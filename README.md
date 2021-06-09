@@ -39,7 +39,7 @@ See some example jammed configurations below.
   <img src="img/jammedPentalobes.png" width="400" /> 
 </p>
 
-## Compilation inputs
+## Input
 
 Once you compile the main file, run the simulation using the generated binary file. The input parameters are:
 * `NCELLS`: integer number of particles
