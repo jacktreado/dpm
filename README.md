@@ -75,7 +75,7 @@ Each row in this file starts with a five-character keyword that denotes what inf
 * `CINFO`: information about cell
 * `VINFO`: information about vertex 
 
-###CINFO 
+### CINFO 
 
 There is one `CINFO` row per cell. For a given cell `mu`, the row is formatted as:
 
@@ -89,7 +89,7 @@ where
 * `a` instantaneous area of cell `mu`
 * `p` instantaneous perimeter of cell `mu`
 
-###VINFO
+### VINFO
 
 There is also one `VINFO` row per vertex. For a given vertex `i` on cell `mu`, the row is formatted as:
 
