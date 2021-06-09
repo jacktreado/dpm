@@ -66,11 +66,11 @@ To generate the above images, run a compiled binary `bin.o` using
 
 ## Output
 
-The final input to the main file, `positionFile`, will store the positions of all vertices in the jammed state as well as some other useful information about the state of the system. 
+The final input to the main file, `positionFile` (above called `pos.test`), will store the positions of all vertices in the jammed state as well as some other useful information about the state of the system. 
 
 Each row in this file starts with a five-character keyword that denotes what information that row contains. The keywords are:
 * `NEWFR`: starts frame
-	** If the code prints multiple configurations, this can be used to identify the start of a new configuration.
+	* If the code prints multiple configurations, this can be used to identify the start of a new configuration.
 * `NUMCL`: number of cells
 * `PACKF`: packing fraction (particle areas / box area)
 * `BOXSZ`: box lengths `Lx` and `Ly`
