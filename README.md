@@ -1,4 +1,4 @@
-# dpm 
+# Getting Started 
 By Jack Treado, Yale University
 
 Welcome to the Deformable Particle Model (DPM)!
@@ -17,7 +17,7 @@ A. Boromand, A. Signoriello, F. Ye, C. S. O'Hern, and M. D. Shattuck, "Jamming o
 
 
 
-## Getting started
+## Compilation
 
 Once the code has been downloaded, the code can be compiled using the `g++` compiler with the `--std=c++11` flag.
 
@@ -28,7 +28,7 @@ To compile a given simulation to a binary (say `bin.o`), make the `dpm` director
 `g++ -O3 --std=c++11 -I src main/[DIR NAME]/[MAIN FILE NAME].cpp src/*.cpp -o bin.o`
 
 
-## Example: Jam bidisperse deformable particles with sinusoidal preferred angle profiles
+# Example: Jam bidisperse deformable particles with sinusoidal preferred angle profiles
 
 Using the main file `main/jam/bidisperseSinusoidalParticleJamming`, you can generate jammed packings (at a specified pressure) of bidisperse, purely repulsive, deformable particles with lobed shapes sets by a sinusoidally-varying preferred angle profile. 
 
@@ -38,6 +38,8 @@ See some example jammed configurations below.
   <img src="img/jammedTriangles.png" width="400" />
   <img src="img/jammedTrilobes.png" width="400" /> 
 </p>
+
+## Compilation inputs
 
 Once you compile using the command above, run the code using the generated binary file. The input parameters are:
 * `NCELLS`: integer number of particles
@@ -54,9 +56,13 @@ Once you compile using the command above, run the code using the generated binar
 * `seed`: integer to seed random number generator
 * `positionFile`: path to file to store position data for jammed configuration. 
 
-To generate the above image on the left, run the compiled binary `bin.o` using
+To generate the above images, run a compiled binary `bin.o` using:
 
-`./bin.o 12 24 1.04 1.0 0.01 3.0 3.0 1e-7 1e-12 1 pos.test`
+* _left_: `./bin.o 12 24 1.04 1.0 0.01 3.0 3.0 1e-7 1e-12 1 pos.test`
 
-`./bin.o 12 24 1.20 1.0 0.01 10.0 3.0 1e-7 1e-12 1 pos.test`
+* _right_: `./bin.o 12 24 1.20 1.0 0.01 10.0 3.0 1e-7 1e-12 1 pos.test`
+
+## Output
+
+The 
 
