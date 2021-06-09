@@ -28,7 +28,7 @@ To compile a given simulation to a binary (say `bin.o`), make the `dpm` director
 `g++ -O3 --std=c++11 -I src main/[DIR NAME]/[MAIN FILE NAME].cpp src/*.cpp -o bin.o`
 
 
-# Jamming of deformable particles with sinusoidal preferred angle profiles
+# Jamming of deformable particles with sinusoidal preferred angles
 
 Using the main file `main/jam/bidisperseSinusoidalParticleJamming.cpp`, you can generate jammed packings (at a specified pressure) of bidisperse, purely repulsive, deformable particles with lobed shapes sets by a sinusoidally-varying preferred angle profile. 
 
