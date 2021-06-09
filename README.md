@@ -28,9 +28,9 @@ To compile a given simulation to a binary (say `bin.o`), make the `dpm` director
 `g++ -O3 --std=c++11 -I src main/[DIR NAME]/[MAIN FILE NAME].cpp src/*.cpp -o bin.o`
 
 
-# Example: Jam bidisperse deformable particles with sinusoidal preferred angle profiles
+# Jam deformable particles with sinusoidal preferred angle profiles
 
-Using the main file `main/jam/bidisperseSinusoidalParticleJamming`, you can generate jammed packings (at a specified pressure) of bidisperse, purely repulsive, deformable particles with lobed shapes sets by a sinusoidally-varying preferred angle profile. 
+Using the main file `main/jam/bidisperseSinusoidalParticleJamming.cpp`, you can generate jammed packings (at a specified pressure) of bidisperse, purely repulsive, deformable particles with lobed shapes sets by a sinusoidally-varying preferred angle profile. 
 
 See some example jammed configurations below.
 
@@ -67,13 +67,15 @@ To generate the above images, run a compiled binary `bin.o` using:
 The final input to the main file, `positionFile`, will store the positions of all vertices in the jammed state as well as some other useful information about the state of the system. 
 
 Each row in this file starts with a five-character keyword that denotes what information that row contains. The keywords are:
-* `NEWFR`: starts this particular frame. If the code prints multiple configurations, this can be used to identify the start of a new configuration.
+* `NEWFR`: starts frame
+	** If the code prints multiple configurations, this can be used to identify the start of a new configuration.
 * `NUMCL`: number of cells
 * `PACKF`: packing fraction (particle areas / box area)
 * `BOXSZ`: box lengths `Lx` and `Ly`
 * `STRSS`: components of the virial stress tensor, sorted as `Sxx`, `Syy`, `Sxy`
 * `CINFO`: information about cell
 * `VINFO`: information about vertex 
+* `ENDFR`: ends frame
 
 ### CINFO 
 
