@@ -1831,6 +1831,8 @@ void dpm::vertexJamming2D(double Ftol, double Ptol, double dt0, double dphi0, bo
 					cout << " WRITING ENTHALPY-MINIMIZED CONFIG TO FILE" << endl;
 					cout << " ENDING COMPRESSION SIMULATION" << endl;
 					scaleFactor = 1.0;
+					if (!plotCompression)
+						printConfiguration2D();
 					break;
 				}
 			}
