@@ -35,8 +35,8 @@ Using the main file `main/jam/bidisperseSinusoidalParticleJamming`, you can gene
 See some example jammed configurations below.
 
 <p float="left">
-  <img src="img/jammedTriangles.png" width="450" />
-  <img src="img/jammedTrilobes.png" width="450" /> 
+  <img src="img/jammedTriangles.png" width="400" />
+  <img src="img/jammedTrilobes.png" width="400" /> 
 </p>
 
 Once you compile using the command above, run the code using the generated binary file. The input parameters are:
