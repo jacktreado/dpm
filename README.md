@@ -56,7 +56,7 @@ Once you compile the main file, run the simulation using the generated binary fi
 * `seed`: integer to seed random number generator
 * `positionFile`: path to file to store position data for jammed configuration. 
 
-To generate the above images, run a compiled binary `bin.o` using:
+To generate the above images, run a compiled binary `bin.o` using
 
 * _left_: `./bin.o 12 24 1.04 1.0 0.01 3.0 3.0 1e-7 1e-12 1 pos.test`
 
