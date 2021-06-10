@@ -48,9 +48,7 @@ int main(){
 	configobj2D.initializeNeighborLinkedList2D(boxLengthScale);
 
 	// compute shape forces
-	configobj2D.resetForcesAndEnergy();
-	configobj2D.shapeForces2D();
-	configobj2D.repulsiveVertexForces2D();
+	configobj2D.updateForces();
 
 	// print config
 	configobj2D.printConfiguration2D();

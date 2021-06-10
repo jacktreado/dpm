@@ -68,7 +68,7 @@ dpm::dpm(int n, int ndim, int seed){
 		cij.at(i) = 0; 
 
 	// initialize nearest neighbor info
-	NBX = 0;
+	NBX = -1;
 
 	// seed random number generator
 	srand48(seed);
@@ -107,8 +107,8 @@ dpm::~dpm(){
 	if (hessout.is_open())
 		hessout.close();
 
-	if (ctcout.is_open())
-		ctcout.close();
+	if (xtraout.is_open())
+		xtraout.close();
 }
 
 
@@ -259,6 +259,47 @@ double dpm::vertexPreferredPackingFraction2D(){
 	// return packing fraction
 	val = areaSum/boxV;
 	return val;
+}
+
+
+// get vertex kinetic energy
+double dpm::vertexKineticEnergy(){
+	double K=0; 
+
+	for(int i=0; i<vertDOF; i++)
+		K += v[i]*v[i];
+	K *= 0.5;
+
+	return K;
+}
+
+
+// get number of vertex-vertex contacts
+int dpm::vvContacts(){
+	int nvv = 0;
+
+	for (int ci=0; ci<NCELLS; ci++){
+		for (int cj=ci+1; cj<NCELLS; cj++)
+			nvv += cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2];
+	}
+
+	return nvv;
+}
+
+
+
+// get number of cell-cell contacts
+int dpm::ccContacts(){
+	int ncc = 0;
+
+	for (int ci=0; ci<NCELLS; ci++){
+		for (int cj=ci+1; cj<NCELLS; cj++){
+			if (cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2] > 0)
+				ncc++;
+		}
+	}
+
+	return ncc;
 }
 
 
@@ -514,7 +555,6 @@ void dpm::initializePositions2D(double phi0, double Ftol){
 	int npNeg      	= 0;
 
 	int fireit    	= 0;
-	int itmax 		= 1e6;
 	double fcheck  	= 10*Ftol;
 
 	// interaction variables
@@ -952,6 +992,41 @@ int dpm::removeRattlers(){
 }
 
 
+// draw random velocities based on input temperature
+void dpm::drawVelocities2D(double T){
+	// local variables
+	int gi;
+	double r1, r2, grv1, grv2, tscale=sqrt(T), vcomx=0.0, vcomy=0.0;
+
+	// loop over velocities, draw from maxwell-boltzmann distribution
+	for (gi=0; gi<NVTOT; gi++){
+		// draw random numbers using Box-Muller
+		r1 				= drand48();
+		r2 				= drand48();
+		grv1 			= sqrt(-2.0*log(r1))*cos(2.0*PI*r2);
+		grv2			= sqrt(-2.0*log(r1))*sin(2.0*PI*r2);
+
+		// assign to velocities
+		v[NDIM*gi] 		= tscale*grv1;
+		v[NDIM*gi + 1] 	= tscale*grv2;
+
+		// add to center of mass
+		vcomx 			+= v[NDIM*gi];
+		vcomy 			+= v[NDIM*gi + 1];
+	}
+	vcomx = vcomx/NVTOT;
+	vcomy = vcomy/NVTOT;
+
+	// subtract off center of mass drift
+	for (gi=0; gi<NVTOT; gi++){
+		v[NDIM*gi] 		-= vcomx;
+		v[NDIM*gi + 1]	-= vcomy;
+	}
+}
+
+
+
+
 
 
 
@@ -1176,7 +1251,7 @@ void dpm::shapeForces2D(){
 }
 
 
-void dpm::repulsiveVertexForces2D(){
+void dpm::vertexRepulsiveForces2D(){
 	// local variables
 	int ci, cj, gi, gj, vi, vj, bi, bj, pi, pj, boxid, sbtmp;
 	double sij, rij, dx, dy, rho0;
@@ -1342,12 +1417,11 @@ void dpm::repulsiveVertexForces2D(){
 }
 
 
-
-
-
-
-
-
+void dpm::forceUpdate(){
+	resetForcesAndEnergy();
+	shapeForces2D();
+	vertexRepulsiveForces2D();
+}
 
 
 
@@ -1394,6 +1468,12 @@ void dpm::vertexFIRE2D(double Ftol, double dt0){
 	// local variables
 	int i;
 	double rho0;
+
+	// check to see if cell linked-list has been initialized
+	if (NBX == -1){
+		cout << "	** ERROR: In dpm::fire, NBX = -1, so cell linked-list has not yet been initialized. Ending here.\n";
+		exit(1);
+	}
 
 	// FIRE variables
 	double P, fnorm, fcheck, vnorm, alpha, dtmax, dtmin;
@@ -1532,10 +1612,8 @@ void dpm::vertexFIRE2D(double Ftol, double dt0){
 				x[i] += L[i % NDIM];
 		}
 
-		// update forces
-		resetForcesAndEnergy();
-		repulsiveVertexForces2D();
-		shapeForces2D();
+		// update forces (function passed as argument)
+		forceUpdate();
 
 		// VV VELOCITY UPDATE #2
 		for (i=0; i<vertDOF; i++)
@@ -1610,7 +1688,7 @@ void dpm::vertexCompress2Target2D(double Ftol, double dt0, double phi0Target, do
 		// update phi0
 		phi0 = vertexPreferredPackingFraction2D();
 
-		// relax configuration
+		// relax configuration (pass member function force update)
 		vertexFIRE2D(Ftol, dt0);
 
 		// get scale factor
@@ -1649,7 +1727,7 @@ void dpm::vertexCompress2Target2D(double Ftol, double dt0, double phi0Target, do
 void dpm::vertexJamming2D(double Ftol, double Ptol, double dt0, double dphi0, bool plotCompression){
 	// local variables
 	int k=0, nr;
-	bool jammed, overcompressed, undercompressed;
+	bool jammed=0, overcompressed=0, undercompressed=0;
 	double pcheck, phi0, rH, r0, rL, rho0, scaleFactor;
 
 	// initialize binary root search parameters
@@ -1673,13 +1751,12 @@ void dpm::vertexJamming2D(double Ftol, double Ptol, double dt0, double dphi0, bo
 	t0save = t0;
 	a0save = a0;
 
-
 	// loop until jamming is found
 	while (!jammed && k < itmax){
 		// set length scale by 1st particle preferred area
 		rho0 = sqrt(a0.at(0));
 
-		// relax configuration
+		// relax configuration (pass member function force update)
 		vertexFIRE2D(Ftol, dt0);
 
 		// update pressure
@@ -1711,13 +1788,16 @@ void dpm::vertexJamming2D(double Ftol, double Ptol, double dt0, double dphi0, bo
 		cout << "	* rL 			= " << rL << endl;
 		cout << "	* pcheck 		= " << pcheck << endl;
 		cout << "	* U 		 	= " << U << endl;
+		cout << "	* Nvv  			= " << vvContacts() << endl;
+		cout << "	* Ncc 			= " << ccContacts() << endl;
 		cout << "	* # of rattlers = " << nr << endl << endl;
 		cout << "	* undercompressed = " << undercompressed << endl;
 		cout << "	* overcompressed = " << overcompressed << endl;
 		cout << "	* jammed = " << jammed << endl << endl;
 		if (plotCompression)
 			printConfiguration2D();
-		printContactMatrix();
+		if (NCELLS < 33)
+			printContactMatrix();
 		cout << endl << endl;
 
 		// update particle scaleFactor based on target check
@@ -1843,6 +1923,9 @@ void dpm::vertexJamming2D(double Ftol, double Ptol, double dt0, double dphi0, bo
 
 		// update packing fraction
 		phi0 = vertexPreferredPackingFraction2D();
+
+		// update iterate
+		k++;
 	}
 }
 
@@ -1869,11 +1952,11 @@ void dpm::printContactMatrix(){
 	for (ci=0; ci<NCELLS; ci++){
 		for (cj=0; cj<NCELLS; cj++){
 			if (ci > cj)
-				cout << cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2] << "  ";
+				cout << setw(5) << cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2];
 			else if (ci < cj)
-				cout << cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2] << "  "; 
+				cout << setw(5) << cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]; 
 			else
-				cout << "0  ";
+				cout << setw(5) << 0;
 		}
 		cout << endl;
 	}

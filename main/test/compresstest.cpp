@@ -50,7 +50,7 @@ int main(){
 
 	// compress to target packing fraction
 	double phi0Target = 1.0, dphi0 = 0.005;
-	configobj2D.vertexCompress2Target2D(Ftol,dt0,phi0Target,dphi0);
+	configobj2D.compress2Target(Ftol,dt0,phi0Target,dphi0);
 
 	// say goodbye
 	cout << "\n\n** Finished compresstest.cpp, ending. " << endl;

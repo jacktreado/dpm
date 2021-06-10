@@ -23,6 +23,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <vector>
+#include <functional>
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <Eigen/Eigenvalues>
@@ -61,8 +62,7 @@ protected:
 	// time step size
 	double dt;
 
-	// kinetic and potential energies
-	double K;
+	// potential energy
 	double U;
 
 	// particle spring constants
@@ -112,7 +112,7 @@ protected:
 	// output objects
 	std::ofstream posout;
 	std::ofstream hessout;
-	std::ofstream ctcout;
+	std::ofstream xtraout;
 
 public:
 
@@ -163,7 +163,9 @@ public:
 	double perimeter(int ci);
 	double vertexPackingFraction2D();
 	double vertexPreferredPackingFraction2D();
-
+	double vertexKineticEnergy();
+	int vvContacts();
+	int ccContacts();
 
 	// Setters
 	void setNCELLS(int val) { NCELLS = val; };
@@ -196,14 +198,14 @@ public:
 			std::cout << "** Opening hessian file " << str << " ..." << std::endl;
 	}
 
-	void openCTCObject(std::string& str){
-		ctcout.open(str.c_str());
-		if (!ctcout.is_open()) {
-			std::cout << "	ERROR: ctcout could not open " << str << "..." << std::endl;
+	void openXtraObject(std::string& str){
+		xtraout.open(str.c_str());
+		if (!xtraout.is_open()) {
+			std::cout << "	ERROR: xtraout could not open " << str << "..." << std::endl;
 			exit(1);
 		}
 		else
-			std::cout << "** Opening ctc file " << str << " ..." << std::endl;
+			std::cout << "** Opening xtra file " << str << " ..." << std::endl;
 	}
 
 
@@ -222,17 +224,16 @@ public:
 	void sortNeighborLinkedList2D();
 	void scaleParticleSizes2D(double scaleFactor);
 	int removeRattlers();
+	void drawVelocities2D(double T);
 
 	// force updates
 	void resetForcesAndEnergy();
 	void shapeForces2D();
-	void repulsiveVertexForces2D();
+	void vertexRepulsiveForces2D();
+	void forceUpdate();
 
-
-	// integrators
-	void nve(double T, double dt0);
+	// simple integrators
 	void vertexFIRE2D(double Ftol, double dt0);
-
 
 	// protocols
 	void vertexCompress2Target2D(double Ftol, double dt0, double phi0Target, double dphi0);

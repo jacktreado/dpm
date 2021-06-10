@@ -33,7 +33,7 @@
 using namespace std;
 
 // global constants
-const bool plotCompression = 0;			// whether or not to plot configuration during jamming (0 saves memory)
+const bool plotCompression = 0;			// whether or not to plot configuration during compression protocol (0 saves memory)
 const double dphi0 = 0.005;				// packing fraction increment
 const double ka = 1.0;					// area force spring constant (should be unit)
 const double kc = 1.0;					// interaction force spring constant (should be unit)

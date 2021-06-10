@@ -54,7 +54,7 @@ int main(){
 
 	// compress to target packing fraction
 	double phi0Target = 1.0, dphi0 = 0.005;
-	configobj2D.vertexJamming2D(Ftol,Ptol,dt0,dphi0);
+	configobj2D.jamming(Ftol,Ptol,dt0,dphi0);
 
 	// say goodbye
 	cout << "\n\n** Finished firetest.cpp, ending. " << endl;
