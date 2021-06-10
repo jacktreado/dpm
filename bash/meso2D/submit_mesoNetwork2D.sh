@@ -33,7 +33,6 @@ numRuns="${10}"
 startSeed="${11}"
 
 # other variables
-calA0=1.001
 disp=0.1
 phiMin=0.4
 Ftol=1e-12
@@ -106,7 +105,7 @@ for seed in `seq $startSeed $numSeedsPerRun $endSeed`; do
         posf=$simdatadir/$filestr.pos
 
         # append to runString
-        runString="$runString ; ./$binf $NCELLS $n $disp $calA0 $phiMin $betaEff $cL $cB $cKb $Ftol $runseed $posf"
+        runString="$runString ; ./$binf $NCELLS $n1 $disp $calA0 $phiMin $betaEff $cL $cB $cKb $Ftol $runseed $posf"
     done
 
     # finish off run string
