@@ -1796,8 +1796,6 @@ void dpm::vertexJamming2D(double Ftol, double Ptol, double dt0, double dphi0, bo
 		cout << "	* jammed = " << jammed << endl << endl;
 		if (plotCompression)
 			printConfiguration2D();
-		if (NCELLS < 33)
-			printContactMatrix();
 		cout << endl << endl;
 
 		// update particle scaleFactor based on target check
