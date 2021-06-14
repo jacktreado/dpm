@@ -53,12 +53,11 @@ binf=bin/"$runstr".o
 mainf=$maindir/bidisperseSinusoidalParticleJamming.cpp
 echo Running bidisperseSinusoidalParticleJamming simulations with parameters:
 echo NCELLS = "$NCELLS"
-echo n1 = "$n1"
+echo nsmall = "$nsmall"
 echo calA0 = "$calA0"
-echo betaEff = "$betaEff"
-echo cL = "$cL"
-echo cB = "$cB"
-echo cKb = "$cKb"
+echo kb = "$kb"
+echo thA = "$thA"
+echo thK = "$thK"
 
 # run compiler
 rm -f $binf
