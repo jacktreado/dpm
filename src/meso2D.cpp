@@ -1013,8 +1013,6 @@ void meso2D::updateMesophyllBondNetwork(){
 
 
 // age mesophyll shape parameters
-// NOTE: NEED TO ADD Kbi DEGREES OF FREEDOM, 
-// will need a different Hessian calculator
 void meso2D::ageMesophyllShapeParameters(){
 	// local variables
 	int gi;

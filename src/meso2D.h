@@ -21,6 +21,7 @@
 class meso2D : public dpm{
 protected:
 	// bending energy per vertex
+	// NOTE: will need to add different Hessian computation
 	std::vector<double> kbi;
 
 	// vertex-vertex contact network
