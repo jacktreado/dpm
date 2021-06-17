@@ -227,6 +227,54 @@ double dpm::perimeter(int ci){
 }
 
 
+// get cell center of mass position
+void dpm::com2D(int ci, double& cx, double& cy){
+	// local variables
+	int vi, gi, gip1, nvtmp;
+	double dx, dy, xi, yi, xip1, yip1, l;
+
+	// initial position: vi = 0
+	nvtmp 	= nv.at(ci);
+	gi 		= gindex(ci,0);
+	xi 		= x[NDIM*gi];
+	yi 		= x[NDIM*gi + 1];
+
+	// initialize center of mass coordinates
+	cx = xi;
+	cy = yi;
+
+	// loop over vertices of cell ci, get perimeter
+	for (vi=0; vi<nvtmp-1; vi++){
+		// next vertex
+		gip1 = ip1.at(gi);
+		gi++;
+
+		// get positions (check minimum images)
+		dx = x[NDIM*gip1] - xi;
+		if (pbc[0])
+			dx -= L[0]*round(dx/L[0]);
+		xip1 = xi + dx;
+
+		dy = x[NDIM*gip1 + 1] - yi;
+		if (pbc[1])
+			dy -= L[1]*round(dy/L[1]);
+		yip1 = yi + dy;
+
+		// add to center of mass
+		cx += xip1;
+		cy += yip1;
+
+		// update coordinates
+		xi = xip1;
+		yi = yip1;
+	}
+
+	// take average to get com
+	cx /= nvtmp;
+	cy /= nvtmp;
+}
+
+
 // get configuration packing fraction
 double dpm::vertexPackingFraction2D(){
 	int ci;

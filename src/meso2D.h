@@ -63,15 +63,18 @@ public:
 	void initializeMesophyllBondNetwork();
 	void mesoShapeForces2D();
 	void mesoNetworkForceUpdate();
+	void mesoPinForceUpdate(std::vector<double>& xpin, double kcspring);
 
 	// integrators
 	void mesoNetworkFIRE(double Ftol, double dt0);
+	void mesoPinFIRE(std::vector<double>& xpin, double Ftol, double dt0, double kcspring);
 	void mesoNetworkNVE(double T, double dt0, int NT, int NPRINTSKIP);
 
 	// protocols
 	void mesoNetworkExtension(double Ftol, double dt0, double delShrink, double dphiPrint, double phiMin);
 	void updateMesophyllBondNetwork();
 	void ageMesophyllShapeParameters();
+	void mesophyllPinExtension(double Ftol, double dt0, double hmax, double dh, double dhprint, double kcspring);
 };
 
 #endif

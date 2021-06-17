@@ -15,3 +15,5 @@ bash/*/tasks
 *.avi
 *.mp4
 *.mov
+local/
+.DS_Store

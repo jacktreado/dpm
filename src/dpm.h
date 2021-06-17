@@ -161,6 +161,7 @@ public:
 	void cindices(int& ci, int& vi, int gi);
 	double area(int ci);
 	double perimeter(int ci);
+	void com2D(int ci, double& cx, double& cy);
 	double vertexPackingFraction2D();
 	double vertexPreferredPackingFraction2D();
 	double vertexKineticEnergy();

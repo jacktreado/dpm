@@ -572,6 +572,42 @@ void meso2D::mesoNetworkForceUpdate(){
 }
 
 
+// update forces for mesophyll cells with pin force (ASSUME PIN ALREADY ASSIGNED)
+void meso2D::mesoPinForceUpdate(vector<double>& xpin, double kcspring){
+	// local variables
+	int gi, ci, vi, nvtmp;
+	double cx, cy, dcx, dcy;
+
+	// update network forces
+	mesoNetworkForceUpdate();
+
+	// update sinking forces
+	for (ci=0; ci<NCELLS; ci++){
+		// tmp nv
+		nvtmp = nv[ci];
+
+		// get center of mass coordinates
+		com2D(ci,cx,cy);
+
+		// get distances to pins
+		dcx = cx - xpin[NDIM*ci];
+		if (pbc[0])
+			dcx -= L[0]*round(dcx/L[0]);
+
+		dcy = cy - xpin[NDIM*ci + 1];
+		if (pbc[1])
+			dcy -= L[1]*round(dcy/L[1]);
+
+		// add to forces 
+		gi = szList[ci];
+		for (vi=0; vi<nvtmp; vi++){
+			F[NDIM*gi] -= (kcspring/nvtmp)*dcx;
+			F[NDIM*gi + 1] -= (kcspring/nvtmp)*dcy;
+			gi++;
+		}
+	}
+}
+
 
 
 /******************************
@@ -776,6 +812,196 @@ void meso2D::mesoNetworkFIRE(double Ftol, double dt0){
 }
 
 
+// use FIRE to minimize potential energy in mesophyll cells sinking toward center of box
+void meso2D::mesoPinFIRE(vector<double>& xpin, double Ftol, double dt0, double kcspring){
+	// local variables
+	int i, ci, vi, gi, k;
+	double cxtmp, cytmp;
+
+	// check to see if cell linked-list has been initialized
+	if (NBX == -1){
+		cout << "	** ERROR: In meso2D::mesoPinFIRE, NBX = -1, so cell linked-list has not yet been initialized. Ending here.\n";
+		exit(1);
+	}
+
+	// FIRE variables
+	double P, fnorm, fcheck, vnorm, alpha, dtmax, dtmin;
+	int npPos, npNeg, fireit;
+
+	// set dt based on geometric parameters
+	setdt(dt0);
+
+	// Initialize FIRE variables
+	P  			= 0;	
+	fnorm 		= 0;
+	vnorm 		= 0;
+	alpha   	= alpha0;
+
+	dtmax   	= 10.0*dt;
+	dtmin   	= 1e-2*dt;
+
+	npPos      	= 0;
+	npNeg      	= 0;
+
+	fireit    	= 0;
+	fcheck  	= 10*Ftol;
+
+	// reset forces and velocities
+	resetForcesAndEnergy();
+	fill(v.begin(), v.end(), 0.0);
+
+	// relax forces using FIRE
+	while (fcheck > Ftol && fireit < itmax){
+		// compute P
+		P = 0.0;
+		for (i=0; i<vertDOF; i++)
+			P += v[i]*F[i];
+
+		// print to console
+		if (fireit % NSKIP == 0){
+			cout << endl << endl;
+			cout << "===========================================" << endl;
+			cout << "		M E S O P H Y L L 			" << endl;
+			cout << " 	F I R E 						" << endl;
+			cout << "		M I N I M I Z A T I O N 	" << endl;
+			cout << "===========================================" << endl;
+			cout << endl;
+			cout << "	** fireit 	= " << fireit << endl;
+			cout << "	** fcheck 	= " << fcheck << endl;
+			cout << "	** U 		= " << U << endl;
+			cout << "	** dt 		= " << dt << endl;
+			cout << "	** P 		= " << P << endl;
+			cout << "	** alpha 	= " << alpha << endl;
+			cout << "	** npPos 	= " << npPos << endl;
+			cout << "	** npNeg 	= " << npNeg << endl;
+		}
+
+		// Adjust simulation based on net motion of degrees of freedom
+		if (P > 0){
+			// increase positive counter
+			npPos++;
+
+			// reset negative counter
+			npNeg = 0;
+
+			// alter simulation if enough positive steps have been taken
+			if (npPos > NDELAY){
+				// change time step
+				if (dt*finc < dtmax)
+					dt *= finc;
+
+				// decrease alpha
+				alpha *= falpha;
+			}
+		}
+		else{
+			// reset positive counter
+			npPos = 0;
+
+			// increase negative counter
+			npNeg++;
+
+			// check if simulation is stuck
+			if (npNeg > NNEGMAX){
+				cout << "	** ERROR: During initial FIRE minimization, P < 0 for too long, so ending." << endl;
+				exit(1);
+			}
+
+			// take half step backwards, reset velocities
+			for (i=0; i<vertDOF; i++){
+				// take half step backwards
+				x[i] -= 0.5*dt*v[i];
+
+				// reset vertex velocities
+				v[i] = 0.0;
+			}
+
+			// decrease time step if past initial delay
+			if (fireit > NDELAY){
+				// decrease time step 
+				if (dt*fdec > dtmin)
+					dt *= fdec;
+
+				// reset alpha
+				alpha = alpha0;
+			}
+		}
+
+		// VV VELOCITY UPDATE #1
+		for (i=0; i<vertDOF; i++)
+			v[i] += 0.5*dt*F[i];
+
+		// compute fnorm, vnorm and P
+		fnorm = 0.0;
+		vnorm = 0.0;
+		for (i=0; i<vertDOF; i++){
+			fnorm 	+= F[i]*F[i];
+			vnorm 	+= v[i]*v[i];
+		}
+		fnorm = sqrt(fnorm);
+		vnorm = sqrt(vnorm);
+
+		// update velocities (s.d. vs inertial dynamics) only if forces are acting
+		if (fnorm > 0){
+			for (i=0; i<vertDOF; i++)
+				v[i] = (1 - alpha)*v[i] + alpha*(F[i]/fnorm)*vnorm;
+		}
+
+		// VV POSITION UPDATE
+		for (i=0; i<vertDOF; i++){
+			// update position
+			x[i] += dt*v[i];
+
+			// recenter in box
+			if (x[i] > L[i % NDIM] && pbc[i % NDIM])
+				x[i] -= L[i % NDIM];
+			else if (x[i] < 0 && pbc[i % NDIM])
+				x[i] += L[i % NDIM];
+		}
+
+		// update forces in mesophyll network 
+		mesoPinForceUpdate(xpin, kcspring);
+
+		// VV VELOCITY UPDATE #2
+		for (i=0; i<vertDOF; i++)
+			v[i] += 0.5*F[i]*dt;
+
+		// update fcheck based on fnorm (= force per degree of freedom)
+		fcheck = 0.0;
+		for (i=0; i<vertDOF; i++)
+			fcheck += F[i]*F[i];
+		fcheck = sqrt(fcheck/vertDOF);
+
+		// update iterator
+		fireit++;
+	}
+	// check if FIRE converged
+	if (fireit == itmax){
+		cout << "	** FIRE minimization did not converge, fireit = " << fireit << ", itmax = " << itmax << "; ending." << endl;
+		exit(1);
+	}
+	else{
+		cout << endl;
+		cout << "===========================================" << endl;
+		cout << "		M E S O P H Y L L 			" << endl;
+		cout << " 	F I R E 						" << endl;
+		cout << "		M I N I M I Z A T I O N 	" << endl;
+		cout << "	C O N V E R G E D! 				" << endl;
+		cout << "===========================================" << endl;
+		cout << endl;
+		cout << "	** fireit 	= " << fireit << endl;
+		cout << "	** fcheck 	= " << fcheck << endl;
+		cout << "	** U 		= " << U << endl;
+
+		cout << "	** fnorm	= " << fnorm << endl;
+		cout << "	** vnorm 	= " << vnorm << endl;
+		cout << "	** dt 		= " << dt << endl;
+		cout << "	** P 		= " << P << endl;
+		cout << "	** alpha 	= " << alpha << endl;
+		cout << endl << endl;
+	}
+}
+
 
 // mesophyll network in the mesophyll ensemble
 void meso2D::mesoNetworkNVE(double T, double dt0, int NT, int NPRINTSKIP){
@@ -906,10 +1132,6 @@ void meso2D::mesoNetworkExtension(double Ftol, double dt0, double delShrink, dou
 		cout << "	* meant0 		= " << meant0() << endl;
 		cout << "	* meankb 		= " << meankb() << endl;
 		cout << endl << endl;
-
-		// print number of contacts per cell
-		for (int ci=0; ci<NCELLS; ci++)
-			cout << z[ci] << endl;
 
 		// print positions if change in packing fraction is large enough
 		if ((lastPrintPhi - phi0) > dphiPrint){
@@ -1062,4 +1284,121 @@ void meso2D::ageMesophyllShapeParameters(){
 		kbi[gi] += cKb;
 	}
 }
+
+
+
+// drag cell pins away from center
+void meso2D::mesophyllPinExtension(double Ftol, double dt0, double hmax, double dh, double dhprint, double kcspring){
+	// local variables
+	int k=0, ci;
+	double cx, cy, dcx, dcy, rho0, h=0.0, lastPrinth=0.0;
+	vector<double> th(NCELLS,0.0);
+	vector<double> xpin(NDIM*NCELLS,0.0);
+
+	// determine extension direction angles + initial pin placement
+	for (ci=0; ci<NCELLS; ci++){
+		// get center of mass
+		com2D(ci,cx,cy);
+
+		// get distances to box center
+		dcx = cx - 0.5*L[0];
+		if (pbc[0])
+			dcx -= L[0]*round(dcx/L[0]);
+
+		dcy = cy - 0.5*L[1];
+		if (pbc[1])
+			dcy -= L[1]*round(dcy/L[1]);
+
+		// get angle
+		th[ci] = atan2(dcy,dcx);
+
+		// save pin location
+		xpin[NDIM*ci] = cx;
+		xpin[NDIM*ci + 1] = cy;
+	}
+
+	// loop over extension steps
+	rho0 = sqrt(a0[0]);
+	while (h < hmax && k < itmax){
+		// relax current configuration
+		mesoPinFIRE(xpin,Ftol,dt0,kcspring);
+
+		// update contact network
+		updateMesophyllBondNetwork();
+
+		// age particle shapes
+		ageMesophyllShapeParameters();
+
+		// output to console
+		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
+		cout << "===============================================" << endl << endl;
+		cout << "												" << endl;
+		cout << " 	M E S O P H Y L L 							" << endl;
+		cout << "	 											" << endl;
+		cout << " 	N E T W O R K . P I N   					" << endl;
+		cout << "												" << endl;
+		cout << "	E X T E N S I O N 							" << endl;
+		cout << " 												" << endl;
+		cout << "===============================================" << endl;
+		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
+		cout << endl;
+		cout << "	* k 			= " << k << endl;
+		cout << "	* h 			= " << h << endl;
+		cout << "	* lastPrinth 	= " << lastPrinth << endl;
+		cout << "	* P 			= " << 0.5*(stress[0] + stress[1]) << endl;
+		cout << "	* U 		 	= " << U << endl << endl;
+		cout << "	* Contacts:" << endl;
+		cout << "	* Nvv 			= " << vvContacts() << endl;
+		cout << "	* Ncc 			= " << ccContacts() << endl << endl;
+		cout << "	* Aging:" << endl;
+		cout << "	* meanl0 		= " << meanl0() << endl;
+		cout << "	* meancalA0 	= " << meancalA0() << endl;
+		cout << "	* meant0 		= " << meant0() << endl;
+		cout << "	* meankb 		= " << meankb() << endl;
+		cout << endl << endl;
+		for (ci=0; ci<NCELLS; ci++)
+			cout << "px=" << xpin[NDIM*ci] << ",   py=" << xpin[NDIM*ci+1] << endl;
+
+		// print positions if change in packing fraction is large enough
+		if (abs(lastPrinth - h) > dhprint){
+			// print positions
+			printConfiguration2D();
+
+			// update last print h
+			lastPrinth = h;
+		}
+
+		// move pins
+		for (ci=0; ci<NCELLS; ci++){
+			xpin[NDIM*ci] += dh*rho0*cos(th[ci]);
+			xpin[NDIM*ci + 1] += dh*rho0*sin(th[ci]);
+		}
+
+		// update new h
+		h += dh;
+
+		// update iterate
+		k++;
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
