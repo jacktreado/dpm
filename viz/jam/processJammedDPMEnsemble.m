@@ -1,16 +1,13 @@
-function processJammedDPMEnsemble(ensembleLoc, savestr)
+function processJammedDPMEnsemble(ensembleStr, savestr)
 %% Process ensemble of jammed dpm configurations
 % ** ASSUMING ONLY 1 FRAME, will skip configs that are empty or have
 % multiple frames
 
 % get files that make up ensemble
-if strcmp(ensembleLoc(end),'/')
-    ensembleLoc(end) = [];
-end
-ensList = dir([ensembleLoc '/*.pos']);
+ensList = dir([ensembleStr '*.pos']);
 NEN = length(ensList);
 if NEN == 0
-    error('processJammedDPMEnsemble:noFilesFound','\nNo files found in ensemble location %s. Ending here.\n',ensembleLoc);
+    error('processJammedDPMEnsemble:noFilesFound','\nNo files found using ensembleStr:%s. Ending here.\n',ensembleLoc);
 else
     fprintf('** Processing %d files stored in %s\n',NEN,ensembleLoc);
 end
