@@ -81,13 +81,12 @@ where `mu` and `i` refer to the cell and vertex indices, respectively, and
 
 To run an ensemble of jammed configurations on a remote cluster, use the following steps. **Note**: currently only supports clusters that use the [Slurm workload manager](https://slurm.schedmd.com/). 
 
-## **READ THIS FIRST**
-
-&  &  &  &  &
+### **READ THIS FIRST**
 
 BEFORE YOU SUBMIT ANYTHING, make sure to edit line `4` to set the `netid` variable to your remote cluster username. This will place all data in a folder named `~/project/dpm` if using the Yale clusters. If you have a different file storage system, edit the variable `outputdir` on line `12` to be your desired location for data output. 
 
-&  &  &  &  &
+
+## Using the `submit_` bash script
 
 To clone the repository to your remote cluster, `ssh` onto the login node and use 
 ```bash 
