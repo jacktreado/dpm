@@ -34,7 +34,7 @@ To compile a given simulation to a binary (say `bin.o`), make the `dpm` director
 
 ### Jamming of deformable particles with sinusoidal preferred angles
 
-Simulations with particles of arbitrarily-lobed, deformable particles. See [sinusoidalJamming.md][howto/sims/sinusoidalJamming.md]
+Simulations with particles of arbitrarily-lobed, deformable particles. See [sinusoidalJamming.md](howto/sims/sinusoidalJamming.md)
 
 
 
