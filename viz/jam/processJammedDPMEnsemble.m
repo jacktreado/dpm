@@ -21,6 +21,7 @@ end
 fskip       = false(NEN,1);
 
 % data to save
+filename    = cell(NEN,1);
 phi         = zeros(NEN,1);
 S           = zeros(NEN,3);
 calA        = cell(NEN,1);
@@ -44,6 +45,9 @@ for ee = 1:NEN
         continue;
     end
     
+    % save file name for parameters
+    filename{ee} = filename;
+    
     % load in data
     dpmConfigData = readDPMConfig(fstr);
     
@@ -54,6 +58,7 @@ for ee = 1:NEN
         fskip(ee) = true;
         continue;
     end
+    NCELLS = dpmConfigData.NCELLS;
     
     % save data
     phi(ee) = dpmConfigData.phi;
@@ -68,8 +73,29 @@ for ee = 1:NEN
     calA{ee} = ptmp.^2./(4.0*pi*atmp);
     
     l0tmp = dpmConfigData.l0;
+    a0tmp = dpmConfigData.a0;
+    calA0tmp = zeros(NCELLS,1);
+    for nn = 1:NCELLS
+        p0tmp = sum(l0tmp{nn});
+        calA0tmp(nn) = p0tmp^2/(4.0*pi*a0tmp(nn));
+    end
+    calA0{ee} = calA0tmp;
     
+    zc{ee} = dpmConfigData.zc;
+    zv{ee} = dpmConfigData.zv;
 end
 
+% delete extra entries
+filename(fskip) = [];
+phi(fskip) = [];
+S(fskip,:) = [];
+calA(fskip) = [];
+calA0(fskip) = [];
+zv(fskip) = [];
+zc(fskip) = [];
+
+
+% save
+save(savestr,'filename','phi','S','calA','calA0','zv','zc');
 
 end

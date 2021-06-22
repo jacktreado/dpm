@@ -77,6 +77,9 @@ where `mu` and `i` refer to the cell and vertex indices, respectively, and
 * `t0`: preferred angle for angle centered on vertex `i`
 
 
+
+
+
 # Running on the cluster
 
 To run an ensemble of jammed configurations on a remote cluster, use the following steps. **Note**: currently only supports clusters that use the [Slurm workload manager](https://slurm.schedmd.com/). 
@@ -137,6 +140,26 @@ Each file will begin with `lobes_`, with the parameters for the ensemble followi
 ```
 Each file will begin with the string `lobes_N16_n24_calA01.10_kb0.01_thA3.0_thK3.0` and will end with `_seed[seedNumber].pos`, where `seedNumber` denotes the seed used in the random number generator. This differentiates different members of the particular ensemble. 
 
-## Data processing
+## Data processing (Slurm scheduler only)
 
-The MATLAB function [processJammedDPMEnsemble](/viz/jam/processJammedDPMEnsemble.m) will aggregate statistical data stored the ensemble folder (i.e. `~/project/dpm/jam/lobes_`) and save it to a `.mat` file stored in `~/project/dpm/jam/matfiles.` To call this function
+The MATLAB function [processJammedDPMEnsemble](/viz/jam/processJammedDPMEnsemble.m) will aggregate statistical data stored the ensemble folder (i.e. `~/project/dpm/jam/lobes_`) and save it to a `.mat` file stored in `~/project/dpm/jam/matfiles.` 
+
+To submit this function to the cluster, use the Slurm script [slurm_bidisperseSinusoidalParticleJamming.slurm](/bash/jam/slurm_bidisperseSinusoidalParticleJamming.slurm). This script must be edited via the command line, so open the file using a command line editor like `vim` or `emacs`. 
+
+Slurm-specific options, like `partition` or `time` are controlled by the `\#SBATCH` headers. See [this Slurm cheatsheet](https://slurm.schedmd.com/pdfs/summary.pdf) for all cluster options. 
+
+Simulation options are set by these variables:
+```bash
+# matlab input information
+NCELLS=16
+nsmall=24
+calA0=1.10
+kb=1.0
+thA=3.0
+thK=3.0
+```
+
+To process a given set of simulations, edit these variables & the Slurm headers appropriately, then use `sbatch` to submit the script to the cluster:
+```bash
+>> sbatch slurm_bidisperseSinusoidalParticleJamming.slurm
+```
