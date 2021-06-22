@@ -5,8 +5,8 @@ Using the main file `main/jam/bidisperseSinusoidalParticleJamming.cpp`, you can 
 See some example jammed configurations below.
 
 <p float="left">
-  <img src="img/jammedTriangles.png" width="400" />
-  <img src="img/jammedPentalobes.png" width="400" /> 
+  <img src="/img/jammedTriangles.png" width="400" />
+  <img src="/img/jammedPentalobes.png" width="400" /> 
 </p>
 
 Particles drawn with empty circles are "rattlers" i.e. are not part of the force-bearing backbone of the packing. 
