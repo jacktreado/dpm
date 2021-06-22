@@ -146,6 +146,8 @@ The MATLAB function [processJammedDPMEnsemble](/viz/jam/processJammedDPMEnsemble
 
 To submit this function to the cluster, use the Slurm script [slurm_bidisperseSinusoidalParticleJamming.slurm](/bash/jam/slurm_bidisperseSinusoidalParticleJamming.slurm). This script must be edited via the command line, so open the file using a command line editor like `vim` or `emacs`. 
 
+**NOTE**: Be sure to edit the `netid` variable to be your netid, or else the data won't be saved in the right location!
+
 Slurm-specific options, like `partition` or `time` are controlled by the `\#SBATCH` headers. See [this Slurm cheatsheet](https://slurm.schedmd.com/pdfs/summary.pdf) for all cluster options. 
 
 Simulation options are set by these variables:
@@ -163,3 +165,5 @@ To process a given set of simulations, edit these variables & the Slurm headers 
 ```bash
 >> sbatch slurm_bidisperseSinusoidalParticleJamming.slurm
 ```
+
+A `matfile` with ensemble statistics will be saved in the folder ``

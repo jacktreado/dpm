@@ -9,6 +9,9 @@
 # load MATLAB
 module load MATLAB
 
+# user's netid
+netid=jdt45
+
 # matlab input information
 NCELLS=16
 nsmall=24
@@ -21,7 +24,7 @@ thK=3.0
 jamstr=lobes_N"$NCELLS"_n"$nsmall"_calA0"$calA0"_kb"$kb"_thA"$thA"_thK"$thK"
 
 # simulation directory string
-simloc=/gpfs/project/fas/ohern/jdt45/cells/seqBidCells
+simloc=/gpfs/project/fas/ohern/"$netid"/dpm/jam
 simstr=$simloc/$jamstr/"$jamstr"_seed
 
 # matlab string
