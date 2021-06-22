@@ -142,11 +142,11 @@ Each file will begin with the string `lobes_N16_n24_calA01.10_kb0.01_thA3.0_thK3
 
 ## Data processing (Slurm scheduler only)
 
-The MATLAB function [processJammedDPMEnsemble](/viz/jam/processJammedDPMEnsemble.m) will aggregate statistical data stored the ensemble folder (i.e. `~/project/dpm/jam/lobes_`) and save it to a `.mat` file stored in `~/project/dpm/jam/matfiles.` 
+The MATLAB function [processJammedDPMEnsemble](/viz/jam/processJammedDPMEnsemble.m) will aggregate statistical data stored the ensemble folder (i.e. `~/project/dpm/jam/lobes_`) and save it to a `.mat` file stored in `~/project/dpm/jam/matfiles`. 
 
 To submit this function to the cluster, use the Slurm script [slurm_bidisperseSinusoidalParticleJamming.slurm](/bash/jam/slurm_bidisperseSinusoidalParticleJamming.slurm). This script must be edited via the command line, so open the file using a command line editor like `vim` or `emacs`. 
 
-**NOTE**: Be sure to edit the `netid` variable to be your netid, or else the data won't be saved in the right location!
+**NOTE**: You MUST edit the `netid` variable to be your netid, or else the data won't be saved in the right location!
 
 Slurm-specific options, like `partition` or `time` are controlled by the `\#SBATCH` headers. See [this Slurm cheatsheet](https://slurm.schedmd.com/pdfs/summary.pdf) for all cluster options. 
 
@@ -166,4 +166,4 @@ To process a given set of simulations, edit these variables & the Slurm headers 
 >> sbatch slurm_bidisperseSinusoidalParticleJamming.slurm
 ```
 
-A `matfile` with ensemble statistics will be saved in the folder ``
+A `matfile` with ensemble statistics will be saved in the folder `~/project/dpm/jam/matfiles` with the same name as the ensemble folder.

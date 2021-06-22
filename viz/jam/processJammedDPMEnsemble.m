@@ -7,7 +7,7 @@ function processJammedDPMEnsemble(ensembleLoc, savestr)
 if strcmp(ensembleLoc(end),'/')
     ensembleLoc(end) = [];
 end
-ensList = flist([ensembleLoc '/*.pos']);
+ensList = dir([ensembleLoc '/*.pos']);
 NEN = length(ensList);
 if NEN == 0
     error('processJammedDPMEnsemble:noFilesFound','\nNo files found in ensemble location %s. Ending here.\n',ensembleLoc);
@@ -25,6 +25,8 @@ filename    = cell(NEN,1);
 phi         = zeros(NEN,1);
 S           = zeros(NEN,3);
 calA        = cell(NEN,1);
+meanCalA    = zeros(NEN,1);
+stdCalA     = zeros(NEN,1);
 calA0       = cell(NEN,1);
 zc          = cell(NEN,1);
 zv          = cell(NEN,1);
@@ -71,6 +73,8 @@ for ee = 1:NEN
     ptmp = dpmConfigData.p;
     atmp = dpmConfigData.a;
     calA{ee} = ptmp.^2./(4.0*pi*atmp);
+    meanCalA(ee) = mean(calA{ee});
+    stdCalA(ee) = std(calA{ee});
     
     l0tmp = dpmConfigData.l0;
     a0tmp = dpmConfigData.a0;
@@ -90,12 +94,14 @@ filename(fskip) = [];
 phi(fskip) = [];
 S(fskip,:) = [];
 calA(fskip) = [];
+meanCalA(fskip) = [];
+stdCalA(fskip) = [];
 calA0(fskip) = [];
 zv(fskip) = [];
 zc(fskip) = [];
 
 
 % save
-save(savestr,'filename','phi','S','calA','calA0','zv','zc');
+save(savestr,'filename','phi','S','calA','meanCalA','stdCalA','calA0','zv','zc');
 
 end
