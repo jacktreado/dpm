@@ -1,10 +1,12 @@
 
-function dpmConfigData = readDPMConfig(fstr)
+function dpmConfigData = readMesoPin2D(fstr)
 %% FUNCTION to read in DPM config data given file string
+% Specifically for mesoNetwork2D data
 
 % print info to console
 finfo = dir(fstr);
-fprintf('-- Reading in %s,  file size = %f\n',finfo.name,finfo.bytes/1e6);
+fprintf('-- Reading in %s\n',finfo.name);
+fprintf('-- File size = %f MB\n',finfo.bytes/1e6);
 
 % open file stream
 fid = fopen(fstr);
@@ -12,7 +14,7 @@ fid = fopen(fstr);
 % read in sim details from first frame
 NCELLS      = textscan(fid,'NUMCL %f',1,'HeaderLines',1);
 NCELLS      = NCELLS{1};
-phitmp      = textscan(fid,'PACKF %f',1);
+htmp        = textscan(fid,'HPULL %f',1);
 fline       = fgetl(fid);
 Ltmp        = textscan(fid,'BOXSZ %f %f',1);
 fline       = fgetl(fid);
@@ -21,13 +23,16 @@ Stmp        = textscan(fid,'STRSS %f %f %f',1);
 % cells to save 
 NFRAMES = 1e6;
 
-phi     = zeros(NFRAMES,1);
+h       = zeros(NFRAMES,1);
 L       = zeros(NFRAMES,2);
 S       = zeros(NFRAMES,3);
 
+px      = zeros(NFRAMES,NCELLS);
+py      = zeros(NFRAMES,NCELLS);
 nv      = zeros(NFRAMES,NCELLS);
 zc      = zeros(NFRAMES,NCELLS);
 zv      = zeros(NFRAMES,NCELLS);
+zg      = zeros(NFRAMES,NCELLS);
 a0      = zeros(NFRAMES,NCELLS);
 a       = zeros(NFRAMES,NCELLS);
 p       = zeros(NFRAMES,NCELLS);
@@ -37,6 +42,7 @@ y       = cell(NFRAMES,NCELLS);
 r       = cell(NFRAMES,NCELLS);
 l0      = cell(NFRAMES,NCELLS);
 t0      = cell(NFRAMES,NCELLS);
+kb      = cell(NFRAMES,NCELLS);
 
 % number of frames found
 nf = 1;
@@ -44,7 +50,7 @@ nf = 1;
 % loop over frames, read in data
 while ~feof(fid)
     % get packing fraction
-    phi(nf) = phitmp{1};
+    h(nf)   = htmp{1};
     
     % get box length
     L(nf,1) = Ltmp{1};
@@ -58,19 +64,22 @@ while ~feof(fid)
     % get info about deformable particle
     for nn = 1:NCELLS
         % get cell pos and asphericity
-        cInfoTmp = textscan(fid,'CINFO %f %f %f %f %f %f',1);   
+        cInfoTmp = textscan(fid,'CINFO %f %f %f %f %f %f %f %f %f',1);   
         fline = fgetl(fid);     % goes to next line in file
 
-        NVTMP = cInfoTmp{1};
+        px(nf,nn) = cInfoTmp{1};
+        py(nf,nn) = cInfoTmp{2};
+        NVTMP = cInfoTmp{3};
         nv(nf,nn) = NVTMP;
-        zc(nf,nn) = cInfoTmp{2};
-        zv(nf,nn) = cInfoTmp{3};
-        a0(nf,nn) = cInfoTmp{4};
-        a(nf,nn) = cInfoTmp{5};
-        p(nf,nn) = cInfoTmp{6};
+        zc(nf,nn) = cInfoTmp{4};
+        zv(nf,nn) = cInfoTmp{5};
+        zg(nf,nn) = cInfoTmp{6};
+        a0(nf,nn) = cInfoTmp{7};
+        a(nf,nn) = cInfoTmp{8};
+        p(nf,nn) = cInfoTmp{9};
         
         % get vertex positions
-        vInfoTmp = textscan(fid,'VINFO %*f %*f %f %f %f %f %f',NVTMP); 
+        vInfoTmp = textscan(fid,'VINFO %*f %*f %f %f %f %f %f %f',NVTMP); 
         fline = fgetl(fid);     % goes to next line in file
 
         % parse data
@@ -79,6 +88,7 @@ while ~feof(fid)
         r{nf,nn} = vInfoTmp{3};
         l0{nf,nn} = vInfoTmp{4};
         t0{nf,nn} = vInfoTmp{5};
+        kb{nf,nn} = vInfoTmp{6};
     end
     
     % increment frame count
@@ -105,7 +115,7 @@ while ~feof(fid)
         NCELLStmp       = textscan(fid,'NUMCL %f');
         
         % read in packing fraction
-        phitmp          = textscan(fid,'PACKF %f',1);                   
+        htmp          = textscan(fid,'HPULL %f',1);                   
         fline = fgetl(fid);
         
         % update box size
@@ -121,13 +131,16 @@ end
 % delete extra information
 if (nf < NFRAMES)
     NFRAMES = nf-1;
-    phi(nf:end) = [];
+    h(nf:end) = [];
     L(nf:end,:) = [];
     S(nf:end,:) = [];
     
+    px(nf:end,:) = [];
+    py(nf:end,:) = [];
     nv(nf:end,:) = [];
     zc(nf:end,:) = [];
     zv(nf:end,:) = [];
+    zg(nf:end,:) = [];
     a0(nf:end,:) = [];
     a(nf:end,:) = [];
     p(nf:end,:) = [];
@@ -137,6 +150,7 @@ if (nf < NFRAMES)
     r(nf:end,:) = [];
     l0(nf:end,:) = [];
     t0(nf:end,:) = [];
+    kb(nf:end,:) = [];
 end
 
 % close position file
@@ -144,13 +158,16 @@ fclose(fid);
 
 % store cell pos data into struct
 dpmConfigData               = struct('NFRAMES',NFRAMES,'NCELLS',NCELLS);
-dpmConfigData.phi           = phi;
+dpmConfigData.h             = h;
 dpmConfigData.L             = L;
 dpmConfigData.S             = S;
 
+dpmConfigData.px            = px;
+dpmConfigData.py            = py;
 dpmConfigData.nv            = nv;
 dpmConfigData.zc            = zc;
 dpmConfigData.zv            = zv;
+dpmConfigData.zg            = zg;
 dpmConfigData.a0            = a0;
 dpmConfigData.a             = a;
 dpmConfigData.p             = p;
@@ -160,5 +177,6 @@ dpmConfigData.y             = y;
 dpmConfigData.r             = r;
 dpmConfigData.l0            = l0;
 dpmConfigData.t0            = t0;
+dpmConfigData.kb            = kb;
 
 end

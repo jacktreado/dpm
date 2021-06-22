@@ -576,7 +576,7 @@ void meso2D::mesoNetworkForceUpdate(){
 void meso2D::mesoPinForceUpdate(vector<double>& xpin, double kcspring){
 	// local variables
 	int gi, ci, vi, nvtmp;
-	double cx, cy, dcx, dcy;
+	double cx, cy, dcx, dcy, fx, fy, rho0=sqrt(a0[0]);
 
 	// update network forces
 	mesoNetworkForceUpdate();
@@ -598,11 +598,21 @@ void meso2D::mesoPinForceUpdate(vector<double>& xpin, double kcspring){
 		if (pbc[1])
 			dcy -= L[1]*round(dcy/L[1]);
 
+		// get forces
+		fx = -kcspring*dcx;
+		fy = -kcspring*dcy;
+
+		// add to virial stress tensor
+		stress[0] += (dcx*fx*rho0)/(L[0]*L[1]);
+		stress[1] += (dcy*fy*rho0)/(L[0]*L[1]);
+		stress[2] += (0.5*(dcx*fy + dcy*fx)*rho0)/(L[0]*L[1]);
+
+
 		// add to forces 
 		gi = szList[ci];
 		for (vi=0; vi<nvtmp; vi++){
-			F[NDIM*gi] -= (kcspring/nvtmp)*dcx;
-			F[NDIM*gi + 1] -= (kcspring/nvtmp)*dcy;
+			F[NDIM*gi] += fx;
+			F[NDIM*gi + 1] += fy;
 			gi++;
 		}
 	}
@@ -1136,7 +1146,7 @@ void meso2D::mesoNetworkExtension(double Ftol, double dt0, double delShrink, dou
 		// print positions if change in packing fraction is large enough
 		if ((lastPrintPhi - phi0) > dphiPrint){
 			// print positions
-			printConfiguration2D();
+			printMesoNetwork2D();
 
 			// update last phi when printed, for next time
 			lastPrintPhi = phi0;
@@ -1362,7 +1372,7 @@ void meso2D::mesophyllPinExtension(double Ftol, double dt0, double hmax, double 
 		// print positions if change in packing fraction is large enough
 		if (abs(lastPrinth - h) > dhprint){
 			// print positions
-			printConfiguration2D();
+			printMesoPin2D(xpin, h);
 
 			// update last print h
 			lastPrinth = h;
@@ -1397,8 +1407,304 @@ void meso2D::mesophyllPinExtension(double Ftol, double dt0, double hmax, double 
 
 
 
+/******************************
+
+	M E S O P H Y L L
+
+	P R I N T I N G
+
+	F U N C T I O N S
+
+*******************************/
 
 
+void meso2D::printMesoNetwork2D(){
+	// local variables
+	bool gtmp;
+	int ci, cj, vi, gi, gj, ctmp, zc, zv, zg;
+	double xi, yi, dx, dy, Lx, Ly;
+
+	// check if pos object is open
+	if (!posout.is_open()){
+		cout << "** ERROR: in printMesoNetwork2D, posout is not open, but function call will try to use. Ending here." << endl;
+		exit(1);
+	}
+	else
+		cout << "** In printMesoNetwork2D, printing particle positions to file..." << endl;
+
+	// save box sizes
+	Lx = L.at(0);
+	Ly = L.at(1);
+
+	// print information starting information
+	posout << setw(w) << left << "NEWFR" << " " << endl;
+	posout << setw(w) << left << "NUMCL" << setw(w) << left << NCELLS << endl;
+	posout << setw(w) << left << "PACKF" << setw(wnum) << setprecision(pnum) << left << vertexPackingFraction2D() << endl;
+
+	// print box sizes
+	posout << setw(w) << left << "BOXSZ";
+	posout << setw(wnum) << setprecision(pnum) << left << Lx;
+	posout << setw(wnum) << setprecision(pnum) << left << Ly;
+	posout << endl;
+
+	// print stress info
+	posout << setw(w) << left << "STRSS";
+	posout << setw(wnum) << setprecision(pnum) << left << stress.at(0);
+	posout << setw(wnum) << setprecision(pnum) << left << stress.at(1);
+	posout << setw(wnum) << setprecision(pnum) << left << stress.at(2);
+	posout << endl;
+
+	// print coordinate for rest of the cells
+	for (ci=0; ci<NCELLS; ci++){
+
+		// get cell contact + meso network data
+		zc = 0;
+		zv = 0;
+		zg = 0;
+		for (cj=0; cj<NCELLS; cj++){
+			// cell-cell contacts
+			if (ci != cj){
+				// contact info from entry ci, cj
+				if (ci < cj)
+					ctmp = cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]; 
+				else
+					ctmp = cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2]; 
+
+				// add to contact information
+				zv += ctmp;
+				if (ctmp > 0)
+					zc++;
+			}
+
+			// meso network
+			gi = gindex(ci,0);
+			for (vi=0; vi<nv[ci]; vi++){
+				for (gj=0; gj<NVTOT; gj++){
+					if (gi < gj)
+						gtmp = gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2]; 
+					else if (gi > gj)
+						gtmp = gij[NVTOT*gj + gi - (gj+1)*(gj+2)/2];
+
+					if (gtmp)
+						zg++;
+				}
+				gi++;
+			}
+		}
+
+		// cell information
+		posout << setw(w) << left << "CINFO";
+		posout << setw(w) << left << nv.at(ci);
+		posout << setw(w) << left << zc;
+		posout << setw(w) << left << zv;
+		posout << setw(w) << left << zg;
+		posout << setw(wnum) << left << a0.at(ci);
+		posout << setw(wnum) << left << area(ci);
+		posout << setw(wnum) << left << perimeter(ci);
+		posout << endl;
+
+		// get initial vertex positions
+		gi = gindex(ci,0);
+		xi = x.at(NDIM*gi);
+		yi = x.at(NDIM*gi + 1);
+
+		// place back in box center
+		xi = fmod(xi,Lx);
+		yi = fmod(yi,Ly);
+
+		posout << setw(w) << left << "VINFO";
+		posout << setw(w) << left << ci;
+		posout << setw(w) << left << 0;
+
+		// output initial vertex information
+		posout << setw(wnum) << setprecision(pnum) << right << xi;
+		posout << setw(wnum) << setprecision(pnum) << right << yi;
+		posout << setw(wnum) << setprecision(pnum) << right << r.at(gi);
+		posout << setw(wnum) << setprecision(pnum) << right << l0.at(gi);
+		posout << setw(wnum) << setprecision(pnum) << right << t0.at(gi);
+		posout << setw(wnum) << setprecision(pnum) << right << kbi.at(gi);
+		posout << endl;
+
+		// vertex information for next vertices
+		for (vi=1; vi<nv.at(ci); vi++){
+			// get global vertex index for next vertex
+			gi++;
+
+			// get next vertex positions
+			dx = x.at(NDIM*gi) - xi;
+			if (pbc[0])
+				dx -= Lx*round(dx/Lx);
+			xi += dx;
+
+			dy = x.at(NDIM*gi + 1) - yi;
+			if (pbc[1])
+				dy -= Ly*round(dy/Ly);
+			yi += dy;
+
+			// Print indexing information
+			posout << setw(w) << left << "VINFO";
+			posout << setw(w) << left << ci;
+			posout << setw(w) << left << vi;
+
+			// output vertex information
+			posout << setw(wnum) << setprecision(pnum) << right << xi;
+			posout << setw(wnum) << setprecision(pnum) << right << yi;
+			posout << setw(wnum) << setprecision(pnum) << right << r.at(gi);
+			posout << setw(wnum) << setprecision(pnum) << right << l0.at(gi);
+			posout << setw(wnum) << setprecision(pnum) << right << t0.at(gi);
+			posout << setw(wnum) << setprecision(pnum) << right << kbi.at(gi);
+			posout << endl;
+		}
+	}
+
+	// print end frame
+	posout << setw(w) << left << "ENDFR" << " " << endl;
+}
 
 
+void meso2D::printMesoPin2D(vector<double>& xpin, double h){
+	// local variables
+	bool gtmp;
+	int ci, cj, vi, gi, gj, ctmp, zc, zv, zg;
+	double xi, yi, dx, dy, Lx, Ly;
+
+	// check if pos object is open
+	if (!posout.is_open()){
+		cout << "** ERROR: in printMesoPin2D, posout is not open, but function call will try to use. Ending here." << endl;
+		exit(1);
+	}
+	else
+		cout << "** In printMesoPin2D, printing particle positions to file..." << endl;
+
+	// save box sizes
+	Lx = L.at(0);
+	Ly = L.at(1);
+
+	// print information starting information
+	posout << setw(w) << left << "NEWFR" << " " << endl;
+	posout << setw(w) << left << "NUMCL" << setw(w) << left << NCELLS << endl;
+	posout << setw(w) << left << "HPULL" << setw(wnum) << setprecision(pnum) << left << h << endl;
+
+	// print box sizes
+	posout << setw(w) << left << "BOXSZ";
+	posout << setw(wnum) << setprecision(pnum) << left << Lx;
+	posout << setw(wnum) << setprecision(pnum) << left << Ly;
+	posout << endl;
+
+	// print stress info
+	posout << setw(w) << left << "STRSS";
+	posout << setw(wnum) << setprecision(pnum) << left << stress.at(0);
+	posout << setw(wnum) << setprecision(pnum) << left << stress.at(1);
+	posout << setw(wnum) << setprecision(pnum) << left << stress.at(2);
+	posout << endl;
+
+	// print coordinate for rest of the cells
+	for (ci=0; ci<NCELLS; ci++){
+
+		// get cell contact + meso network data
+		zc = 0;
+		zv = 0;
+		zg = 0;
+		for (cj=0; cj<NCELLS; cj++){
+			// cell-cell contacts
+			if (ci != cj){
+				// contact info from entry ci, cj
+				if (ci < cj)
+					ctmp = cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]; 
+				else
+					ctmp = cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2]; 
+
+				// add to contact information
+				zv += ctmp;
+				if (ctmp > 0)
+					zc++;
+			}
+
+			// meso network
+			gi = gindex(ci,0);
+			for (vi=0; vi<nv[ci]; vi++){
+				for (gj=0; gj<NVTOT; gj++){
+					if (gi < gj)
+						gtmp = gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2]; 
+					else if (gi > gj)
+						gtmp = gij[NVTOT*gj + gi - (gj+1)*(gj+2)/2];
+
+					if (gtmp)
+						zg++;
+				}
+				gi++;
+			}
+		}
+
+		// cell information
+		posout << setw(w) << left << "CINFO";
+		posout << setw(wnum) << left << xpin[NDIM*ci];
+		posout << setw(wnum) << left << xpin[NDIM*ci + 1];
+		posout << setw(w) << left << nv.at(ci);
+		posout << setw(w) << left << zc;
+		posout << setw(w) << left << zv;
+		posout << setw(w) << left << zg;
+		posout << setw(wnum) << left << a0.at(ci);
+		posout << setw(wnum) << left << area(ci);
+		posout << setw(wnum) << left << perimeter(ci);
+		posout << endl;
+
+
+		// get initial vertex positions
+		gi = gindex(ci,0);
+		xi = x.at(NDIM*gi);
+		yi = x.at(NDIM*gi + 1);
+
+		// place back in box center
+		xi = fmod(xi,Lx);
+		yi = fmod(yi,Ly);
+
+		posout << setw(w) << left << "VINFO";
+		posout << setw(w) << left << ci;
+		posout << setw(w) << left << 0;
+
+		// output initial vertex information
+		posout << setw(wnum) << setprecision(pnum) << right << xi;
+		posout << setw(wnum) << setprecision(pnum) << right << yi;
+		posout << setw(wnum) << setprecision(pnum) << right << r.at(gi);
+		posout << setw(wnum) << setprecision(pnum) << right << l0.at(gi);
+		posout << setw(wnum) << setprecision(pnum) << right << t0.at(gi);
+		posout << setw(wnum) << setprecision(pnum) << right << kbi.at(gi);
+		posout << endl;
+
+		// vertex information for next vertices
+		for (vi=1; vi<nv.at(ci); vi++){
+			// get global vertex index for next vertex
+			gi++;
+
+			// get next vertex positions
+			dx = x.at(NDIM*gi) - xi;
+			if (pbc[0])
+				dx -= Lx*round(dx/Lx);
+			xi += dx;
+
+			dy = x.at(NDIM*gi + 1) - yi;
+			if (pbc[1])
+				dy -= Ly*round(dy/Ly);
+			yi += dy;
+
+			// Print indexing information
+			posout << setw(w) << left << "VINFO";
+			posout << setw(w) << left << ci;
+			posout << setw(w) << left << vi;
+
+			// output vertex information
+			posout << setw(wnum) << setprecision(pnum) << right << xi;
+			posout << setw(wnum) << setprecision(pnum) << right << yi;
+			posout << setw(wnum) << setprecision(pnum) << right << r.at(gi);
+			posout << setw(wnum) << setprecision(pnum) << right << l0.at(gi);
+			posout << setw(wnum) << setprecision(pnum) << right << t0.at(gi);
+			posout << setw(wnum) << setprecision(pnum) << right << kbi.at(gi);
+			posout << endl;
+		}
+	}
+
+	// print end frame
+	posout << setw(w) << left << "ENDFR" << " " << endl;
+}
 

@@ -1368,9 +1368,9 @@ void dpm::vertexRepulsiveForces2D(){
 							U += 0.5*kc*pow((1 - (rij/sij)),2.0);
 
 							// add to virial stress
-							stress[1] += dx*fx;
-							stress[2] += dy*fy;
-							stress[3] += 0.5*(dx*fy + dy*fx);
+							stress[0] += dx*fx;
+							stress[1] += dy*fy;
+							stress[2] += 0.5*(dx*fy + dy*fx);
 
 							// add to contacts
 							cindices(ci, vi, gi);
@@ -1432,9 +1432,9 @@ void dpm::vertexRepulsiveForces2D(){
 								U += 0.5*kc*pow((1 - (rij/sij)),2.0);
 
 								// add to virial stress
-								stress[1] += dx*fx;
-								stress[2] += dy*fy;
-								stress[3] += 0.5*(dx*fy + dy*fx);
+								stress[0] += dx*fx;
+								stress[1] += dy*fy;
+								stress[2] += 0.5*(dx*fy + dy*fx);
 
 								// add to contacts
 								cindices(ci, vi, gi);
@@ -1938,13 +1938,12 @@ void dpm::vertexJamming2D(double Ftol, double Ptol, double dt0, double dphi0, bo
 					// current = upper bound length scale r
 		            rH = rho0;
 
-		            // save overcompressed state
-					r0 = rH;
-					xsave = x;
-					rsave = r;
-					l0save = l0;
-					t0save = t0;
-					a0save = a0;
+		            // load state
+					x = xsave;
+					r = rsave;
+					l0 = l0save;
+					t0 = t0save;
+					a0 = a0save;
 
 					// compute new scale factor
 		            scaleFactor = 0.5*(rH + rL)/r0;
@@ -1980,7 +1979,436 @@ void dpm::vertexJamming2D(double Ftol, double Ptol, double dt0, double dphi0, bo
 
 
 
+/******************************
 
+	D P M  
+
+		H E S S I A N
+
+*******************************/
+
+
+// wrapper function for total hessian
+// note: dynamical matrix M = H - S
+void dpm::dpmHessian2D(Eigen::MatrixXd& H, Eigen::MatrixXd& S){
+	// local variables
+	int k, l;
+
+	// print something to the console
+	cout << "** Computing Hessian for configuration in dpmHessian2D ..." << endl;
+
+	// initialize all possible matrices
+	Eigen::MatrixXd Ha(vertDOF,vertDOF);		// stiffness matrix for area term
+	Eigen::MatrixXd Sa(vertDOF,vertDOF);		// stress matrix for area term
+	Eigen::MatrixXd Hl(vertDOF,vertDOF);		// stiffness matrix for perimeter term
+	Eigen::MatrixXd Sl(vertDOF,vertDOF);		// stress matrix for perimeter term
+	Eigen::MatrixXd Hb(vertDOF,vertDOF);		// stiffness matrix for bending energy
+	Eigen::MatrixXd Sb(vertDOF,vertDOF);		// stress matrix for bending term
+	Eigen::MatrixXd Hvv(vertDOF,vertDOF);		// stiffness matrix for interaction terms
+	Eigen::MatrixXd Svv(vertDOF,vertDOF);		// stress matrix for interaction terms
+
+	// initialize all matrices to be 0 initially
+	for (k=0; k<vertDOF; k++){
+		for (l=0; l<vertDOF; l++){
+			Ha(k,l) = 0.0;
+			Sa(k,l) = 0.0;
+			Hl(k,l) = 0.0;
+			Sl(k,l) = 0.0;
+			Hb(k,l) = 0.0;
+			Sb(k,l) = 0.0;
+			Hvv(k,l) = 0.0;
+			Svv(k,l) = 0.0;
+			S(k,l) = 0.0;
+			H(k,l) = 0.0;
+		}
+	}
+
+	// find matrix elements for each term
+	if (ka > 0)
+		dpmAreaHessian2D(Ha,Sa);
+
+	if (kl > 0)
+		dpmPerimeterHessian2D(Hl,Sl);
+
+	// if (kb > 0)
+		// dpmBendingHessian2D(Hb,Sb);
+
+	if (kc > 0)
+		dpmRepulsiveHarmonicSprings2D(Hvv,Svv);
+
+	// construct matrices
+	for (k=0; k<vertDOF; k++){
+		for (l=0; l<vertDOF; l++){
+			H(k,l) = Ha(k,l) + Hl(k,l) + Hb(k,l) + Hvv(k,l);
+			S(k,l) = -Sa(k,l) - Sl(k,l) - Sb(k,l) - Svv(k,l);
+		}
+	}
+}
+
+
+// construct hessian for area term
+void dpm::dpmAreaHessian2D(Eigen::MatrixXd& Ha, Eigen::MatrixXd& Sa){
+	// local variables
+	int nvtmp, ci, vim1, vi, vip1, vjm1, vj, vjp1;
+	int kxm1, kx, kxp1, kym1, ky, kyp1, lxm1, lym1, lx, ly, lxp1, lyp1;
+	double rho0, a0tmp, a02tmp, da, da_dxi, da_dyi, da_dxj, da_dyj;
+	double lim1x, lix, liy, lim1y, ljm1x, ljm1y, ljx, ljy;
+
+	// loop over cells
+	rho0 = sqrt(a0[0]);
+	for (ci=0; ci<NCELLS; ci++){
+		// shape parameters for ci
+		nvtmp = nv[ci];
+		a0tmp = a0[ci];
+		a02tmp = a0tmp*a0tmp;
+
+		// fractional area strain
+		da = (area(ci)/a0tmp) - 1.0;
+
+		// loop over vertices
+		for (vi=0; vi<nvtmp; vi++){
+			// wrap vertices
+			vim1 		= (vi - 1 + nvtmp) % nvtmp;
+			vip1 		= (vi + 1) % nvtmp;
+
+			// matrix indices
+			kxm1 		= NDIM*(gindex(ci,vim1));
+			kym1 		= NDIM*(gindex(ci,vim1)) + 1;
+
+			kx 			= NDIM*(gindex(ci,vi));
+			ky 			= NDIM*(gindex(ci,vi)) + 1;
+
+			kxp1 		= NDIM*(gindex(ci,vip1));
+			kyp1 		= NDIM*(gindex(ci,vip1)) + 1;
+
+
+			// segment elements
+			lim1x 		= x[kx] - x[kxm1];
+			lim1y 		= x[ky] - x[kym1];
+
+			lix 		= x[kxp1] - x[kx];
+			liy 		= x[kyp1] - x[ky];
+
+			if (pbc[0]){
+				lim1x 	-= L[0]*round(lim1x/L[0]);
+				lix		-= L[0]*round(lix/L[0]);
+			}
+			if (pbc[1]){
+				lim1y 	-= L[1]*round(lim1y/L[1]);
+				liy 	-= L[1]*round(liy/L[1]);
+			}
+
+			// stress matrix
+		    Sa(kx,kyp1) = 0.5*da*((rho0*rho0)/a0tmp);
+			Sa(ky,kxp1) = -0.5*da*((rho0*rho0)/a0tmp);
+
+			Sa(kyp1,kx) = Sa(kx,kyp1);
+			Sa(kxp1,ky) = Sa(ky,kxp1);
+
+			// area derivatives (for stiffness matrix)
+			da_dxi      = 0.5*(liy + lim1y);
+			da_dyi      = -0.5*(lim1x + lix);
+
+			// loop over other vertices, for area elasticity stiffness matrix
+			for (vj=vi; vj<nvtmp; vj++){
+
+				// wrap jp1 and jm1
+				vjp1 		= (vj + 1) % nvtmp;
+				vjm1 		= (vj - 1 + nvtmp) % nvtmp;
+
+				// dof elements
+				lxm1 		= NDIM*(gindex(ci,vjm1));
+				lym1 		= lxm1 + 1;
+
+				lx 			= NDIM*(gindex(ci,vj));
+				ly 			= lx + 1;
+
+				lxp1		= NDIM*(gindex(ci,vjp1));
+				lyp1		= lxp1 + 1;
+
+				// j segments
+				ljm1x 		= x[lx] - x[lxm1];
+				if (pbc[0])
+					ljm1x		-= L[0]*round(ljm1x/L[0]);
+
+				ljm1y 		= x[ly] - x[lym1];
+				if (pbc[1])
+					ljm1y 		-= L[1]*round(ljm1y/L[1]);
+
+
+				ljx 		= x[lxp1] - x[lx];
+				if (pbc[0])
+					ljx			-= L[0]*round(ljx/L[0]);
+
+				ljy 		= x[lyp1] - x[ly];
+				if (pbc[1])
+					ljy 		-= L[1]*round(ljy/L[1]);
+
+				// area derivatives
+				da_dxj      = 0.5*(ljy + ljm1y);
+				da_dyj      = -0.5*(ljm1x + ljx);
+
+				// stiffness matrix
+				Ha(kx,lx) = da_dxi*da_dxj*((rho0*rho0)/a02tmp);
+		        Ha(kx,ly) = da_dxi*da_dyj*((rho0*rho0)/a02tmp);
+		        
+		        Ha(ky,lx) = da_dyi*da_dxj*((rho0*rho0)/a02tmp);
+		        Ha(ky,ly) = da_dyi*da_dyj*((rho0*rho0)/a02tmp);
+		        
+		        Ha(lx,kx) = Ha(kx,lx);
+		        Ha(ly,kx) = Ha(kx,ly);
+		        
+		        Ha(lx,ky) = Ha(ky,lx);
+		        Ha(ly,ky) = Ha(ky,ly);
+		    }
+		}
+	}
+}
+
+
+// construct hessian for perimeter term
+void dpm::dpmPerimeterHessian2D(Eigen::MatrixXd& Hl, Eigen::MatrixXd& Sl){
+	// local variables
+	int nvtmp, ci, vim1, vi, vip1;
+	int kxm1, kx, kxp1, kym1, ky, kyp1;
+	double lim1x, lim1y, lix, liy, lim1, li, dlim1, dli, ulim1x, ulim1y, ulix, uliy;
+	double l0im1, l0im1_sq, l0i, l0i_sq;
+	double rho0, Kl;
+
+	// loop over cells
+	rho0 = sqrt(a0[0]);
+	for (ci=0; ci<NCELLS; ci++){
+		// number of vertices
+		nvtmp = nv[ci];
+
+		// prefactor scaled by length, will come out as dimensionless
+		Kl = kl*(rho0*rho0);
+
+		for (vi=0; vi<nvtmp; vi++){
+			// wrap vertices
+			vim1 		= (vi - 1 + nvtmp) % nvtmp;
+			vip1 		= (vi + 1) % nvtmp;
+
+			// matrix indices
+			kxm1 		= NDIM*(gindex(ci,vim1));
+			kym1 		= NDIM*(gindex(ci,vim1)) + 1;
+
+			kx 			= NDIM*(gindex(ci,vi));
+			ky 			= NDIM*(gindex(ci,vi)) + 1;
+
+			kxp1 		= NDIM*(gindex(ci,vip1));
+			kyp1 		= NDIM*(gindex(ci,vip1)) + 1;
+
+
+			// segment elements
+			lim1x 		= x[kx] - x[kxm1];
+			lim1y 		= x[ky] - x[kym1];
+
+			lix 		= x[kxp1] - x[kx];
+			liy 		= x[kyp1] - x[ky];
+
+			if (pbc[0]){
+				lim1x 	-= L[0]*round(lim1x/L[0]);
+				lix		-= L[0]*round(lix/L[0]);
+			}
+			if (pbc[1]){
+				lim1y 	-= L[1]*round(lim1y/L[1]);
+				liy 	-= L[1]*round(liy/L[1]);
+			}
+
+
+			// segment lengths
+			lim1 		= sqrt(lim1x*lim1x + lim1y*lim1y);
+			li 			= sqrt(lix*lix + liy*liy);
+
+			// segment strains
+			l0im1 		= l0[gindex(ci,vim1)];
+			l0i 		= l0[gindex(ci,vi)];
+
+			dlim1 		= (lim1/l0im1) - 1.0;
+			dli 		= (li/l0i) - 1.0;
+
+			l0im1_sq 	= l0im1*l0im1;
+			l0i_sq 		= l0i*l0i;
+
+
+			// -- PERIMETER SPRINGS
+
+			// unit vectors
+			ulim1x   = lim1x/lim1;
+			ulim1y   = lim1y/lim1;
+
+			ulix   = lix/li;
+			uliy   = liy/li;
+
+			// 	STIFFNESS MATRIX
+
+			// main diagonal
+		    Hl(kx,kx)       = Kl*((ulix*ulix)/l0i_sq + (ulim1x*ulim1x)/l0im1_sq);
+			Hl(ky,ky)       = Kl*((uliy*uliy)/l0i_sq + (ulim1y*ulim1y)/l0im1_sq);
+
+			Hl(kx,ky)       = Kl*((ulix*uliy)/l0i_sq + (ulim1x*ulim1y)/l0im1_sq);
+			Hl(ky,kx)       = Hl(kx,ky);
+		    
+		    // 1off diagonal
+		    Hl(kx,kxp1)     = -Kl*(ulix*ulix)/l0i_sq;
+			Hl(ky,kyp1)     = -Kl*(uliy*uliy)/l0i_sq;
+
+			Hl(kx,kyp1)     = -Kl*(ulix*uliy)/l0i_sq;
+			Hl(ky,kxp1)     = Hl(kx,kyp1);
+		    
+		    // enforce symmetry in lower triangle
+		    Hl(kxp1,kx)     = Hl(kx,kxp1);
+		    Hl(kyp1,ky)     = Hl(ky,kyp1);
+		    
+		    Hl(kyp1,kx)     = Hl(kx,kyp1);
+		    Hl(kxp1,ky)     = Hl(ky,kxp1);
+
+
+		    // 	STRESS MATRIX
+
+		    // main diagonal
+		    Sl(kx,kx)       = Kl*(dlim1*((ulim1y*ulim1y)/(l0im1*lim1)) + dli*((uliy*uliy)/(l0i*li)));
+		    Sl(ky,ky)       = Kl*(dlim1*((ulim1x*ulim1x)/(l0im1*lim1)) + dli*((ulix*ulix)/(l0i*li)));
+		    
+		    Sl(kx,ky)       = -Kl*(dlim1*((ulim1x*ulim1y)/(l0im1*lim1)) + dli*((ulix*uliy)/(l0i*li)));
+		    Sl(ky,kx)       = Sl(kx,ky);
+		    
+		    // 1off diagonal
+		    Sl(kx,kxp1)     = -Kl*dli*((uliy*uliy)/(l0i*li));
+		    Sl(ky,kyp1)     = -Kl*dli*((ulix*ulix)/(l0i*li));
+		    
+		    Sl(kx,kyp1)     = Kl*dli*((ulix*uliy)/(l0i*li));
+		    Sl(ky,kxp1)     = Sl(kx,kyp1);
+
+		    // enforce symmetry in lower triangle
+		    Sl(kxp1,kx)     = Sl(kx,kxp1);
+    		Sl(kyp1,ky)     = Sl(ky,kyp1);
+    
+    		Sl(kyp1,kx)     = Sl(kx,kyp1);
+    		Sl(kxp1,ky)     = Sl(ky,kxp1);
+		}
+	}
+}
+
+
+// TO-DO: need to make hessian function for bending term (th - th0)^2
+
+// construct hessian for interaction term
+void dpm::dpmRepulsiveHarmonicSprings2D(Eigen::MatrixXd& Hvv, Eigen::MatrixXd& Svv){
+	// local variables
+	int ci, cj, vi, vj, gi, gj;
+	int mxi, myi, mxj, myj;
+	double rho0, sij, dx, dy, rij, kij, h, uxij, uyij;
+
+	// loop over cell pairs
+	rho0 = sqrt(a0[0]);
+	for (ci=0; ci<NCELLS; ci++){
+		for (cj=ci+1; cj<NCELLS; cj++){
+
+			// check if pair of cells is contact, only proceed if true
+			if (cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2] > 0){
+
+				// loop over pairs of vertices on both cells, check for overlap, compute matrix elements
+				for (vi=0; vi<nv[ci]; vi++){
+
+					// matrix element indices (cell ci, vertex vi)
+					gi = gindex(ci,vi);
+					mxi = NDIM*gi;
+					myi = mxi + 1;
+
+					for (vj=0; vj<nv[cj]; vj++){
+						// matrix element indices (cell cj, vertex vj)
+						gj = gindex(cj,vj);
+						mxj = NDIM*gj;
+						myj = mxj + 1;
+
+						// contact distance
+						sij = r[gi] + r[gj];
+
+						// get distance between vertices
+						// particle distance
+						dx = x[mxj] - x[mxi];
+						if (pbc[0])
+							dx -= L[0]*round(dx/L[0]);
+						if (dx < sij){
+							dy = x[myj] - x[myi];
+							if (pbc[1])
+								dy -= L[1]*round(dy/L[1]);
+							if (dy < sij){
+								rij = sqrt(dx*dx + dy*dy);
+								if (rij < sij){
+									// spring constant
+									kij = (kc*rho0*rho0)/(sij*rij);
+
+									// dimensionless overlap
+									h = rij/sij;
+
+									// derivatives of distance w.r.t. coordinates
+									uxij = dx/rij;
+									uyij = dy/rij;
+
+									// compute stiffness and stress matrices (off diagonal, enforce symmetry in lower triangles)
+
+									// -- stiffness matrix
+									Hvv(mxi,mxj) = -((kc*rho0*rho0)/(sij*sij))*(uxij*uxij);
+									Hvv(myi,myj) = -((kc*rho0*rho0)/(sij*sij))*(uyij*uyij);
+									Hvv(mxi,myj) = -((kc*rho0*rho0)/(sij*sij))*(uxij*uyij);
+									Hvv(myi,mxj) = -((kc*rho0*rho0)/(sij*sij))*(uyij*uxij);
+
+									Hvv(mxj,mxi) = Hvv(mxi,mxj);
+									Hvv(myj,myi) = Hvv(myi,myj);
+									Hvv(mxj,myi) = Hvv(myi,mxj);
+									Hvv(myj,mxi) = Hvv(mxi,myj);
+
+
+
+									// -- stress matrix
+									Svv(mxi,mxj) = kij*(1.0 - h)*(uyij*uyij);
+									Svv(myi,myj) = kij*(1.0 - h)*(uxij*uxij);
+									Svv(mxi,myj) = -kij*(1.0 - h)*(uxij*uyij);
+									Svv(myi,mxj) = -kij*(1.0 - h)*(uxij*uyij);
+
+									Svv(mxj,mxi) = Svv(mxi,mxj);
+					                Svv(myj,myi) = Svv(myi,myj);
+					                Svv(mxj,myi) = Svv(myi,mxj);
+					                Svv(myj,mxi) = Svv(mxi,myj);
+
+
+					                
+					                // add to diagonal, using off diagonals and reciprocity
+
+					                // -- stiffness matrix
+					                Hvv(mxi,mxi) -= Hvv(mxi,mxj);
+					                Hvv(myi,myi) -= Hvv(myi,myj);
+					                Hvv(mxi,myi) -= Hvv(mxi,myj);
+					                Hvv(myi,mxi) -= Hvv(myi,mxj);
+					                
+					                Hvv(mxj,mxj) -= Hvv(mxi,mxj);
+					                Hvv(myj,myj) -= Hvv(myi,myj);
+					                Hvv(mxj,myj) -= Hvv(mxi,myj);
+					                Hvv(myj,mxj) -= Hvv(myi,mxj);
+
+
+					                // -- stress matrix
+					                Svv(mxi,mxi) -= Svv(mxi,mxj);
+					                Svv(myi,myi) -= Svv(myi,myj);
+					                Svv(mxi,myi) -= Svv(mxi,myj);
+					                Svv(myi,mxi) -= Svv(myi,mxj);
+					                
+					                Svv(mxj,mxj) -= Svv(mxi,mxj);
+					                Svv(myj,myj) -= Svv(myi,myj);
+					                Svv(mxj,myj) -= Svv(mxi,myj);
+					                Svv(myj,mxj) -= Svv(myi,mxj);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
 
 
 
@@ -2013,8 +2441,13 @@ void dpm::printConfiguration2D(){
 	int ci, cj, vi, gi, ctmp, zc, zv;
 	double xi, yi, dx, dy, Lx, Ly;
 
-	// print to console
-	cout << "** Printing particle positions to file" << endl;
+	// check if pos object is open
+	if (!posout.is_open()){
+		cout << "** ERROR: in printConfiguration2D, posout is not open, but function call will try to use. Ending here." << endl;
+		exit(1);
+	}
+	else
+		cout << "** In printConfiguration2D, printing particle positions to file..." << endl;
 
 	// save box sizes
 	Lx = L.at(0);
@@ -2125,7 +2558,22 @@ void dpm::printConfiguration2D(){
 	posout << setw(w) << left << "ENDFR" << " " << endl;
 }
 
+void dpm::printMatrixEigenvalues2D(Eigen::MatrixXd& M){
+	// check if pos object is open
+	if (!hessout.is_open()){
+		cout << "** ERROR: in printMatrixEigenvalues2D, hessout is not open, but function call will try to use. Ending here." << endl;
+		exit(1);
+	}
+	else
+		cout << "** In printMatrixEigenvalues2D, printing particle positions to file..." << endl;
 
 
+	// compute eigenvalues from matrix, plot
+	Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> dynamicalMatrixEigenmodes(M);
+
+	// print to file
+	hessout << vertDOF << endl;
+	hessout << dynamicalMatrixEigenmodes.eigenvalues() << endl;
+}
 
 

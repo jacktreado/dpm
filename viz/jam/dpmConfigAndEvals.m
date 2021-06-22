@@ -1,13 +1,14 @@
-%% Draw dpm config files
+%% Script to read in DPM configuration with dynamical matrix eigenvalues
 
 clear;
 close all;
 clc;
 
-% file name string
+% file name strings
 fstr = '~/Jamming/CellSim/dpm/pos.test';
+hstr = '~/Jamming/CellSim/dpm/hess.test';
 
-% read in data
+% read in config data
 dpmData = readDPMConfig(fstr);
 
 % get number of frames
@@ -33,6 +34,27 @@ S = dpmData.S;
 P = 0.5*(S(:,1) + S(:,2));
 
 phi = dpmData.phi;
+
+
+% read in Hessian data
+fid = fopen(hstr);
+vertDOF = textscan(fid,'%f',1);
+vertDOF = vertDOF{1};
+evals = textscan(fid,'%f',vertDOF);
+evals = evals{1};
+fclose(fid);
+
+dofx = 1:vertDOF;
+figure(100), clf, hold on, box on;
+plot(dofx(evals<0),abs(evals(evals<0)),'ks','markerfacecolor','r','markersize',10);
+plot(dofx(evals>0),evals(evals>0),'bo','markersize',10);
+xlabel('index','Interpreter','latex');
+ylabel('$\lambda_i$','Interpreter','latex');
+ax = gca;
+ax.FontSize = 24;
+ax.YScale = 'log';
+
+
 
 %% Draw cells
 

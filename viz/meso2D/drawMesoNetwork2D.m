@@ -8,10 +8,12 @@ clc;
 fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
-dpmData = readDPMConfig(fstr);
+dpmData = readMesoNetwork2D(fstr);
 
 % get number of frames
 NFRAMES = dpmData.NFRAMES;
+
+% sim info
 NCELLS = dpmData.NCELLS;
 nv = dpmData.nv(1,:);
 L = dpmData.L(1,:);
@@ -22,27 +24,86 @@ y = dpmData.y;
 r = dpmData.r;
 zc = dpmData.zc;
 zv = dpmData.zv;
+zg = dpmData.zg;
 a0 = dpmData.a0;
 l0 = dpmData.l0;
+t0 = dpmData.t0;
+kb = dpmData.kb;
 
+% get preferred shape
+calA0 = zeros(NFRAMES,NCELLS);
+for ff = 1:NFRAMES
+    a0tmp = a0(ff,:);
+    l0tmp = l0(ff,:);
+    for cc = 1:NCELLS
+        p0tmp = sum(l0tmp{cc});
+        calA0(ff,cc) = p0tmp^2/(4.0*pi*a0tmp(cc));
+    end
+end
+
+% particle shape data
 p = dpmData.p;
 a = dpmData.a;
 calA = p.^2./(4.0*pi*a);
 
+% stress data
 S = dpmData.S;
 P = 0.5*(S(:,1) + S(:,2));
 
+% packing fraction
 phi = dpmData.phi;
 
 %% Draw cells
 
 % show vertices or not
-showverts = 1;
+showverts = 0;
 
-% get cell colors
-[nvUQ, ~, IC] = unique(nv);
-NUQ = length(nvUQ);
-cellCLR = summer(NUQ);
+% color by shape or size
+colorShape = 0;
+
+if colorShape == 1
+    % color by real shape
+    NCLR = 100;
+    calA0Bins = linspace(0.999*min(calA(:)),1.001*max(calA(:)),NCLR+1);
+    cellCLR = jet(NCLR);
+elseif colorShape == 2
+    % color by preferred shape
+    NCLR = 100;
+    calA0Bins = linspace(0.999*min(calA0(:)),1.001*max(calA0(:)),NCLR+1);
+    cellCLR = jet(NCLR);
+else
+    [nvUQ, ~, IC] = unique(nv);
+    NUQ = length(nvUQ);
+    cellCLR = summer(NUQ);
+end
+
+% draw cell cell contacts
+if exist(ctcstr,'var')
+    % can choose to draw contacts
+    drawCTCS = 1;
+
+    % load in ctc data
+    if drawCTCS == 1
+        cijList = cell(NFRAMES,1);
+        zc = zeros(NFRAMES,NCELLS);
+        NCTCS = 0.5*NCELLS*(NCELLS-1);
+        ltInds =  find(tril(ones(NCELLS),-1));
+        frmt = repmat('%f ',1,NCTCS);
+        fid = fopen(ctcstr);
+        for ff = 1:NFRAMES
+            cijtmp = zeros(NCELLS);
+            ctmp = textscan(fid,frmt,1);
+            ctmp = cell2mat(ctmp);
+            cijtmp(ltInds) = ctmp;
+            cijtmp = cijtmp + cijtmp';
+            cijList{ff} = cijtmp;
+            zc(ff,:) = sum(cijtmp > 0,1);
+        end
+        fclose(fid);
+    end
+else
+    drawCTCS = 0;
+end
 
 % get frames to plot
 if showverts == 0
@@ -51,7 +112,7 @@ if showverts == 0
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
-    FSTART = NFRAMES;
+    FSTART = 2;
     FSTEP = 1;
     FEND = FSTART;
 end
@@ -59,7 +120,7 @@ end
 % make a movie
 makeAMovie = 0;
 if makeAMovie == 1
-    moviestr = 'jamming.mp4';
+    moviestr = 'mesoNetwork.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);

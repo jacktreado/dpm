@@ -169,6 +169,7 @@ public:
 	int ccContacts();
 
 	// Setters
+	void setpbc(int d, bool val) { pbc.at(d) = val; };
 	void setNCELLS(int val) { NCELLS = val; };
 	void setdt(double val);
 	void setka(double val) { ka = val; };
@@ -240,9 +241,18 @@ public:
 	void vertexCompress2Target2D(double Ftol, double dt0, double phi0Target, double dphi0);
 	void vertexJamming2D(double Ftol, double Ptol, double dt0, double dphi0, bool plotCompression);
 
+
+	// hessian methods
+	// note: dynamical matrix contribution is always M = H - S
+	void dpmHessian2D(Eigen::MatrixXd& H, Eigen::MatrixXd& S);
+	void dpmAreaHessian2D(Eigen::MatrixXd& Ha, Eigen::MatrixXd& Sa);
+	void dpmPerimeterHessian2D(Eigen::MatrixXd& Hl, Eigen::MatrixXd& Sl);
+	void dpmRepulsiveHarmonicSprings2D(Eigen::MatrixXd& Hvv, Eigen::MatrixXd& Svv);
+
 	// print vertex information to file
 	void printContactMatrix();
 	void printConfiguration2D();
+	void printMatrixEigenvalues2D(Eigen::MatrixXd& M);
 
 };
 

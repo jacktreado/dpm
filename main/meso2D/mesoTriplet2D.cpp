@@ -35,8 +35,8 @@ using namespace std;
 // global constants
 const int NCELLS 				= 3;		// always 3 cells
 const double phi0 				= 0.1;		// initial packing fraction, for viz
-const double dh 				= 0.01;		// cell center step size
-const double dhprint 			= 0.1;		// dh before print step
+const double dh 				= 0.0001;	// cell center step size
+const double dhprint 			= 0.05;		// dh before print step
 const double boxLengthScale 	= 2.5;		// neighbor list box size in units of initial l0
 const double dt0 				= 1e-2;		// initial magnitude of time step in units of MD time
 
@@ -86,6 +86,10 @@ int main(int argc, char const *argv[])
 	// instantiate object
 	meso2D meso2Dobj(NCELLS, seed);
 
+	// SET PBC -> 0, NO NEED FOR TRIPLET CELLS
+	meso2Dobj.setpbc(0,false);
+	meso2Dobj.setpbc(1,false);
+
 	// open position config file
 	meso2Dobj.openPosObject(positionFile);
 
@@ -102,7 +106,6 @@ int main(int argc, char const *argv[])
 
 	// draw pins to box center
 	meso2Dobj.mesoPinFIRE(xpin0, Ftol, dt0, kcspring);
-	meso2Dobj.printConfiguration2D();
 
 	// set aging parameters
 	meso2Dobj.setbetaEff(betaEff);

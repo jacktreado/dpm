@@ -1,10 +1,12 @@
 
-function dpmConfigData = readDPMConfig(fstr)
+function dpmConfigData = readMesoNetwork2D(fstr)
 %% FUNCTION to read in DPM config data given file string
+% Specifically for mesoNetwork2D data
 
 % print info to console
 finfo = dir(fstr);
-fprintf('-- Reading in %s,  file size = %f\n',finfo.name,finfo.bytes/1e6);
+fprintf('-- Reading in %s\n',finfo.name);
+fprintf('-- File size = %f MB\n',finfo.bytes/1e6);
 
 % open file stream
 fid = fopen(fstr);
@@ -28,6 +30,7 @@ S       = zeros(NFRAMES,3);
 nv      = zeros(NFRAMES,NCELLS);
 zc      = zeros(NFRAMES,NCELLS);
 zv      = zeros(NFRAMES,NCELLS);
+zg      = zeros(NFRAMES,NCELLS);
 a0      = zeros(NFRAMES,NCELLS);
 a       = zeros(NFRAMES,NCELLS);
 p       = zeros(NFRAMES,NCELLS);
@@ -37,6 +40,7 @@ y       = cell(NFRAMES,NCELLS);
 r       = cell(NFRAMES,NCELLS);
 l0      = cell(NFRAMES,NCELLS);
 t0      = cell(NFRAMES,NCELLS);
+kb      = cell(NFRAMES,NCELLS);
 
 % number of frames found
 nf = 1;
@@ -58,19 +62,20 @@ while ~feof(fid)
     % get info about deformable particle
     for nn = 1:NCELLS
         % get cell pos and asphericity
-        cInfoTmp = textscan(fid,'CINFO %f %f %f %f %f %f',1);   
+        cInfoTmp = textscan(fid,'CINFO %f %f %f %f %f %f %f',1);   
         fline = fgetl(fid);     % goes to next line in file
 
         NVTMP = cInfoTmp{1};
         nv(nf,nn) = NVTMP;
         zc(nf,nn) = cInfoTmp{2};
         zv(nf,nn) = cInfoTmp{3};
-        a0(nf,nn) = cInfoTmp{4};
-        a(nf,nn) = cInfoTmp{5};
-        p(nf,nn) = cInfoTmp{6};
+        zg(nf,nn) = cInfoTmp{4};
+        a0(nf,nn) = cInfoTmp{5};
+        a(nf,nn) = cInfoTmp{6};
+        p(nf,nn) = cInfoTmp{7};
         
         % get vertex positions
-        vInfoTmp = textscan(fid,'VINFO %*f %*f %f %f %f %f %f',NVTMP); 
+        vInfoTmp = textscan(fid,'VINFO %*f %*f %f %f %f %f %f %f',NVTMP); 
         fline = fgetl(fid);     % goes to next line in file
 
         % parse data
@@ -79,6 +84,7 @@ while ~feof(fid)
         r{nf,nn} = vInfoTmp{3};
         l0{nf,nn} = vInfoTmp{4};
         t0{nf,nn} = vInfoTmp{5};
+        kb{nf,nn} = vInfoTmp{6};
     end
     
     % increment frame count
@@ -128,6 +134,7 @@ if (nf < NFRAMES)
     nv(nf:end,:) = [];
     zc(nf:end,:) = [];
     zv(nf:end,:) = [];
+    zg(nf:end,:) = [];
     a0(nf:end,:) = [];
     a(nf:end,:) = [];
     p(nf:end,:) = [];
@@ -137,6 +144,7 @@ if (nf < NFRAMES)
     r(nf:end,:) = [];
     l0(nf:end,:) = [];
     t0(nf:end,:) = [];
+    kb(nf:end,:) = [];
 end
 
 % close position file
@@ -151,6 +159,7 @@ dpmConfigData.S             = S;
 dpmConfigData.nv            = nv;
 dpmConfigData.zc            = zc;
 dpmConfigData.zv            = zv;
+dpmConfigData.zg            = zg;
 dpmConfigData.a0            = a0;
 dpmConfigData.a             = a;
 dpmConfigData.p             = p;
@@ -160,5 +169,6 @@ dpmConfigData.y             = y;
 dpmConfigData.r             = r;
 dpmConfigData.l0            = l0;
 dpmConfigData.t0            = t0;
+dpmConfigData.kb            = kb;
 
 end

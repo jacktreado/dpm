@@ -75,6 +75,11 @@ public:
 	void updateMesophyllBondNetwork();
 	void ageMesophyllShapeParameters();
 	void mesophyllPinExtension(double Ftol, double dt0, double hmax, double dh, double dhprint, double kcspring);
+
+
+	// printing functions
+	void printMesoNetwork2D();
+	void printMesoPin2D(std::vector<double>& xpin, double h);
 };
 
 #endif
