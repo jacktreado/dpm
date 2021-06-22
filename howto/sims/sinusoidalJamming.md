@@ -148,7 +148,7 @@ To submit this function to the cluster, use the Slurm script [slurm_bidisperseSi
 
 **NOTE**: You MUST edit the `netid` variable to be your netid, or else the data won't be saved in the right location!
 
-Slurm-specific options, like `partition` or `time` are controlled by the `\#SBATCH` headers. See [this Slurm cheatsheet](https://slurm.schedmd.com/pdfs/summary.pdf) for all cluster options. 
+Slurm-specific options, like `partition` or `time` are controlled by the `#SBATCH` headers. See [this Slurm cheatsheet](https://slurm.schedmd.com/pdfs/summary.pdf) for all cluster options. 
 
 Simulation options are set by these variables:
 ```bash
