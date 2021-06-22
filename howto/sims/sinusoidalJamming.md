@@ -142,7 +142,7 @@ Each file will begin with the string `lobes_N16_n24_calA01.10_kb0.01_thA3.0_thK3
 
 ## Data processing (Slurm scheduler only)
 
-The MATLAB function [processJammedDPMEnsemble](/viz/jam/processJammedDPMEnsemble.m) will aggregate statistical data stored the ensemble folder (i.e. `~/project/dpm/jam/lobes_`) and save it to a `.mat` file stored in `~/project/dpm/jam/matfiles`. 
+The MATLAB function [processJammedDPMEnsemble](/viz/jam/processJammedDPMEnsemble.m) will aggregate statistical data stored the ensemble folder (i.e. `~/project/dpm/jam/lobes_`) and save it to a `.mat` file (see [MATLAB documentation](https://www.mathworks.com/help/matlab/ref/matlab.io.matfile.html) stored in `~/project/dpm/jam/matfiles`. 
 
 To submit this function to the cluster, use the Slurm script [slurm_bidisperseSinusoidalParticleJamming.slurm](/bash/jam/slurm_bidisperseSinusoidalParticleJamming.slurm). This script must be edited via the command line, so open the file using a command line editor like `vim` or `emacs`. 
 
