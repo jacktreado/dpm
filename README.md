@@ -3,7 +3,7 @@ By Jack Treado, Yale University
 
 Welcome to the Deformable Particle Model (DPM)!
 
-This repository broadly allows for the simulation of deformable particles. Currently (as of date: "`r format(Sys.time(), '%d %B, %Y')`") we only support 2D particles, but 3D is on the way!
+This repository broadly allows for the simulation of deformable particles. Currently we only support 2D particles, but 3D is on the way!
 
 
 
