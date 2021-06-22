@@ -16,7 +16,7 @@ netid=jdt45
 NCELLS=16
 nsmall=24
 calA0=1.10
-kb=1.0
+kb=0.01
 thA=3.0
 thK=3.0
 
