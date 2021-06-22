@@ -7,9 +7,9 @@ function processJammedDPMEnsemble(ensembleStr, savestr)
 ensList = dir([ensembleStr '*.pos']);
 NEN = length(ensList);
 if NEN == 0
-    error('processJammedDPMEnsemble:noFilesFound','\nNo files found using ensembleStr:%s. Ending here.\n',ensembleLoc);
+    error('processJammedDPMEnsemble:noFilesFound','\nNo files found using ensembleStr:%s. Ending here.\n',ensembleStr);
 else
-    fprintf('** Processing %d files stored in %s\n',NEN,ensembleLoc);
+    fprintf('** Processing %d files stored in %s\n',NEN,ensembleStr);
 end
 
 %% Loop over files in ensemble, extract data
