@@ -88,22 +88,24 @@ To clone the repository to your remote cluster, `ssh` onto the login node and us
 >> git clone https://github.com/jacktreado/dpm.git
 ``` 
 
+The bash script [submit_bidisperseSinusoidalParticleJamming.sh](/bash/jam/submit_bidisperseSinusoidalParticleJamming.sh) will submit an ensemble of simulations to the cluster as an array job. 
+
 1. Once you have logged in to the remote cluster, `cd` to `~/dpm/bash/jam`.
 2. Use `>> cat submit_bidisperseSinusoidalParticleJamming.sh` to see the input list, which is:
 ```bash
-	# ====================
-	#       INPUTS
-	# ====================
-	# 1. NCELLS
-	# 2. n
-	# 3. calA0
-	# 4. kb
-	# 5. thA (lobey preferred angle amplitude)
-	# 6. thK (lobey preferred angle wavenumber)
-	# 7. partition
-	# 8. time
-	# 9. number of runs (number of array entries, i.e. arraynum)
-	# 10. start seed (end seed determined by number of runs)
+# ====================
+#       INPUTS
+# ====================
+# 1. NCELLS
+# 2. n
+# 3. calA0
+# 4. kb
+# 5. thA (lobey preferred angle amplitude)
+# 6. thK (lobey preferred angle wavenumber)
+# 7. partition
+# 8. time
+# 9. number of runs (number of array entries, i.e. arraynum)
+# 10. start seed (end seed determined by number of runs)
 ```
 3. Jobs are submitted with `>> bash submit_bidisperseSinusoidalParticleJamming.sh [INPUTS]` where `[INPUTS]` must match the list above. See input description below.
 
@@ -124,10 +126,12 @@ To clone the repository to your remote cluster, `ssh` onto the login node and us
 
 By default, data will be stored in `~/project/dpm/jam` *if you have set* `netid` *to your netid*. 
 
-Each file will begin with `lobes_`, with the parameters for the simulation following. For example, a sim with `NCELLS=16`, `n=24`, `calA0=1.10`, `kb0.01`, `thA=3.0`, and `thK=3.0` will be stored in the directory
+Each file will begin with `lobes_`, with the parameters for the ensemble following. For example, an ensemble with `NCELLS=16`, `n=24`, `calA0=1.10`, `kb0.01`, `thA=3.0`, and `thK=3.0` will be stored in the directory
 ```bash
 ~/project/dpm/jam/lobes_N16_n24_calA01.10_kb0.01_thA3.0_thK3.0
 ```
-Each file will begin with the string `lobes_N16_n24_calA01.10_kb0.01_thA3.0_thK3.0` and end with `_seed[seedNumber].pos`, where `seedNumber` denotes the seed used in the random number generator. 
+Each file will begin with the string `lobes_N16_n24_calA01.10_kb0.01_thA3.0_thK3.0` and will end with `_seed[seedNumber].pos`, where `seedNumber` denotes the seed used in the random number generator. This differentiates different members of the particular ensemble. 
 
+## Data processing
 
+The MATLAB function [processJammedDPMEnsemble](/viz/jam/processJammedDPMEnsemble.m) will aggregate statistical data stored the ensemble folder (i.e. `~/project/dpm/jam/lobes_`) and save it to a `.mat` file stored in `~/project/dpm/jam/matfiles.` To call this function
