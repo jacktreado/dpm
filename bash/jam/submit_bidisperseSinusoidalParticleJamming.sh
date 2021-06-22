@@ -1,12 +1,15 @@
 #!/bin/bash
 
+# user's NETID
+netid=jdt45
+
 # directories with code
 cellsdir=~/dpm
 srcdir=$cellsdir/src
 maindir=$cellsdir/main/jam
 
 # directory for all output for cell simulations
-outputdir=/gpfs/loomis/project/fas/ohern/jdt45/dpm
+outputdir=/gpfs/loomis/project/fas/ohern/"$netid"/dpm
 
 # directory for simulations specific to jamming
 simtypedir=$outputdir/jam
@@ -164,8 +167,9 @@ sbatch -t $time $slurmf
 # 8. time
 # 9. number of runs (number of array entries, i.e. arraynum)
 # 10. start seed (end seed determined by number of runs)
-
-
+# 
+# 
+# REMEMBER TO MAKE SURE YOUR netid VARIABLE IS CORRECT!
 
 
 

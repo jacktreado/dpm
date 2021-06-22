@@ -81,17 +81,53 @@ where `mu` and `i` refer to the cell and vertex indices, respectively, and
 
 To run an ensemble of jammed configurations on a remote cluster, use the following steps. **Note**: currently only supports clusters that use the [Slurm workload manager](https://slurm.schedmd.com/). 
 
+***NOTE***: BEFORE YOU SUBMIT ANYTHING, make sure to edit line `4` to set the `netid` variable to your remote cluster username. This will place all data in a folder named `~/project/dpm` if using the Yale clusters. If you have a different file storage system, edit the variable `outputdir` on line `12` to be your desired location for data output. 
+
 To clone the repository to your remote cluster, `ssh` onto the login node and use 
 ```bash 
 >> git clone https://github.com/jacktreado/dpm.git
 ``` 
-from the home folder. 
 
 1. Once you have logged in to the remote cluster, `cd` to `~/dpm/bash/jam`.
+2. Use `>> cat submit_bidisperseSinusoidalParticleJamming.sh` to see the input list, which is:
+```bash
+	# ====================
+	#       INPUTS
+	# ====================
+	# 1. NCELLS
+	# 2. n
+	# 3. calA0
+	# 4. kb
+	# 5. thA (lobey preferred angle amplitude)
+	# 6. thK (lobey preferred angle wavenumber)
+	# 7. partition
+	# 8. time
+	# 9. number of runs (number of array entries, i.e. arraynum)
+	# 10. start seed (end seed determined by number of runs)
+```
+3. Jobs are submitted with `>> bash submit_bidisperseSinusoidalParticleJamming.sh [INPUTS]` where `[INPUTS]` must match the list above. See input description below.
 
+## Bash script inputs
 
+1. `NCELLS`: integer number of particles
+2. `n`: integer number of vertices on small particles (`nsmall` above)
+3. `calA0`: **preferred** shape parameter of all particles
+4. `kb`: mechanical constant for curvature
+5. `thA`: amplitude of sinusoidal preferred angles
+6. `thK`: wavenumber of sinusoidal preferred angles (**sets number of lobes**)
+7. `partition`: Slurm partition to queue + run jobs
+8. `time`: Slurm time limit
+9. `numSeedsPerRun`: number of jobs in batch submission
+10. `startSeed`: first seed in array, last seed is `startSeed + numSeedsPerRun`
 
+## Data storage
 
+By default, data will be stored in `~/project/dpm/jam` *if you have set* `netid` *to your netid*. 
 
+Each file will begin with `lobes_`, with the parameters for the simulation following. For example, a sim with `NCELLS=16`, `n=24`, `calA0=1.10`, `kb0.01`, `thA=3.0`, and `thK=3.0` will be stored in the directory
+```bash
+~/project/dpm/jam/lobes_N16_n24_calA01.10_kb0.01_thA3.0_thK3.0
+```
+Each file will begin with the string `lobes_N16_n24_calA01.10_kb0.01_thA3.0_thK3.0` and end with `_seed[seedNumber].pos`, where `seedNumber` denotes the seed used in the random number generator. 
 
 
