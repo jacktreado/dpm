@@ -75,3 +75,19 @@ where `mu` and `i` refer to the cell and vertex indices, respectively, and
 * `r`: radius of vertex
 * `l0`: preferred length of edge between vertices `i` and `i+1`
 * `t0`: preferred angle for angle centered on vertex `i`
+
+
+# Running on the cluster
+
+To run an ensemble of jammed configurations on a remote cluster, use the following steps. **Note**: currently only supports clusters that use the [Slurm workload manager](https://slurm.schedmd.com/). 
+
+To clone the repository to your remote cluster, `ssh` onto the login node and use ```bash >> git clone https://github.com/jacktreado/dpm.git``` from the home folder. 
+
+1. Once you have logged in to the remote cluster, `cd` to `~/dpm/bash/jam`.
+
+
+
+
+
+
+
