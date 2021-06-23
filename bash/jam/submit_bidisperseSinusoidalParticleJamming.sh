@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # user's NETID
-netid=jdt45
+netid="$USER"
 
 # directories with code
 cellsdir=~/dpm

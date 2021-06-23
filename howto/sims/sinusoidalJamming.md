@@ -84,10 +84,6 @@ where `mu` and `i` refer to the cell and vertex indices, respectively, and
 
 To run an ensemble of jammed configurations on a remote cluster, use the following steps. **Note**: currently only supports clusters that use the [Slurm workload manager](https://slurm.schedmd.com/). 
 
-### **READ THIS FIRST**
-
-BEFORE YOU SUBMIT ANYTHING, make sure to edit line `4` to set the `netid` variable to your remote cluster username. This will place all data in a folder named `~/project/dpm` if using the Yale clusters. If you have a different file storage system, edit the variable `outputdir` on line `12` to be your desired location for data output. 
-
 
 ## Using the `submit_` bash script
 
@@ -96,7 +92,9 @@ To clone the repository to your remote cluster, `ssh` onto the login node and us
 >> git clone https://github.com/jacktreado/dpm.git
 ``` 
 
-The bash script [submit_bidisperseSinusoidalParticleJamming.sh](/bash/jam/submit_bidisperseSinusoidalParticleJamming.sh) will submit an ensemble of simulations to the cluster as an array job. 
+The bash script [submit_bidisperseSinusoidalParticleJamming.sh](/bash/jam/submit_bidisperseSinusoidalParticleJamming.sh) submits an ensemble of simulations to the cluster as an array job.
+
+**NOTE**: All data will be placed in [project](https://docs.ycrc.yale.edu/clusters-at-yale/data/) on the [Grace](https://docs.ycrc.yale.edu/clusters-at-yale/clusters/grace/) if using the Yale clusters. If using a different file storage system, edit `outputdir` to the desired location for data output. 
 
 1. Once you have logged in to the remote cluster, `cd` to `~/dpm/bash/jam`.
 2. Use `>> cat submit_bidisperseSinusoidalParticleJamming.sh` to see the input list, which is:
@@ -132,7 +130,7 @@ The bash script [submit_bidisperseSinusoidalParticleJamming.sh](/bash/jam/submit
 
 ## Data storage
 
-By default, data will be stored in `~/project/dpm/jam` *if you have set* `netid` *to your netid*. 
+By default, data will be stored in your Grace project folder.
 
 Each file will begin with `lobes_`, with the parameters for the ensemble following. For example, an ensemble with `NCELLS=16`, `n=24`, `calA0=1.10`, `kb0.01`, `thA=3.0`, and `thK=3.0` will be stored in the directory
 ```bash
@@ -145,8 +143,6 @@ Each file will begin with the string `lobes_N16_n24_calA01.10_kb0.01_thA3.0_thK3
 The MATLAB function [processJammedDPMEnsemble](/viz/jam/processJammedDPMEnsemble.m) will aggregate statistical data stored the ensemble folder (i.e. `~/project/dpm/jam/lobes_`) and save it to a `.mat` file (see [MATLAB documentation](https://www.mathworks.com/help/matlab/ref/matlab.io.matfile.html) stored in `~/project/dpm/jam/matfiles`. 
 
 To submit this function to the cluster, use the Slurm script [slurm_bidisperseSinusoidalParticleJamming.slurm](/bash/jam/slurm_bidisperseSinusoidalParticleJamming.slurm). This script must be edited via the command line, so open the file using a command line editor like `vim` or `emacs`. 
-
-**NOTE**: You MUST edit the `netid` variable to be your netid, or else the data won't be saved in the right location!
 
 Slurm-specific options, like `partition` or `time` are controlled by the `#SBATCH` headers. See [this Slurm cheatsheet](https://slurm.schedmd.com/pdfs/summary.pdf) for all cluster options. 
 
