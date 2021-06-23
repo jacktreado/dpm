@@ -167,9 +167,6 @@ sbatch -t $time $slurmf
 # 8. time
 # 9. number of runs (number of array entries, i.e. arraynum)
 # 10. start seed (end seed determined by number of runs)
-# 
-# 
-# REMEMBER TO MAKE SURE YOUR netid VARIABLE IS CORRECT!
 
 
 

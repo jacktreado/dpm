@@ -94,7 +94,7 @@ To clone the repository to your remote cluster, `ssh` onto the login node and us
 
 The bash script [submit_bidisperseSinusoidalParticleJamming.sh](/bash/jam/submit_bidisperseSinusoidalParticleJamming.sh) submits an ensemble of simulations to the cluster as an array job.
 
-**NOTE**: All data will be placed in [project](https://docs.ycrc.yale.edu/clusters-at-yale/data/) on the [Grace](https://docs.ycrc.yale.edu/clusters-at-yale/clusters/grace/) if using the Yale clusters. If using a different file storage system, edit `outputdir` to the desired location for data output. 
+**NOTE**: All data will be placed in [project](https://docs.ycrc.yale.edu/clusters-at-yale/data/) on [Grace](https://docs.ycrc.yale.edu/clusters-at-yale/clusters/grace/) if using Yale HPC. If using a different file storage system, edit `outputdir` to the desired location for data output. 
 
 1. Once you have logged in to the remote cluster, `cd` to `~/dpm/bash/jam`.
 2. Use `>> cat submit_bidisperseSinusoidalParticleJamming.sh` to see the input list, which is:
