@@ -236,6 +236,10 @@ void meso2D::initializeMesophyllBondNetwork(){
 
 			// test overlaps with forward neighboring cells
 			for (bj=0; bj<NNN; bj++){
+				// only check if boundaries permit
+				if (nn[bi][bj] == -1)
+					continue;
+
 				// get first particle in neighboring cell
 				pj = head[nn[bi][bj]];
 

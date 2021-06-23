@@ -846,16 +846,33 @@ void dpm::initializeNeighborLinkedList2D(double boxLengthScale){
 		
 		// neighbors
 		nn[i][0] 			= (i + 1) % NBX; 			// right neighbor (i+1)
-		nn[i][1] 			= (i + scx) % NBX;			// top neighbor (j+1)
+
+		if (pbc[1])										// top neighbor (j+1)
+			nn[i][1] 		= (i + scx) % NBX;			// ** top neighbor (j+1) (with pbc)
+		else{
+			if (i >= NBX - scx)
+				nn[i][1] 	= -1;						// ** NO top neighbor (j+1) when !pbc and on top row
+			else
+				nn[i][1] 	= i + scx;					// ** top neighbor (j+1) (without pbc, but not on top row)
+		}
+
 		nntmp 				= (i + NBX - scx) % NBX;	// bottom neighbor (j-1)
 		nn[i][2] 			= (nn[i][1] + 1) % NBX;		// top-right neighbor (i+1, j+1)
 		nn[i][3] 			= nntmp + 1;				// bottom-right neighbor (i+1, j-1)
 
 		// right-hand bc (periodic)
 		if ((i+1) % scx == 0){
-			nn[i][0] = i - scx + 1;
-			nn[i][2] = nn[i][1]  - scx + 1;
-			nn[i][3] = nntmp - scx + 1;
+			if (pbc[0]){
+				nn[i][0] = i - scx + 1;
+				nn[i][2] = nn[i][1]  - scx + 1;
+				nn[i][3] = nntmp - scx + 1;
+			}
+			else{
+				nn[i][0] = -1;
+				nn[i][2] = -1;
+				nn[i][3] = -1;
+			}
+			
 		}
 	}
 
@@ -1390,6 +1407,10 @@ void dpm::vertexRepulsiveForces2D(){
 
 			// test overlaps with forward neighboring cells
 			for (bj=0; bj<NNN; bj++){
+				// only check if boundaries permit
+				if (nn[bi][bj] == -1)
+					continue;
+
 				// get first particle in neighboring cell
 				pj = head[nn[bi][bj]];
 
