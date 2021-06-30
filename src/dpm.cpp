@@ -10,6 +10,7 @@
 #include <functional>
 
 typedef void (dpm::*dpmMemFn)(void);
+#define CALL_MEMBER_FN(object, ptrToMember) ((object).*(ptrToMember))
 
 // namespace
 using namespace Eigen;
@@ -1758,7 +1759,10 @@ void dpm::vertexFIRE2D(dpmMemFn forceCall, double Ftol, double dt0)
 		}
 
 		// update forces (function passed as argument)
-		std::invoke(forceCall, this);
+		//std::invoke(forceCall, this);
+		CALL_MEMBER_FN(*this, forceCall)
+		();
+		//(this.*forceCall)();
 
 		// VV VELOCITY UPDATE #2
 		for (i = 0; i < vertDOF; i++)
