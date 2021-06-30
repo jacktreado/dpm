@@ -40,7 +40,13 @@ int main(){
 
 	// open position config file
 	configobj2D.openPosObject(posf);
-	configobj2D.openHessObject(hessf);
+
+	// open hessian ofstream object
+	ofstream hessout(hessf.c_str());
+	if (!hessout.is_open()){
+		cerr << "** Hessian file string " << hessf << " did not open, ending here." << endl;
+		return 1;
+	}
 
 	// set spring constants
 	configobj2D.setka(ka);
@@ -78,8 +84,10 @@ int main(){
 	}
 
 	// print hessian data
-	configobj2D.printMatrixEigenvalues2D(M);
+	configobj2D.printHessianEigenvalues2D(hessout,M);
 
+	// close hessian output file
+	hessout.close();
 
 	// say goodbye
 	cout << "\n\n** Finished hesstest.cpp, ending. " << endl;

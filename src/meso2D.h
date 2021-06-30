@@ -37,10 +37,36 @@ protected:
 	double cL; 		// aging of excess perimeter
 	double cB; 		// aging of preferred angles
 	double cKb; 	// aging of bending stiffness
+
+	// meso specific output objects
+	std::ofstream hessout;
+	std::ofstream ctcout;
 public:
 
 	// constructor and destructor
 	meso2D(int n, int seed) : dpm(n,seed) { betaEff=0.0; cL=0.0; cB=0.0; cKb=0.0; z.resize(n); };
+
+	// File openers
+	void openHessObject(std::string& str){
+		hessout.open(str.c_str());
+		if (!hessout.is_open()) {
+			std::cout << "	ERROR: hessout could not open " << str << "..." << std::endl;
+			exit(1);
+		}
+		else
+			std::cout << "** Opening hess file " << str << " ..." << std::endl;
+	}
+
+	void openCTCObject(std::string& str){
+		ctcout.open(str.c_str());
+		if (!ctcout.is_open()) {
+			std::cout << "	ERROR: ctcout could not open " << str << "..." << std::endl;
+			exit(1);
+		}
+		else
+			std::cout << "** Opening ctc file " << str << " ..." << std::endl;
+	}
+
 
 	// setters
 	void setkbi(double val) { fill(kbi.begin(), kbi.end(), val); };

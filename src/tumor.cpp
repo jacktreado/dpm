@@ -4,6 +4,12 @@
 
 	Jack Treado, 06/04/21
 
+	** TO DO 06/24/21
+	1. Add adipocyte / tumor boundary sim initialization function
+	2. Make protocol that compresses ONLY so that we have premade initial conditions, don't have to spend overhead
+	3. Add constant pressure via piston attached to left-side wall, box vol. changes as cells invade
+		* Need to add kinetic term to stress tensor
+
 */
 
 

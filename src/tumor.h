@@ -21,7 +21,7 @@
 class tumor : public dpm{
 protected:
 
-	// temporary number of cells
+	// temporary number of tumor cells
 	int ntmp;
 
 	// adhesion parameters
@@ -33,6 +33,8 @@ protected:
 public:
 
 	// Constructors and Destructors
+
+	// monolayer constructor
 	tumor(int n, int seed) : dpm(n,seed) { ntmp=0; l1=0.0; l2=0.0; v0=0.0; Dr=0.0; Ds=0.0; pbc[0]=0; pbc[1]=0; };
 
 	// setters
@@ -43,8 +45,9 @@ public:
 	void setDs(double val) { Ds = val; };
 
 
-	// initialize single cell
+	// initialization
 	void initializeSingleTumorCell();
+	void initializeTumorInterface(double aCalA0, double tCalA0, double prt);
 
 
 	// editing & updating

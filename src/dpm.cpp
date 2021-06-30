@@ -103,12 +103,6 @@ dpm::~dpm(){
 	
 	if (posout.is_open())
 		posout.close();
-
-	if (hessout.is_open())
-		hessout.close();
-
-	if (xtraout.is_open())
-		xtraout.close();
 }
 
 
@@ -368,15 +362,15 @@ void dpm::initializeVertexIndexing2D(){
 
 	// check that vertDOF has been assigned
 	if (NVTOT <= 0){
-		cout << "	** ERROR: in initializeVertexIndexing2D, NVTOT not assigned. Need to initialize x, v, and F vectors in this function, so ending here." << endl;
+		cerr << "	** ERROR: in initializeVertexIndexing2D, NVTOT not assigned. Need to initialize x, v, and F vectors in this function, so ending here." << endl;
 		exit(1);
 	}
 	if (vertDOF <= 0){
-		cout << "	** ERROR: in initializeVertexIndexing2D, vertDOF not assigned. Need to initialize x, v, and F vectors in this function, so ending here." << endl;
+		cerr << "	** ERROR: in initializeVertexIndexing2D, vertDOF not assigned. Need to initialize x, v, and F vectors in this function, so ending here." << endl;
 		exit(1);
 	}
 	else if (nv.size() == 0){
-		cout << "	** ERROR: in initializeVertexIndexing2D, nv vector not assigned. Need to initialize x, v, and F vectors in this function, so ending here." << endl;
+		cerr << "	** ERROR: in initializeVertexIndexing2D, nv vector not assigned. Need to initialize x, v, and F vectors in this function, so ending here." << endl;
 		exit(1);
 	}
 
@@ -412,15 +406,15 @@ void dpm::initializeVertexShapeParameters(double calA0, int nref){
 
 	// check that vertDOF has been assigned
 	if (NVTOT <= 0){
-		cout << "	** ERROR: in initializeVertexShapeParameters, NVTOT not assigned. Ending here." << endl;
+		cerr << "	** ERROR: in initializeVertexShapeParameters, NVTOT not assigned. Ending here." << endl;
 		exit(1);
 	}
 	if (vertDOF <= 0){
-		cout << "	** ERROR: in initializeVertexShapeParameters, vertDOF not assigned. Ending here." << endl;
+		cerr << "	** ERROR: in initializeVertexShapeParameters, vertDOF not assigned. Ending here." << endl;
 		exit(1);
 	}
 	else if (nv.size() == 0){
-		cout << "	** ERROR: in initializeVertexShapeParameters, nv vector not assigned. Ending here." << endl;
+		cerr << "	** ERROR: in initializeVertexShapeParameters, nv vector not assigned. Ending here." << endl;
 		exit(1);
 	}
 
@@ -647,7 +641,7 @@ void dpm::initializePositions2D(double phi0, double Ftol){
 
 			// check if simulation is stuck
 			if (npNeg > NNEGMAX){
-				cout << "	** ERROR: During initial FIRE minimization, P < 0 for too long, so ending." << endl;
+				cerr << "	** ERROR: During initial FIRE minimization, P < 0 for too long, so ending." << endl;
 				exit(1);
 			}
 
@@ -1540,7 +1534,7 @@ void dpm::vertexFIRE2D(double Ftol, double dt0){
 
 	// check to see if cell linked-list has been initialized
 	if (NBX == -1){
-		cout << "	** ERROR: In dpm::fire, NBX = -1, so cell linked-list has not yet been initialized. Ending here.\n";
+		cerr << "	** ERROR: In dpm::fire, NBX = -1, so cell linked-list has not yet been initialized. Ending here.\n";
 		exit(1);
 	}
 
@@ -1625,7 +1619,7 @@ void dpm::vertexFIRE2D(double Ftol, double dt0){
 
 			// check if simulation is stuck
 			if (npNeg > NNEGMAX){
-				cout << "	** ERROR: During initial FIRE minimization, P < 0 for too long, so ending." << endl;
+				cerr << "	** ERROR: During initial FIRE minimization, P < 0 for too long, so ending." << endl;
 				exit(1);
 			}
 
@@ -2052,7 +2046,7 @@ void dpm::dpmHessian2D(Eigen::MatrixXd& H, Eigen::MatrixXd& S){
 		dpmPerimeterHessian2D(Hl,Sl);
 
 	// if (kb > 0)
-		// dpmBendingHessian2D(Hb,Sb);
+	// 	dpmBendingHessian2D(Hb,Sb);
 
 	if (kc > 0)
 		dpmRepulsiveHarmonicSprings2D(Hvv,Svv);
@@ -2314,6 +2308,11 @@ void dpm::dpmPerimeterHessian2D(Eigen::MatrixXd& Hl, Eigen::MatrixXd& Sl){
 
 
 // TO-DO: need to make hessian function for bending term (th - th0)^2
+// void dpm::dpmBendingHessian2D(Eigen::MatrixXd& Hb, Eigen::MatrixXd& Sb){
+// 	// local variables
+
+// 	// 
+// }
 
 // construct hessian for interaction term
 void dpm::dpmRepulsiveHarmonicSprings2D(Eigen::MatrixXd& Hvv, Eigen::MatrixXd& Svv){
@@ -2464,7 +2463,7 @@ void dpm::printConfiguration2D(){
 
 	// check if pos object is open
 	if (!posout.is_open()){
-		cout << "** ERROR: in printConfiguration2D, posout is not open, but function call will try to use. Ending here." << endl;
+		cerr << "** ERROR: in printConfiguration2D, posout is not open, but function call will try to use. Ending here." << endl;
 		exit(1);
 	}
 	else
@@ -2579,10 +2578,10 @@ void dpm::printConfiguration2D(){
 	posout << setw(w) << left << "ENDFR" << " " << endl;
 }
 
-void dpm::printMatrixEigenvalues2D(Eigen::MatrixXd& M){
+void dpm::printHessianEigenvalues2D(ofstream& hessout, Eigen::MatrixXd& M){
 	// check if pos object is open
 	if (!hessout.is_open()){
-		cout << "** ERROR: in printMatrixEigenvalues2D, hessout is not open, but function call will try to use. Ending here." << endl;
+		cerr << "** ERROR: in printMatrixEigenvalues2D, hessout is not open, but function call will try to use. Ending here." << endl;
 		exit(1);
 	}
 	else
