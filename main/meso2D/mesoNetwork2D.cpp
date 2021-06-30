@@ -119,8 +119,8 @@ int main(int argc, char const *argv[])
 
 	// relax configuration using network
 	meso2Dobj.initializeMesophyllBondNetwork();
-	dpmMemFn forceCall = &meso2Dobj::mesoNetworkForceUpdate;
-	meso2Dobj.vertexFIRE2D(forceCall, Ftol, dt0);
+	dpmMemFn networkForceUpdate = &meso2D::mesoNetworkForceUpdate;
+	meso2Dobj.vertexFIRE2D(networkForceUpdate, Ftol, dt0);
 	//meso2Dobj.mesoNetworkFIRE(Ftol, dt0);
 
 	// run stretching simulation to create network
