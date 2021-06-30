@@ -1078,8 +1078,6 @@ void meso2D::mesoNetworkNVE(double T, double dt0, int NT, int NPRINTSKIP){
 			cout << "	** U 		= " << setprecision(12) << U << endl;
 			cout << "	** K 		= " << setprecision(12) << K << endl;
 			cout << "	** E 		= " << setprecision(12) << U + K << endl;
-			if (xtraout.is_open())
-				xtraout << t << " " << U << " " << K << endl;
 			if (posout.is_open())
 				printConfiguration2D();
 		}
