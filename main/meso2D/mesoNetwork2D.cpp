@@ -108,7 +108,7 @@ int main(int argc, char const *argv[])
 		Ftoltmp = Ftol * 100;
 	//dpmMemFn forceCall = std::bind(&meso2D::forceUpdate, &meso2Dobj);
 	dpmMemFn forceCall = &dpm::forceUpdate;
-	meso2Dobj.vertexJamming2D(forceCall, Ftol, dt0, dphiGrow, plotCompression);
+	meso2Dobj.vertexJamming2D(forceCall, Ftoltmp, Ptol, dt0, dphiGrow, plotCompression);
 	//meso2Dobj.vertexJamming2D(Ftoltmp, Ptol, dt0, dphiGrow, plotCompression);
 
 	// set aging parameters
