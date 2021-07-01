@@ -54,15 +54,15 @@ void meso2D::initializeVertexContactNetwork(){
 
 	// check that vertDOF has been assigned
 	if (NVTOT <= 0){
-		cout << "	** ERROR: in meso2D::initializeVertexContactNetwork, NVTOT not assigned. Ending here." << endl;
+		cerr << "	** ERROR: in meso2D::initializeVertexContactNetwork, NVTOT not assigned. Ending here." << endl;
 		exit(1);
 	}
 	if (vertDOF <= 0){
-		cout << "	** ERROR: in meso2D::initializeVertexContactNetwork, vertDOF not assigned. Ending here." << endl;
+		cerr << "	** ERROR: in meso2D::initializeVertexContactNetwork, vertDOF not assigned. Ending here." << endl;
 		exit(1);
 	}
 	else if (nv.size() == 0){
-		cout << "	** ERROR: in meso2D::initializeVertexContactNetwork, nv vector not assigned. Ending here." << endl;
+		cerr << "	** ERROR: in meso2D::initializeVertexContactNetwork, nv vector not assigned. Ending here." << endl;
 		exit(1);
 	}
 
@@ -640,7 +640,7 @@ void meso2D::mesoNetworkFIRE(double Ftol, double dt0){
 
 	// check to see if cell linked-list has been initialized
 	if (NBX == -1){
-		cout << "	** ERROR: In meso2D::mesoNetworkFIRE, NBX = -1, so cell linked-list has not yet been initialized. Ending here.\n";
+		cerr << "	** ERROR: In meso2D::mesoNetworkFIRE, NBX = -1, so cell linked-list has not yet been initialized. Ending here.\n";
 		exit(1);
 	}
 
@@ -726,7 +726,7 @@ void meso2D::mesoNetworkFIRE(double Ftol, double dt0){
 
 			// check if simulation is stuck
 			if (npNeg > NNEGMAX){
-				cout << "	** ERROR: During initial FIRE minimization, P < 0 for too long, so ending." << endl;
+				cerr << "	** ERROR: During initial FIRE minimization, P < 0 for too long, so ending." << endl;
 				exit(1);
 			}
 
@@ -834,9 +834,16 @@ void meso2D::mesoPinFIRE(vector<double>& xpin, double Ftol, double dt0, double k
 
 	// check to see if cell linked-list has been initialized
 	if (NBX == -1){
-		cout << "	** ERROR: In meso2D::mesoPinFIRE, NBX = -1, so cell linked-list has not yet been initialized. Ending here.\n";
+		cerr << "	** ERROR: In meso2D::mesoPinFIRE, NBX = -1, so cell linked-list has not yet been initialized. Ending here.\n";
 		exit(1);
 	}
+
+	// also check that xpin has been created
+	if (xpin.size() < 1){
+		cerr << "	** ERROR: in meso2D::mesoPinFIRE, xpin size = " << xpin.size() << ", has not yet been created. Ending. " << endl;
+		exit(1);
+	}
+
 
 	// FIRE variables
 	double P, fnorm, fcheck, vnorm, alpha, dtmax, dtmin;
@@ -917,7 +924,7 @@ void meso2D::mesoPinFIRE(vector<double>& xpin, double Ftol, double dt0, double k
 
 			// check if simulation is stuck
 			if (npNeg > NNEGMAX){
-				cout << "	** ERROR: During initial FIRE minimization, P < 0 for too long, so ending." << endl;
+				cerr << "	** ERROR: During initial FIRE minimization, P < 0 for too long, so ending." << endl;
 				exit(1);
 			}
 
@@ -1071,8 +1078,6 @@ void meso2D::mesoNetworkNVE(double T, double dt0, int NT, int NPRINTSKIP){
 			cout << "	** U 		= " << setprecision(12) << U << endl;
 			cout << "	** K 		= " << setprecision(12) << K << endl;
 			cout << "	** E 		= " << setprecision(12) << U + K << endl;
-			if (xtraout.is_open())
-				xtraout << t << " " << U << " " << K << endl;
 			if (posout.is_open())
 				printConfiguration2D();
 		}
@@ -1430,7 +1435,7 @@ void meso2D::printMesoNetwork2D(){
 
 	// check if pos object is open
 	if (!posout.is_open()){
-		cout << "** ERROR: in printMesoNetwork2D, posout is not open, but function call will try to use. Ending here." << endl;
+		cerr << "** ERROR: in printMesoNetwork2D, posout is not open, but function call will try to use. Ending here." << endl;
 		exit(1);
 	}
 	else
@@ -1574,7 +1579,7 @@ void meso2D::printMesoPin2D(vector<double>& xpin, double h){
 
 	// check if pos object is open
 	if (!posout.is_open()){
-		cout << "** ERROR: in printMesoPin2D, posout is not open, but function call will try to use. Ending here." << endl;
+		cerr << "** ERROR: in printMesoPin2D, posout is not open, but function call will try to use. Ending here." << endl;
 		exit(1);
 	}
 	else

@@ -112,8 +112,6 @@ protected:
 
 	// output objects
 	std::ofstream posout;
-	std::ofstream hessout;
-	std::ofstream xtraout;
 
 public:
 	// Constructors and Destructors
@@ -179,39 +177,14 @@ public:
 	void openPosObject(std::string &str)
 	{
 		posout.open(str.c_str());
-		if (!posout.is_open())
-		{
-			std::cout << "	ERROR: posout could not open " << str << "..." << std::endl;
+		if (!posout.is_open()) {
+			std::cerr << "	ERROR: posout could not open " << str << "..." << std::endl;
 			exit(1);
 		}
 		else
 			std::cout << "** Opening pos file " << str << " ..." << std::endl;
 	}
-
-	void openHessObject(std::string &str)
-	{
-		hessout.open(str.c_str());
-		if (!hessout.is_open())
-		{
-			std::cout << "	ERROR: hessout could not open " << str << "..." << std::endl;
-			exit(1);
-		}
-		else
-			std::cout << "** Opening hessian file " << str << " ..." << std::endl;
-	}
-
-	void openXtraObject(std::string &str)
-	{
-		xtraout.open(str.c_str());
-		if (!xtraout.is_open())
-		{
-			std::cout << "	ERROR: xtraout could not open " << str << "..." << std::endl;
-			exit(1);
-		}
-		else
-			std::cout << "** Opening xtra file " << str << " ..." << std::endl;
-	}
-
+    
 	// Initialize particles (two dimensions)
 	void monodisperse2D(int n);
 	void bidisperse2D(double calA0, int nsmall, double smallfrac, double sizefrac);
@@ -251,7 +224,7 @@ public:
 	// print vertex information to file
 	void printContactMatrix();
 	void printConfiguration2D();
-	void printMatrixEigenvalues2D(Eigen::MatrixXd &M);
+	void printHessianEigenvalues2D(std::ofstream& hessout, Eigen::MatrixXd& M);
 };
 
 #endif
