@@ -325,10 +325,10 @@ void meso2D::mesoShapeForces(){
 				da = (atmp/a0tmp) - 1.0;
 
 				// update potential energy
-				U += 0.5*ka*(da*da);
+				U += 0.5 * ka * (da * da);
 
 				// shape force parameters
-				fa = ka*da*(rho0/a0tmp);
+				fa = ka * da * (rho0 / a0tmp);
 
 				// compute cell center of mass
 				xi = x[NDIM*gi];
@@ -423,10 +423,10 @@ void meso2D::mesoShapeForces(){
 		F[NDIM*gi + 1] 	+= (fli*dli*liy/li) - (flim1*dlim1*lim1y/lim1);
 		
 		// update potential energy
-		U += 0.5*kl*(dli*dli);
+		U += 0.5 * kl *(dli * dli);
 
 		// -- Bending force
-		fb = kbi[gi];
+		fb = kbi[gi] * rho0;
 
 		if (fb > 0){
 			// get ip2 for third angle
@@ -472,7 +472,7 @@ void meso2D::mesoShapeForces(){
 			F[NDIM*gi + 1] 	+= fb*(ddtim1*nim1y + ddti*niy);
 
 			// update potential energy
-			U += 0.5*kb*(dti*dti);
+			U += 0.5 * kb * (dti * dti);
 		}
 		
 		

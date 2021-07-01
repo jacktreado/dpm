@@ -1107,7 +1107,7 @@ void dpm::shapeForces2D() {
 
 				// shape force parameters
 				fa = ka * da * (rho0 / a0tmp);
-				fb = kb;
+				fb = kb * rho0;
 
 				// compute cell center of mass
 				xi = x[NDIM * gi];
@@ -1665,6 +1665,8 @@ void dpm::attractiveForceUpdate(){
 	vertexAttractiveForces2D();
 }
 
+
+
 /******************************
 
 	D P M  
@@ -1698,6 +1700,7 @@ void dpm::setdt(double dt0) {
 	// set dt
 	dt = dt0 * tmin;
 }
+
 
 void dpm::vertexFIRE2D(dpmMemFn forceCall, double Ftol, double dt0) {
 	// local variables
