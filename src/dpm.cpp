@@ -1467,6 +1467,9 @@ void dpm::vertexAttractiveForces2D() {
 			// real particle index
 			gi = pi - 1;
 
+			// cell index of gi
+			cindices(ci, vi, gi);
+
 			// next particle in list
 			pj = list[pi];
 
@@ -1529,14 +1532,11 @@ void dpm::vertexAttractiveForces2D() {
 							F[NDIM*gj + 1] 		+= fy;
 
 							// add to virial stress
-							stress[1] 			+= dx*fx;
-							stress[2] 			+= dy*fy;
-							stress[3] 			+= 0.5*(dx*fy + dy*fx);
+							stress[0] 			+= dx*fx;
+							stress[1] 			+= dy*fy;
+							stress[2] 			+= 0.5*(dx*fy + dy*fx);
 
 							// add to contacts
-							cindices(ci, vi, gi);
-							cindices(cj, vj, gj);
-
 							if (ci > cj)
 								cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2]++;
 							else if (ci < cj)
@@ -1567,6 +1567,7 @@ void dpm::vertexAttractiveForces2D() {
 						pj = list[pj];
 						continue;
 					}
+
 					// contact distance
 					sij = r[gi] + r[gj];
 
@@ -1616,13 +1617,9 @@ void dpm::vertexAttractiveForces2D() {
 								F[NDIM*gj + 1] 		+= fy;
 
 								// add to virial stress
-								stress[1] 			+= dx*fx;
-								stress[2] 			+= dy*fy;
-								stress[3] 			+= 0.5*(dx*fy + dy*fx);
-
-								// add to contacts
-								cindices(ci, vi, gi);
-								cindices(cj, vj, gj);
+								stress[0] 			+= dx*fx;
+								stress[1] 			+= dy*fy;
+								stress[2] 			+= 0.5*(dx*fy + dy*fx);
 
 								if (ci > cj)
 									cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2]++;
@@ -1700,7 +1697,6 @@ void dpm::setdt(double dt0) {
 	// set dt
 	dt = dt0 * tmin;
 }
-
 
 void dpm::vertexFIRE2D(dpmMemFn forceCall, double Ftol, double dt0) {
 	// local variables
@@ -1899,7 +1895,80 @@ void dpm::vertexFIRE2D(dpmMemFn forceCall, double Ftol, double dt0) {
 	}
 }
 
+void dpm::vertexNVE2D(ofstream &enout, dpmMemFn forceCall, double T, double dt0, int NT, int NPRINTSKIP){
+	// local variables
+	int t, i;
+	double K, simclock;
 
+	// set time step magnitude
+	setdt(dt0);
+
+	// initialize time keeper
+	simclock = 0.0;
+
+	// initialize velocities
+	drawVelocities2D(T);
+
+	// loop over time, print energy
+	for (t=0; t<NT; t++){
+		// VV VELOCITY UPDATE #1
+		for (i=0; i<vertDOF; i++)
+			v[i] += 0.5*dt*F[i];
+
+		// VV POSITION UPDATE
+		for (i=0; i<vertDOF; i++){
+			// update position
+			x[i] += dt*v[i];
+
+			// recenter in box
+			if (x[i] > L[i % NDIM] && pbc[i % NDIM])
+				x[i] -= L[i % NDIM];
+			else if (x[i] < 0 && pbc[i % NDIM])
+				x[i] += L[i % NDIM];
+		}
+
+		// FORCE UPDATE
+		CALL_MEMBER_FN(*this, forceCall)();
+
+		// VV VELOCITY UPDATE #2
+		for (i=0; i<vertDOF; i++)
+			v[i] += 0.5*F[i]*dt;
+
+		// update sim clock
+		simclock += dt;
+
+		// print to console and file
+		if (t % NPRINTSKIP == 0){
+			// compute kinetic energy
+			K = vertexKineticEnergy();
+
+			// print to console
+			cout << endl << endl;
+			cout << "===============================" << endl;
+			cout << "	D P M  						" << endl;
+			cout << " 			 					" << endl;
+			cout << "		N V E 					" << endl;
+			cout << "===============================" << endl;
+			cout << endl;
+			cout << "	** t / NT	= " << t << " / " << NT << endl;
+			cout << "	** U 		= " << setprecision(12) << U << endl;
+			cout << "	** K 		= " << setprecision(12) << K << endl;
+			cout << "	** E 		= " << setprecision(12) << U + K << endl;
+
+			// print to energy file
+			cout << "** printing energy" << endl;
+			enout << setw(w) << left << t;
+			enout << setw(wnum) << left << simclock;
+			enout << setw(wnum) << setprecision(12) << U;
+			enout << setw(wnum) << setprecision(12) << K;
+			enout << endl;
+
+			// print to configuration only if position file is open
+			if (posout.is_open())
+				printConfiguration2D();
+		}
+	}
+}
 
 
 /******************************

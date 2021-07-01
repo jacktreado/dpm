@@ -46,10 +46,10 @@ cellCLR = summer(NUQ);
 
 % get frames to plot
 if showverts == 0
-    FSTART = NFRAMES;
+    FSTART = 1;
     FSTEP = 1;
-%     FEND = NFRAMES;
-    FEND = FSTART;
+    FEND = NFRAMES;
+%     FEND = FSTART;
 else
     FSTART = 1;
     FSTEP = 1;

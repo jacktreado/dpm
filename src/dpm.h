@@ -221,6 +221,7 @@ public:
 
 	// simple integrators
 	void vertexFIRE2D(dpmMemFn forceCall, double Ftol, double dt0);
+	void vertexNVE2D(std::ofstream &enout, dpmMemFn forceCall, double T, double dt0, int NT, int NPRINTSKIP);
 
 	// protocols
 	void vertexCompress2Target2D(dpmMemFn forceCall, double Ftol, double dt0, double phi0Target, double dphi0);
