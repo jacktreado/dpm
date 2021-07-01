@@ -1,5 +1,5 @@
 // File to test meso network forces using NVE protocol
-
+// TODO: add alternative force routines to parent dpm class, so meso2D can inherit them.
 
 // header files
 #include "meso2D.h"

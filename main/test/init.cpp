@@ -2,6 +2,7 @@
 // 
 // 	Will create bidisperse DPM particles, set constants,
 // 	place particle centers, print vertex locations
+//  g++ -O3 -std=c++11 -I src main/test/init.cpp src/*.cpp -o init.o 
 
 
 
@@ -48,7 +49,7 @@ int main(){
 	configobj2D.initializeNeighborLinkedList2D(boxLengthScale);
 
 	// compute shape forces
-	configobj2D.updateForces();
+	configobj2D.forceUpdate();
 
 	// print config
 	configobj2D.printConfiguration2D();

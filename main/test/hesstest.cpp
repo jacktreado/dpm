@@ -40,7 +40,13 @@ int main(){
 
 	// open position config file
 	configobj2D.openPosObject(posf);
-	configobj2D.openHessObject(hessf);
+
+	// open hessian ofstream object
+	ofstream hessout(hessf.c_str());
+	if (!hessout.is_open()){
+		cerr << "** Hessian file string " << hessf << " did not open, ending here." << endl;
+		return 1;
+	}
 
 	// set spring constants
 	configobj2D.setka(ka);
@@ -62,7 +68,7 @@ int main(){
 
 	// compress to target packing fraction
 	double phi0Target = 1.0, dphi0 = 0.005;
-	configobj2D.vertexJamming2D(Ftol,Ptol,dt0,dphi0,plotCompression);
+	configobj2D.vertexJamming2D(&dpm::forceUpdate, Ftol,Ptol,dt0,dphi0,plotCompression);
 
 	// compute Hessian
 	int vertDOF = configobj2D.getvertDOF();
@@ -78,8 +84,10 @@ int main(){
 	}
 
 	// print hessian data
-	configobj2D.printMatrixEigenvalues2D(M);
+	configobj2D.printHessianEigenvalues2D(hessout,M);
 
+	// close hessian output file
+	hessout.close();
 
 	// say goodbye
 	cout << "\n\n** Finished hesstest.cpp, ending. " << endl;

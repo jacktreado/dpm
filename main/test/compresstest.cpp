@@ -2,7 +2,7 @@
 // 
 // 	Will create bidisperse DPM particles, set constants,
 // 	place particle centers, relax shapes + positions, compress to target phi, print configuration
-
+//  g++ -O3 -std=c++11 -I src main/test/compresstest.cpp src/*.cpp -o compresstest.o 
 
 
 
@@ -50,7 +50,7 @@ int main(){
 
 	// compress to target packing fraction
 	double phi0Target = 1.0, dphi0 = 0.005;
-	configobj2D.compress2Target(Ftol,dt0,phi0Target,dphi0);
+	configobj2D.vertexCompress2Target2D(&dpm::forceUpdate, Ftol,dt0,phi0Target,dphi0);
 
 	// say goodbye
 	cout << "\n\n** Finished compresstest.cpp, ending. " << endl;
