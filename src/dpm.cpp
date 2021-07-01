@@ -6,14 +6,15 @@
 
 */
 
-
 #include "dpm.h"
+#include <functional>
+
+typedef void (dpm::*dpmMemFn)(void);
+#define CALL_MEMBER_FN(object, ptrToMember) ((object).*(ptrToMember))
 
 // namespace
 using namespace Eigen;
 using namespace std;
-
-
 
 /******************************
 
@@ -23,10 +24,9 @@ using namespace std;
 
 *******************************/
 
-
-
 // Main constructor
-dpm::dpm(int n, int ndim, int seed){
+dpm::dpm(int n, int ndim, int seed)
+{
 	// local variables
 	int d, i;
 
@@ -49,7 +49,8 @@ dpm::dpm(int n, int ndim, int seed){
 	// default boundary variables
 	L.resize(NDIM);
 	pbc.resize(NDIM);
-	for (d=0; d<NDIM; d++){
+	for (d = 0; d < NDIM; d++)
+	{
 		L[d] = 1.0;
 		pbc[d] = 1;
 	}
@@ -58,14 +59,14 @@ dpm::dpm(int n, int ndim, int seed){
 	a0.resize(NCELLS);
 
 	// macroscopic stress vector
-	stress.resize(NDIM*(NDIM+1)/2);
-	for (i=0; i<NDIM*(NDIM+1)/2; i++)
+	stress.resize(NDIM * (NDIM + 1) / 2);
+	for (i = 0; i < NDIM * (NDIM + 1) / 2; i++)
 		stress.at(i) = 0.0;
 
 	// contact network vector
-	cij.resize(NCELLS*(NCELLS-1)/2);
-	for (i=0; i<NCELLS*(NCELLS-1)/2; i++)
-		cij.at(i) = 0; 
+	cij.resize(NCELLS * (NCELLS - 1) / 2);
+	for (i = 0; i < NCELLS * (NCELLS - 1) / 2; i++)
+		cij.at(i) = 0;
 
 	// initialize nearest neighbor info
 	NBX = -1;
@@ -75,7 +76,8 @@ dpm::dpm(int n, int ndim, int seed){
 }
 
 // destructor
-dpm::~dpm(){
+dpm::~dpm()
+{
 	// clear all private vectors
 	L.clear();
 	pbc.clear();
@@ -93,19 +95,16 @@ dpm::~dpm(){
 	stress.clear();
 	sb.clear();
 	lb.clear();
-	for (int i=0; i<NBX; i++)
+	for (int i = 0; i < NBX; i++)
 		nn.at(i).clear();
 	nn.clear();
 	head.clear();
 	last.clear();
 	list.clear();
 
-	
 	if (posout.is_open())
 		posout.close();
 }
-
-
 
 /******************************
 
@@ -115,17 +114,19 @@ dpm::~dpm(){
 
 *******************************/
 
-
 // get global vertex index gi given input cell index ci and vertex index vi
-int dpm::gindex(int ci, int vi){
+int dpm::gindex(int ci, int vi)
+{
 	return szList[ci] + vi;
-} 
+}
 
-
-// get cell index ci and vertex index 
-void dpm::cindices(int& ci, int& vi, int gi){
-	for (int i=NCELLS-1; i>=0; i--){
-		if (gi >= szList[i]){
+// get cell index ci and vertex index
+void dpm::cindices(int &ci, int &vi, int gi)
+{
+	for (int i = NCELLS - 1; i >= 0; i--)
+	{
+		if (gi >= szList[i])
+		{
 			ci = i;
 			vi = gi - szList[ci];
 			break;
@@ -133,38 +134,39 @@ void dpm::cindices(int& ci, int& vi, int gi){
 	}
 }
 
-
 // get cell area
-double dpm::area(int ci){
+double dpm::area(int ci)
+{
 	// local variables
 	int vi, vip1, gi, gip1, nvtmp;
 	double dx, dy, xi, yi, xip1, yip1, areaVal = 0.0;
 
 	// initial position: vi = 0
-	nvtmp 	= nv.at(ci);
-	gi 		= gindex(ci,0);
-	xi 		= x[NDIM*gi];
-	yi 		= x[NDIM*gi + 1];
+	nvtmp = nv.at(ci);
+	gi = gindex(ci, 0);
+	xi = x[NDIM * gi];
+	yi = x[NDIM * gi + 1];
 
 	// loop over vertices of cell ci, get area by shoe-string method
-	for (vi=0; vi<nvtmp; vi++){
+	for (vi = 0; vi < nvtmp; vi++)
+	{
 		// next vertex
 		gip1 = ip1[gi];
 		gi++;
 
 		// get positions (check minimum images)
-		dx = x[NDIM*gip1] - xi;
+		dx = x[NDIM * gip1] - xi;
 		if (pbc[0])
-			dx -= L[0]*round(dx/L[0]);
+			dx -= L[0] * round(dx / L[0]);
 		xip1 = xi + dx;
 
-		dy = x[NDIM*gip1 + 1] - yi;
+		dy = x[NDIM * gip1 + 1] - yi;
 		if (pbc[1])
-			dy -= L[1]*round(dy/L[1]);
+			dy -= L[1] * round(dy / L[1]);
 		yip1 = yi + dy;
 
 		// increment area
-		areaVal += xi*yip1 - xip1*yi;
+		areaVal += xi * yip1 - xip1 * yi;
 
 		// set next coordinates
 		xi = xip1;
@@ -175,38 +177,39 @@ double dpm::area(int ci){
 	return abs(areaVal);
 }
 
-
 // get cell perimeter
-double dpm::perimeter(int ci){
+double dpm::perimeter(int ci)
+{
 	// local variables
 	int vi, gi, gip1, nvtmp;
 	double dx, dy, xi, yi, xip1, yip1, l, perimVal = 0.0;
 
 	// initial position: vi = 0
-	nvtmp 	= nv.at(ci);
-	gi 		= gindex(ci,0);
-	xi 		= x[NDIM*gi];
-	yi 		= x[NDIM*gi + 1];
+	nvtmp = nv.at(ci);
+	gi = gindex(ci, 0);
+	xi = x[NDIM * gi];
+	yi = x[NDIM * gi + 1];
 
 	// loop over vertices of cell ci, get perimeter
-	for (vi=0; vi<nvtmp; vi++){
+	for (vi = 0; vi < nvtmp; vi++)
+	{
 		// next vertex
 		gip1 = ip1[gi];
 		gi++;
 
 		// get positions (check minimum images)
-		dx = x[NDIM*gip1] - xi;
+		dx = x[NDIM * gip1] - xi;
 		if (pbc[0])
-			dx -= L[0]*round(dx/L[0]);
+			dx -= L[0] * round(dx / L[0]);
 		xip1 = xi + dx;
 
-		dy = x[NDIM*gip1 + 1] - yi;
+		dy = x[NDIM * gip1 + 1] - yi;
 		if (pbc[1])
-			dy -= L[1]*round(dy/L[1]);
+			dy -= L[1] * round(dy / L[1]);
 		yip1 = yi + dy;
 
 		// compute segment length
-		l = sqrt(dx*dx + dy*dy);
+		l = sqrt(dx * dx + dy * dy);
 
 		// add to perimeter
 		perimVal += l;
@@ -220,38 +223,39 @@ double dpm::perimeter(int ci){
 	return perimVal;
 }
 
-
 // get cell center of mass position
-void dpm::com2D(int ci, double& cx, double& cy){
+void dpm::com2D(int ci, double &cx, double &cy)
+{
 	// local variables
 	int vi, gi, gip1, nvtmp;
 	double dx, dy, xi, yi, xip1, yip1, l;
 
 	// initial position: vi = 0
-	nvtmp 	= nv.at(ci);
-	gi 		= gindex(ci,0);
-	xi 		= x[NDIM*gi];
-	yi 		= x[NDIM*gi + 1];
+	nvtmp = nv.at(ci);
+	gi = gindex(ci, 0);
+	xi = x[NDIM * gi];
+	yi = x[NDIM * gi + 1];
 
 	// initialize center of mass coordinates
 	cx = xi;
 	cy = yi;
 
 	// loop over vertices of cell ci, get perimeter
-	for (vi=0; vi<nvtmp-1; vi++){
+	for (vi = 0; vi < nvtmp - 1; vi++)
+	{
 		// next vertex
 		gip1 = ip1.at(gi);
 		gi++;
 
 		// get positions (check minimum images)
-		dx = x[NDIM*gip1] - xi;
+		dx = x[NDIM * gip1] - xi;
 		if (pbc[0])
-			dx -= L[0]*round(dx/L[0]);
+			dx -= L[0] * round(dx / L[0]);
 		xip1 = xi + dx;
 
-		dy = x[NDIM*gip1 + 1] - yi;
+		dy = x[NDIM * gip1 + 1] - yi;
 		if (pbc[1])
-			dy -= L[1]*round(dy/L[1]);
+			dy -= L[1] * round(dy / L[1]);
 		yip1 = yi + dy;
 
 		// add to center of mass
@@ -268,84 +272,84 @@ void dpm::com2D(int ci, double& cx, double& cy){
 	cy /= nvtmp;
 }
 
-
 // get configuration packing fraction
-double dpm::vertexPackingFraction2D(){
+double dpm::vertexPackingFraction2D()
+{
 	int ci;
 	double val, boxV, areaSum = 0.0;
 
 	// numerator
-	for (ci=0; ci<NCELLS; ci++)
-		areaSum += area(ci) + 0.25*PI*pow(2.0*r.at(szList[ci]),2.0)*(0.5*nv.at(ci) - 1);
+	for (ci = 0; ci < NCELLS; ci++)
+		areaSum += area(ci) + 0.25 * PI * pow(2.0 * r.at(szList[ci]), 2.0) * (0.5 * nv.at(ci) - 1);
 
 	// denominator
-	boxV = L[0]*L[1];
-	
+	boxV = L[0] * L[1];
+
 	// return packing fraction
-	val = areaSum/boxV;
+	val = areaSum / boxV;
 	return val;
 }
 
 // get configuration "preferred" packing fraction
-double dpm::vertexPreferredPackingFraction2D(){
+double dpm::vertexPreferredPackingFraction2D()
+{
 	int ci;
 	double val, boxV, areaSum = 0.0;
 
 	// numerator
-	for (ci=0; ci<NCELLS; ci++)
-		areaSum += a0[ci] + 0.25*PI*pow(2.0*r.at(szList[ci]),2.0)*(0.5*nv.at(ci) - 1);
+	for (ci = 0; ci < NCELLS; ci++)
+		areaSum += a0[ci] + 0.25 * PI * pow(2.0 * r.at(szList[ci]), 2.0) * (0.5 * nv.at(ci) - 1);
 
 	// denominator
-	boxV = L[0]*L[1];
-	
+	boxV = L[0] * L[1];
+
 	// return packing fraction
-	val = areaSum/boxV;
+	val = areaSum / boxV;
 	return val;
 }
 
-
 // get vertex kinetic energy
-double dpm::vertexKineticEnergy(){
-	double K=0; 
+double dpm::vertexKineticEnergy()
+{
+	double K = 0;
 
-	for(int i=0; i<vertDOF; i++)
-		K += v[i]*v[i];
+	for (int i = 0; i < vertDOF; i++)
+		K += v[i] * v[i];
 	K *= 0.5;
 
 	return K;
 }
 
-
 // get number of vertex-vertex contacts
-int dpm::vvContacts(){
+int dpm::vvContacts()
+{
 	int nvv = 0;
 
-	for (int ci=0; ci<NCELLS; ci++){
-		for (int cj=ci+1; cj<NCELLS; cj++)
-			nvv += cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2];
+	for (int ci = 0; ci < NCELLS; ci++)
+	{
+		for (int cj = ci + 1; cj < NCELLS; cj++)
+			nvv += cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2];
 	}
 
 	return nvv;
 }
 
-
-
 // get number of cell-cell contacts
-int dpm::ccContacts(){
+int dpm::ccContacts()
+{
 	int ncc = 0;
 
-	for (int ci=0; ci<NCELLS; ci++){
-		for (int cj=ci+1; cj<NCELLS; cj++){
-			if (cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2] > 0)
+	for (int ci = 0; ci < NCELLS; ci++)
+	{
+		for (int cj = ci + 1; cj < NCELLS; cj++)
+		{
+			if (cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2] > 0)
 				ncc++;
 		}
 	}
 
 	return ncc;
 }
-
-
-
 
 /******************************
 
@@ -355,9 +359,9 @@ int dpm::ccContacts(){
 
 *******************************/
 
-
 // initialize vertex indexing
-void dpm::initializeVertexIndexing2D(){
+void dpm::initializeVertexIndexing2D()
+{
 	int gi, vi, vip1, vim1, ci;
 
 	// check that vertDOF has been assigned
@@ -377,17 +381,19 @@ void dpm::initializeVertexIndexing2D(){
 	// save list of adjacent vertices
 	im1.resize(NVTOT);
 	ip1.resize(NVTOT);
-	for (ci=0; ci<NCELLS; ci++){
+	for (ci = 0; ci < NCELLS; ci++)
+	{
 		// vertex indexing
-		for (vi=0; vi<nv.at(ci); vi++){
+		for (vi = 0; vi < nv.at(ci); vi++)
+		{
 			// wrap local indices
 			vim1 = (vi - 1 + nv.at(ci)) % nv.at(ci);
 			vip1 = (vi + 1) % nv.at(ci);
 
 			// get global wrapped indices
-			gi 			= gindex(ci,vi);
-			im1.at(gi) 	= gindex(ci,vim1);
-			ip1.at(gi) 	= gindex(ci,vip1);
+			gi = gindex(ci, vi);
+			im1.at(gi) = gindex(ci, vim1);
+			ip1.at(gi) = gindex(ci, vip1);
 		}
 	}
 
@@ -397,9 +403,9 @@ void dpm::initializeVertexIndexing2D(){
 	F.resize(vertDOF);
 }
 
-
 // initialize vertex shape parameters based on nv
-void dpm::initializeVertexShapeParameters(double calA0, int nref){
+void dpm::initializeVertexShapeParameters(double calA0, int nref)
+{
 	// local variables
 	int gi, ci, vi, nvtmp;
 	double rtmp, calA0tmp, calAntmp;
@@ -415,7 +421,7 @@ void dpm::initializeVertexShapeParameters(double calA0, int nref){
 	}
 	else if (nv.size() == 0){
 		cerr << "	** ERROR: in initializeVertexShapeParameters, nv vector not assigned. Ending here." << endl;
-		exit(1);
+    exit(1);
 	}
 
 	// resize shape paramters
@@ -424,31 +430,33 @@ void dpm::initializeVertexShapeParameters(double calA0, int nref){
 	r.resize(NVTOT);
 
 	// loop over cells, determine shape parameters
-	for (ci=0; ci<NCELLS; ci++){
+	for (ci = 0; ci < NCELLS; ci++)
+	{
 		// number of vertices on cell ci
-		nvtmp 		= nv.at(ci);
+		nvtmp = nv.at(ci);
 
 		// a0 based on nv
-		rtmp 		= (double)nvtmp/nref;
-		a0.at(ci) 	= rtmp*rtmp;
+		rtmp = (double)nvtmp / nref;
+		a0.at(ci) = rtmp * rtmp;
 
 		// shape parameter
-		calAntmp 	= nvtmp*tan(PI/nvtmp)/PI;
-		calA0tmp 	= calA0*calAntmp;
+		calAntmp = nvtmp * tan(PI / nvtmp) / PI;
+		calA0tmp = calA0 * calAntmp;
 
 		// l0 and vertex radii
-		gi 			= szList.at(ci);
-		for (vi=0; vi<nv.at(ci); vi++){
-			l0.at(gi+vi) 	= 2.0*sqrt(PI*calA0tmp*a0.at(ci))/nvtmp;
-			t0.at(gi+vi) 	= 0.0;
-			r.at(gi+vi) 	= 0.5*l0.at(gi+vi);
+		gi = szList.at(ci);
+		for (vi = 0; vi < nv.at(ci); vi++)
+		{
+			l0.at(gi + vi) = 2.0 * sqrt(PI * calA0tmp * a0.at(ci)) / nvtmp;
+			t0.at(gi + vi) = 0.0;
+			r.at(gi + vi) = 0.5 * l0.at(gi + vi);
 		}
 	}
 }
 
-
 // initialize bidisperse cell system, single calA0
-void dpm::bidisperse2D(double calA0, int nsmall, double smallfrac, double sizefrac){
+void dpm::bidisperse2D(double calA0, int nsmall, double smallfrac, double sizefrac)
+{
 	// local variables
 	double calA0tmp, calAntmp, rtmp, areaSum;
 	int vim1, vip1, gi, ci, vi, nlarge, smallN, largeN, NVSMALL;
@@ -457,28 +465,31 @@ void dpm::bidisperse2D(double calA0, int nsmall, double smallfrac, double sizefr
 	cout << "** initializing bidisperse DPM particles in 2D ..." << endl;
 
 	// number of vertices on large particles
-	nlarge = round(sizefrac*nsmall);
+	nlarge = round(sizefrac * nsmall);
 
 	// total number of vertices
-	smallN 	= round(smallfrac*NCELLS);
-	largeN 	= NCELLS - smallN;
-	NVSMALL = nsmall*smallN;
-	NVTOT 	= NVSMALL + nlarge*largeN;
-	vertDOF = NDIM*NVTOT;
+	smallN = round(smallfrac * NCELLS);
+	largeN = NCELLS - smallN;
+	NVSMALL = nsmall * smallN;
+	NVTOT = NVSMALL + nlarge * largeN;
+	vertDOF = NDIM * NVTOT;
 
 	// szList and nv (keep track of global vertex indices)
 	nv.resize(NCELLS);
 	szList.resize(NCELLS);
 
 	nv.at(0) = nsmall;
-	for (ci=1; ci<NCELLS; ci++){
-		if (ci < smallN){
+	for (ci = 1; ci < NCELLS; ci++)
+	{
+		if (ci < smallN)
+		{
 			nv.at(ci) = nsmall;
-			szList.at(ci) = szList.at(ci-1) + nv.at(ci-1);
+			szList.at(ci) = szList.at(ci - 1) + nv.at(ci - 1);
 		}
-		else{
+		else
+		{
 			nv.at(ci) = nlarge;
-			szList.at(ci) = szList.at(ci-1) + nv.at(ci-1);
+			szList.at(ci) = szList.at(ci - 1) + nv.at(ci - 1);
 		}
 	}
 
@@ -490,7 +501,8 @@ void dpm::bidisperse2D(double calA0, int nsmall, double smallfrac, double sizefr
 }
 
 // initialize gaussian polydisperse cell system, single calA0
-void dpm::gaussian2D(double dispersion, double calA0, int n1){
+void dpm::gaussian2D(double dispersion, double calA0, int n1)
+{
 	// local variables
 	double calA0tmp, calAntmp, rtmp, areaSum, r1, r2, grv;
 	int vim1, vip1, gi, ci, vi, nvtmp;
@@ -504,23 +516,24 @@ void dpm::gaussian2D(double dispersion, double calA0, int n1){
 
 	nv.at(0) = n1;
 	NVTOT = n1;
-	for (ci=1; ci<NCELLS; ci++){
+	for (ci = 1; ci < NCELLS; ci++)
+	{
 		// use Box-Muller to generate polydisperse sample
 		r1 = drand48();
 		r2 = drand48();
-		grv = sqrt(-2.0*log(r1))*cos(2.0*PI*r2);
-		nvtmp = floor(dispersion*n1*grv + n1);
+		grv = sqrt(-2.0 * log(r1)) * cos(2.0 * PI * r2);
+		nvtmp = floor(dispersion * n1 * grv + n1);
 		if (nvtmp < nvmin)
 			nvtmp = nvmin;
 
 		// store size of cell ci
 		nv.at(ci) = nvtmp;
-		szList.at(ci) = szList.at(ci-1) + nv.at(ci-1);
+		szList.at(ci) = szList.at(ci - 1) + nv.at(ci - 1);
 
 		// add to total NV count
 		NVTOT += nvtmp;
 	}
-	vertDOF = NDIM*NVTOT;
+	vertDOF = NDIM * NVTOT;
 
 	// initialize vertex shape parameters
 	initializeVertexShapeParameters(calA0, n1);
@@ -529,9 +542,9 @@ void dpm::gaussian2D(double dispersion, double calA0, int n1){
 	initializeVertexIndexing2D();
 }
 
-
 // set sinusoidal preferred angle
-void dpm::sinusoidalPreferredAngle(double thA, double thK){
+void dpm::sinusoidalPreferredAngle(double thA, double thK)
+{
 	int ci, vi, gi;
 	double thR;
 
@@ -540,64 +553,67 @@ void dpm::sinusoidalPreferredAngle(double thA, double thK){
 
 	// loop over cells
 	gi = 0;
-	for (ci=0; ci<NCELLS; ci++){
-		thR = (2.0*PI)/nv.at(ci);
-		for (vi=0; vi<nv.at(ci); vi++){
-			t0.at(gi) = thA*thR*sin(thR*thK*vi);
+	for (ci = 0; ci < NCELLS; ci++)
+	{
+		thR = (2.0 * PI) / nv.at(ci);
+		for (vi = 0; vi < nv.at(ci); vi++)
+		{
+			t0.at(gi) = thA * thR * sin(thR * thK * vi);
 			gi++;
 		}
 	}
 }
 
 // initialize CoM positions of cells using SP FIRE
-void dpm::initializePositions2D(double phi0, double Ftol){
+void dpm::initializePositions2D(double phi0, double Ftol)
+{
 	// local variables
-	int i, d, ci, cj, vi, vj, gi, cellDOF = NDIM*NCELLS;
+	int i, d, ci, cj, vi, vj, gi, cellDOF = NDIM * NCELLS;
 	double areaSum, xtra = 1.1;
 
 	// local disk vectors
-	vector<double> drad(NCELLS,0.0);
-	vector<double> dpos(cellDOF,0.0);
-	vector<double> dv(cellDOF,0.0);
-	vector<double> dF(cellDOF,0.0);
+	vector<double> drad(NCELLS, 0.0);
+	vector<double> dpos(cellDOF, 0.0);
+	vector<double> dv(cellDOF, 0.0);
+	vector<double> dF(cellDOF, 0.0);
 
 	// print to console
 	cout << "** initializing particle positions using 2D SP model and FIRE relaxation ..." << endl;
 
 	// initialize box size based on packing fraction
 	areaSum = 0.0;
-	for (ci=0; ci<NCELLS; ci++)
-		areaSum += a0.at(ci) + 0.25*PI*pow(l0.at(ci),2.0)*(0.5*nv.at(ci) - 1);
+	for (ci = 0; ci < NCELLS; ci++)
+		areaSum += a0.at(ci) + 0.25 * PI * pow(l0.at(ci), 2.0) * (0.5 * nv.at(ci) - 1);
 
 	// set box size
-	for (d=0; d<NDIM; d++)
-		L.at(d) = pow(areaSum/phi0,1.0/NDIM);
+	for (d = 0; d < NDIM; d++)
+		L.at(d) = pow(areaSum / phi0, 1.0 / NDIM);
 
 	// initialize cell centers randomly
-	for (ci=0; ci<cellDOF; ci += 2)
-		dpos.at(ci) = L[ci % 2]*drand48();
-	for (ci=cellDOF-1; ci>0; ci -= 2)
-		dpos.at(ci) = L[ci % 2]*drand48();
+	for (ci = 0; ci < cellDOF; ci += 2)
+		dpos.at(ci) = L[ci % 2] * drand48();
+	for (ci = cellDOF - 1; ci > 0; ci -= 2)
+		dpos.at(ci) = L[ci % 2] * drand48();
 
 	// set radii of SP disks
-	for (ci=0; ci<NCELLS; ci++)
-		drad.at(ci) = xtra*sqrt((2.0*a0.at(ci))/(nv.at(ci)*sin(2.0*PI/nv.at(ci))));
+	for (ci = 0; ci < NCELLS; ci++)
+		drad.at(ci) = xtra * sqrt((2.0 * a0.at(ci)) / (nv.at(ci) * sin(2.0 * PI / nv.at(ci))));
 
 	// FIRE VARIABLES
-	double P  		= 0;	
-	double fnorm 	= 0;
-	double vnorm 	= 0;
-	double alpha   	= alpha0;
+	double P = 0;
+	double fnorm = 0;
+	double vnorm = 0;
+	double alpha = alpha0;
 
-	double dt0 		= 1e-2;
-	double dtmax   	= 10*dt0;
-	double dtmin   	= 1e-8*dt0;
+	double dt0 = 1e-2;
+	double dtmax = 10 * dt0;
+	double dtmin = 1e-8 * dt0;
 
-	int npPos      	= 0;
-	int npNeg      	= 0;
+	int npPos = 0;
+	int npNeg = 0;
 
-	int fireit    	= 0;
-	double fcheck  	= 10*Ftol;
+	int fireit = 0;
+	double fcheck = 10 * Ftol;
 
 	// interaction variables
 	double rij, sij, dtmp, ftmp, vftmp;
@@ -606,16 +622,17 @@ void dpm::initializePositions2D(double phi0, double Ftol){
 	// initial step size
 	dt = dt0;
 
-
 	// loop until force relaxes
-	while ((fcheck > Ftol) && fireit < itmax){
+	while ((fcheck > Ftol) && fireit < itmax)
+	{
 		// FIRE step 1. Compute P
 		P = 0.0;
-		for (i=0; i<cellDOF; i++)
-			P += dv[i]*dF[i];
+		for (i = 0; i < cellDOF; i++)
+			P += dv[i] * dF[i];
 
 		// FIRE step 2. adjust simulation based on net motion of degrees of freedom
-		if (P > 0){
+		if (P > 0)
+		{
 			// increase positive counter
 			npPos++;
 
@@ -623,16 +640,18 @@ void dpm::initializePositions2D(double phi0, double Ftol){
 			npNeg = 0;
 
 			// alter simulation if enough positive steps have been taken
-			if (npPos > NMIN){
+			if (npPos > NMIN)
+			{
 				// change time step
-				if (dt*finc < dtmax)
+				if (dt * finc < dtmax)
 					dt *= finc;
 
 				// decrease alpha
 				alpha *= falpha;
 			}
 		}
-		else{
+		else
+		{
 			// reset positive counter
 			npPos = 0;
 
@@ -646,18 +665,20 @@ void dpm::initializePositions2D(double phi0, double Ftol){
 			}
 
 			// take half step backwards, reset velocities
-			for (i=0; i<cellDOF; i++){
+			for (i = 0; i < cellDOF; i++)
+			{
 				// take half step backwards
-				dpos[i] -= 0.5*dt*dv[i];
+				dpos[i] -= 0.5 * dt * dv[i];
 
 				// reset velocities
 				dv[i] = 0.0;
 			}
 
 			// decrease time step if past initial delay
-			if (fireit > NDELAY){
-				// decrease time step 
-				if (dt*fdec > dtmin)
+			if (fireit > NDELAY)
+			{
+				// decrease time step
+				if (dt * fdec > dtmin)
 					dt *= fdec;
 
 				// reset alpha
@@ -666,46 +687,52 @@ void dpm::initializePositions2D(double phi0, double Ftol){
 		}
 
 		// FIRE step 3. First VV update
-		for (i=0; i<cellDOF; i++)
-			dv[i] += 0.5*dt*dF[i];
+		for (i = 0; i < cellDOF; i++)
+			dv[i] += 0.5 * dt * dF[i];
 
 		// FIRE step 4. adjust velocity magnitude
 		fnorm = 0.0;
 		vnorm = 0.0;
-		for (i=0; i<cellDOF; i++){
-			fnorm 	+= dF[i]*dF[i];
-			vnorm 	+= dv[i]*dv[i];
+		for (i = 0; i < cellDOF; i++)
+		{
+			fnorm += dF[i] * dF[i];
+			vnorm += dv[i] * dv[i];
 		}
 		fnorm = sqrt(fnorm);
 		vnorm = sqrt(vnorm);
-		if (fnorm > 0){
-			for (i=0; i<cellDOF; i++)
-				dv[i] = (1 - alpha)*dv[i] + alpha*(vnorm/fnorm)*dF[i];
+		if (fnorm > 0)
+		{
+			for (i = 0; i < cellDOF; i++)
+				dv[i] = (1 - alpha) * dv[i] + alpha * (vnorm / fnorm) * dF[i];
 		}
 
 		// FIRE step 4. Second VV update
-		for (i=0; i<cellDOF; i++){
-			dpos[i] += dt*dv[i];
+		for (i = 0; i < cellDOF; i++)
+		{
+			dpos[i] += dt * dv[i];
 			dF[i] = 0.0;
 		}
 
 		// FIRE step 5. Update forces
-		for (ci=0; ci<NCELLS; ci++){
-			for (cj=ci+1; cj<NCELLS; cj++){
+		for (ci = 0; ci < NCELLS; ci++)
+		{
+			for (cj = ci + 1; cj < NCELLS; cj++)
+			{
 
 				// contact distance
 				sij = drad[ci] + drad[cj];
 
 				// true distance
 				rij = 0.0;
-				for (d=0; d<NDIM; d++){
+				for (d = 0; d < NDIM; d++)
+				{
 					// get distance element
-					dtmp = dpos[NDIM*cj + d] - dpos[NDIM*ci + d];
+					dtmp = dpos[NDIM * cj + d] - dpos[NDIM * ci + d];
 					if (pbc[d])
-						dtmp -= L[d]*round(dtmp/L[d]);
+						dtmp -= L[d] * round(dtmp / L[d]);
 
 					// add to true distance
-					rij += dtmp*dtmp;
+					rij += dtmp * dtmp;
 
 					// save in distance array
 					dr[d] = dtmp;
@@ -713,33 +740,37 @@ void dpm::initializePositions2D(double phi0, double Ftol){
 				rij = sqrt(rij);
 
 				// check distances
-				if (rij < sij){
+				if (rij < sij)
+				{
 					// force magnitude
-					ftmp = kc*(1.0 - (rij/sij))/sij;
-					
+					ftmp = kc * (1.0 - (rij / sij)) / sij;
+
 					// add to vectorial force
-					for (d=0; d<NDIM; d++){
-						vftmp = ftmp*(dr[d]/rij);
-						dF[NDIM*ci + d] -= vftmp;
-						dF[NDIM*cj + d] += vftmp;
+					for (d = 0; d < NDIM; d++)
+					{
+						vftmp = ftmp * (dr[d] / rij);
+						dF[NDIM * ci + d] -= vftmp;
+						dF[NDIM * cj + d] += vftmp;
 					}
 				}
 			}
 		}
 
 		// FIRE step 5. Final VV update
-		for (i=0; i<cellDOF; i++)
-			dv[i] += 0.5*dt*dF[i];
+		for (i = 0; i < cellDOF; i++)
+			dv[i] += 0.5 * dt * dF[i];
 
 		// update forces to check
 		fcheck = 0.0;
-		for (i=0; i<cellDOF; i++)
-			fcheck += dF[i]*dF[i];
-		fcheck = sqrt(fcheck/NCELLS);
+		for (i = 0; i < cellDOF; i++)
+			fcheck += dF[i] * dF[i];
+		fcheck = sqrt(fcheck / NCELLS);
 
 		// print to console
-		if (fireit % NSKIP == 0){
-			cout << endl << endl;
+		if (fireit % NSKIP == 0)
+		{
+			cout << endl
+				 << endl;
 			cout << "===========================================" << endl;
 			cout << "		I N I T I A L  S P 			" << endl;
 			cout << " 	F I R E 						" << endl;
@@ -752,7 +783,7 @@ void dpm::initializePositions2D(double phi0, double Ftol){
 			cout << "	** vnorm = " << vnorm << endl;
 			cout << "	** dt = " << dt << endl;
 			cout << "	** P = " << P << endl;
-			cout << "	** Pdir = " << P/(fnorm*vnorm) << endl;
+			cout << "	** Pdir = " << P / (fnorm * vnorm) << endl;
 			cout << "	** alpha = " << alpha << endl;
 		}
 
@@ -760,17 +791,21 @@ void dpm::initializePositions2D(double phi0, double Ftol){
 		fireit++;
 	}
 	// check if FIRE converged
-	if (fireit == itmax){
+	if (fireit == itmax)
+	{
 		cout << "	** FIRE minimization did not converge, fireit = " << fireit << ", itmax = " << itmax << "; ending." << endl;
 		exit(1);
 	}
-	else{
-		cout << endl << endl;
+	else
+	{
+		cout << endl
+			 << endl;
 		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
 		cout << "===========================================" << endl;
 		cout << " 	F I R E 						" << endl;
 		cout << "		M I N I M I Z A T I O N 	" << endl;
-		cout << "	C O N V E R G E D! 				" << endl << endl;
+		cout << "	C O N V E R G E D! 				" << endl
+			 << endl;
 
 		cout << "	(for initial disk minimization) " << endl;
 		cout << "===========================================" << endl;
@@ -785,26 +820,28 @@ void dpm::initializePositions2D(double phi0, double Ftol){
 	}
 
 	// initialize vertex positions based on cell centers
-	for (ci=0; ci<NCELLS; ci++){
-		for (vi=0; vi<nv.at(ci); vi++){
+	for (ci = 0; ci < NCELLS; ci++)
+	{
+		for (vi = 0; vi < nv.at(ci); vi++)
+		{
 			// get global vertex index
-			gi = gindex(ci,vi);
+			gi = gindex(ci, vi);
 
 			// length from center to vertex
-			dtmp = sqrt((2.0*a0.at(ci))/(nv.at(ci)*sin((2.0*PI)/nv.at(ci))));
+			dtmp = sqrt((2.0 * a0.at(ci)) / (nv.at(ci) * sin((2.0 * PI) / nv.at(ci))));
 
 			// set positions
-			x.at(NDIM*gi) 		= dtmp*cos((2.0*PI*vi)/nv.at(ci)) + dpos.at(NDIM*ci) + 1e-2*l0[gi]*drand48();
-			x.at(NDIM*gi + 1)	= dtmp*sin((2.0*PI*vi)/nv.at(ci)) + dpos.at(NDIM*ci + 1) + 1e-2*l0[gi]*drand48();
+			x.at(NDIM * gi) = dtmp * cos((2.0 * PI * vi) / nv.at(ci)) + dpos.at(NDIM * ci) + 1e-2 * l0[gi] * drand48();
+			x.at(NDIM * gi + 1) = dtmp * sin((2.0 * PI * vi) / nv.at(ci)) + dpos.at(NDIM * ci + 1) + 1e-2 * l0[gi] * drand48();
 		}
 	}
 }
 
-
 // initialize neighbor linked list
-void dpm::initializeNeighborLinkedList2D(double boxLengthScale){
+void dpm::initializeNeighborLinkedList2D(double boxLengthScale)
+{
 	// local variables
-	double llscale = 2.0*r.at(0);
+	double llscale = 2.0 * r.at(0);
 	int i, d, nntmp, scx;
 
 	// print to console
@@ -814,16 +851,17 @@ void dpm::initializeNeighborLinkedList2D(double boxLengthScale){
 	NBX = 1;
 	sb.resize(NDIM);
 	lb.resize(NDIM);
-	for (d=0; d<NDIM; d++){
+	for (d = 0; d < NDIM; d++)
+	{
 		// determine number of cells along given dimension by rmax
-		sb[d] = round(L[d]/(boxLengthScale*llscale));
+		sb[d] = round(L[d] / (boxLengthScale * llscale));
 
 		// just in case, if < 3, change to 3 so box neighbor checking will work
 		if (sb[d] < 3)
 			sb[d] = 3;
 
 		// determine box length by number of cells
-		lb[d] = L[d]/sb[d];
+		lb[d] = L[d] / sb[d];
 
 		// count total number of cells
 		NBX *= sb[d];
@@ -834,53 +872,54 @@ void dpm::initializeNeighborLinkedList2D(double boxLengthScale){
 	nn.resize(NBX);
 
 	// loop over cells, save forward neighbors for each box
-	for (i=0; i<NBX; i++){
+	for (i = 0; i < NBX; i++)
+	{
 		// reshape entry
 		nn[i].resize(NNN);
-		
-		// neighbors
-		nn[i][0] 			= (i + 1) % NBX; 			// right neighbor (i+1)
 
-		if (pbc[1])										// top neighbor (j+1)
-			nn[i][1] 		= (i + scx) % NBX;			// ** top neighbor (j+1) (with pbc)
-		else{
+		// neighbors
+		nn[i][0] = (i + 1) % NBX; // right neighbor (i+1)
+
+		if (pbc[1])						// top neighbor (j+1)
+			nn[i][1] = (i + scx) % NBX; // ** top neighbor (j+1) (with pbc)
+		else
+		{
 			if (i >= NBX - scx)
-				nn[i][1] 	= -1;						// ** NO top neighbor (j+1) when !pbc and on top row
+				nn[i][1] = -1; // ** NO top neighbor (j+1) when !pbc and on top row
 			else
-				nn[i][1] 	= i + scx;					// ** top neighbor (j+1) (without pbc, but not on top row)
+				nn[i][1] = i + scx; // ** top neighbor (j+1) (without pbc, but not on top row)
 		}
 
-		nntmp 				= (i + NBX - scx) % NBX;	// bottom neighbor (j-1)
-		nn[i][2] 			= (nn[i][1] + 1) % NBX;		// top-right neighbor (i+1, j+1)
-		nn[i][3] 			= nntmp + 1;				// bottom-right neighbor (i+1, j-1)
+		nntmp = (i + NBX - scx) % NBX;	 // bottom neighbor (j-1)
+		nn[i][2] = (nn[i][1] + 1) % NBX; // top-right neighbor (i+1, j+1)
+		nn[i][3] = nntmp + 1;			 // bottom-right neighbor (i+1, j-1)
 
 		// right-hand bc (periodic)
-		if ((i+1) % scx == 0){
-			if (pbc[0]){
+		if ((i + 1) % scx == 0)
+		{
+			if (pbc[0])
+			{
 				nn[i][0] = i - scx + 1;
-				nn[i][2] = nn[i][1]  - scx + 1;
+				nn[i][2] = nn[i][1] - scx + 1;
 				nn[i][3] = nntmp - scx + 1;
 			}
-			else{
+			else
+			{
 				nn[i][0] = -1;
 				nn[i][2] = -1;
 				nn[i][3] = -1;
 			}
-			
 		}
 	}
 
 	// linked-list variables
 	head.resize(NBX);
 	last.resize(NBX);
-	list.resize(NVTOT+1);
+	list.resize(NVTOT + 1);
 
 	// print box info to console
 	cout << ";  initially NBX = " << NBX << " ..." << endl;
 }
-
-
-
 
 /******************************
 
@@ -890,9 +929,9 @@ void dpm::initializeNeighborLinkedList2D(double boxLengthScale){
 
 *******************************/
 
-
 // sort vertices into neighbor linked list
-void dpm::sortNeighborLinkedList2D(){
+void dpm::sortNeighborLinkedList2D()
+{
 	// local variables
 	int d, gi, boxid, sbtmp;
 
@@ -902,13 +941,15 @@ void dpm::sortNeighborLinkedList2D(){
 	fill(last.begin(), last.end(), 0);
 
 	// sort vertices into linked list
-	for (gi=0; gi<NVTOT; gi++){
+	for (gi = 0; gi < NVTOT; gi++)
+	{
 		// 1. get cell id of current particle position
 		boxid = 0;
 		sbtmp = 1;
-		for (d=0; d<NDIM; d++){
+		for (d = 0; d < NDIM; d++)
+		{
 			// add d index to 1d list
-			boxid += floor(x[NDIM*gi + d]/lb[d])*sbtmp;
+			boxid += floor(x[NDIM * gi + d] / lb[d]) * sbtmp;
 
 			// increment dimensional factor
 			sbtmp *= sb[d];
@@ -916,45 +957,49 @@ void dpm::sortNeighborLinkedList2D(){
 
 		// 2. add to head list or link within list
 		// NOTE: particle ids are labelled starting from 1, setting to 0 means end of linked list
-		if (head[boxid] == 0){
+		if (head[boxid] == 0)
+		{
 			head[boxid] = gi + 1;
 			last[boxid] = gi + 1;
 		}
-		else{
+		else
+		{
 			list[last[boxid]] = gi + 1;
 			last[boxid] = gi + 1;
 		}
 	}
 }
 
-
 // change size of particles
-void dpm::scaleParticleSizes2D(double scaleFactor){
+void dpm::scaleParticleSizes2D(double scaleFactor)
+{
 	// local variables
 	int gi, ci, vi, xind, yind;
 	double xi, yi, cx, cy, dx, dy;
 
 	// loop over cells, scale
- 	for (ci=0; ci<NCELLS; ci++){
+	for (ci = 0; ci < NCELLS; ci++)
+	{
 		// scale preferred area
-		a0[ci] *= scaleFactor*scaleFactor;
+		a0[ci] *= scaleFactor * scaleFactor;
 
 		// first global index for ci
 		gi = szList.at(ci);
 
 		// compute cell center of mass
-		xi = x[NDIM*gi];
-		yi = x[NDIM*gi + 1];
-		cx = xi; 
+		xi = x[NDIM * gi];
+		yi = x[NDIM * gi + 1];
+		cx = xi;
 		cy = yi;
-		for (vi=1; vi<nv.at(ci); vi++){
-			dx = x.at(NDIM*(gi+vi)) - xi;
+		for (vi = 1; vi < nv.at(ci); vi++)
+		{
+			dx = x.at(NDIM * (gi + vi)) - xi;
 			if (pbc[0])
-				dx -= L[0]*round(dx/L[0]);
+				dx -= L[0] * round(dx / L[0]);
 
-			dy = x.at(NDIM*(gi+vi) + 1) - yi;
+			dy = x.at(NDIM * (gi + vi) + 1) - yi;
 			if (pbc[1])
-				dy -= L[1]*round(dy/L[1]);
+				dy -= L[1] * round(dy / L[1]);
 
 			xi += dx;
 			yi += dy;
@@ -965,58 +1010,62 @@ void dpm::scaleParticleSizes2D(double scaleFactor){
 		cx /= nv.at(ci);
 		cy /= nv.at(ci);
 
-		for (vi=0; vi<nv.at(ci); vi++){
+		for (vi = 0; vi < nv.at(ci); vi++)
+		{
 			// x and y inds
-			xind = NDIM*(gi+vi);
+			xind = NDIM * (gi + vi);
 			yind = xind + 1;
 
 			// closest relative position
 			dx = x[xind] - cx;
 			if (pbc[0])
-				dx -= L[0]*round(dx/L[0]);
+				dx -= L[0] * round(dx / L[0]);
 
 			dy = x[yind] - cy;
 			if (pbc[1])
-				dy -= L[1]*round(dy/L[1]);
+				dy -= L[1] * round(dy / L[1]);
 
 			// update vertex positions
-			x[xind] 		+= (scaleFactor - 1.0)*dx;
-			x[yind] 		+= (scaleFactor - 1.0)*dy;
+			x[xind] += (scaleFactor - 1.0) * dx;
+			x[yind] += (scaleFactor - 1.0) * dy;
 
 			// scale vertex radii
-			r[gi+vi] 		*= scaleFactor;
-			l0[gi+vi] 		*= scaleFactor;
+			r[gi + vi] *= scaleFactor;
+			l0[gi + vi] *= scaleFactor;
 		}
 	}
 }
 
-
 // remove rattlers from contact network, return number of rattlers
-int dpm::removeRattlers(){
+int dpm::removeRattlers()
+{
 	// local variables
-	int ci, cj, ctmp, rvv, rcc, nr, nm=1;
+	int ci, cj, ctmp, rvv, rcc, nr, nm = 1;
 
 	// loop over rows, eliminate contacts to rattlers until nm = 0
-	while (nm > 0){
+	while (nm > 0)
+	{
 		// reset number of rattlers
 		nr = 0;
 
 		// number of "marginal" rattlers to be removed
 		nm = 0;
-		for (ci=0; ci<NCELLS; ci++) {
+		for (ci = 0; ci < NCELLS; ci++)
+		{
 			// get number of contacts on cell ci
 			rvv = 0;
 			rcc = 0;
-			for (cj=0; cj<NCELLS; cj++){
-				if (ci != cj){
+			for (cj = 0; cj < NCELLS; cj++)
+			{
+				if (ci != cj)
+				{
 					if (ci > cj)
-						ctmp = cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2];
+						ctmp = cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2];
 					else
-						ctmp = cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2];
+						ctmp = cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2];
 				}
 				else
 					ctmp = 0;
-				
 
 				rvv += ctmp;
 				if (ctmp > 0)
@@ -1024,21 +1073,25 @@ int dpm::removeRattlers(){
 			}
 
 			// check to see if particle should be removed from network
-			if (rcc <= NDIM && rvv <= 3) {
+			if (rcc <= NDIM && rvv <= 3)
+			{
 				// increment # of rattlers
 				nr++;
 
 				// if in contact, remove contacts
-				if (rvv > 0) {
+				if (rvv > 0)
+				{
 					nm++;
 
-					for (cj=0; cj<NCELLS; cj++) {
+					for (cj = 0; cj < NCELLS; cj++)
+					{
 						// delete contact between ci and cj
-						if (ci != cj){
+						if (ci != cj)
+						{
 							if (ci > cj)
-								cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2] = 0;
+								cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2] = 0;
 							else
-								cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2] = 0; 
+								cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2] = 0;
 						}
 					}
 				}
@@ -1050,44 +1103,40 @@ int dpm::removeRattlers(){
 	return nr;
 }
 
-
 // draw random velocities based on input temperature
-void dpm::drawVelocities2D(double T){
+void dpm::drawVelocities2D(double T)
+{
 	// local variables
 	int gi;
-	double r1, r2, grv1, grv2, tscale=sqrt(T), vcomx=0.0, vcomy=0.0;
+	double r1, r2, grv1, grv2, tscale = sqrt(T), vcomx = 0.0, vcomy = 0.0;
 
 	// loop over velocities, draw from maxwell-boltzmann distribution
-	for (gi=0; gi<NVTOT; gi++){
+	for (gi = 0; gi < NVTOT; gi++)
+	{
 		// draw random numbers using Box-Muller
-		r1 				= drand48();
-		r2 				= drand48();
-		grv1 			= sqrt(-2.0*log(r1))*cos(2.0*PI*r2);
-		grv2			= sqrt(-2.0*log(r1))*sin(2.0*PI*r2);
+		r1 = drand48();
+		r2 = drand48();
+		grv1 = sqrt(-2.0 * log(r1)) * cos(2.0 * PI * r2);
+		grv2 = sqrt(-2.0 * log(r1)) * sin(2.0 * PI * r2);
 
 		// assign to velocities
-		v[NDIM*gi] 		= tscale*grv1;
-		v[NDIM*gi + 1] 	= tscale*grv2;
+		v[NDIM * gi] = tscale * grv1;
+		v[NDIM * gi + 1] = tscale * grv2;
 
 		// add to center of mass
-		vcomx 			+= v[NDIM*gi];
-		vcomy 			+= v[NDIM*gi + 1];
+		vcomx += v[NDIM * gi];
+		vcomy += v[NDIM * gi + 1];
 	}
-	vcomx = vcomx/NVTOT;
-	vcomy = vcomy/NVTOT;
+	vcomx = vcomx / NVTOT;
+	vcomy = vcomy / NVTOT;
 
 	// subtract off center of mass drift
-	for (gi=0; gi<NVTOT; gi++){
-		v[NDIM*gi] 		-= vcomx;
-		v[NDIM*gi + 1]	-= vcomy;
+	for (gi = 0; gi < NVTOT; gi++)
+	{
+		v[NDIM * gi] -= vcomx;
+		v[NDIM * gi + 1] -= vcomy;
 	}
 }
-
-
-
-
-
-
 
 /******************************
 
@@ -1097,15 +1146,15 @@ void dpm::drawVelocities2D(double T){
 
 *******************************/
 
-
-void dpm::resetForcesAndEnergy(){
+void dpm::resetForcesAndEnergy()
+{
 	fill(F.begin(), F.end(), 0.0);
 	fill(stress.begin(), stress.end(), 0.0);
 	U = 0.0;
 }
 
-
-void dpm::shapeForces2D(){
+void dpm::shapeForces2D()
+{
 	// local variables
 	int ci, gi, vi, nvtmp;
 	double fa, fli, flim1, fb, cx, cy, xi, yi;
@@ -1119,11 +1168,14 @@ void dpm::shapeForces2D(){
 	// loop over vertices, add to force
 	rho0 = sqrt(a0.at(0));
 	ci = 0;
-	for (gi=0; gi<NVTOT; gi++){
+	for (gi = 0; gi < NVTOT; gi++)
+	{
 
 		// -- Area force (and get cell index ci)
-		if (ci < NCELLS){
-			if (gi == szList[ci]){
+		if (ci < NCELLS)
+		{
+			if (gi == szList[ci])
+			{
 				// shape information
 				nvtmp = nv[ci];
 				a0tmp = a0[ci];
@@ -1133,28 +1185,29 @@ void dpm::shapeForces2D(){
 
 				// compute area deviation
 				atmp = area(ci);
-				da = (atmp/a0tmp) - 1.0;
+				da = (atmp / a0tmp) - 1.0;
 
 				// update potential energy
-				U += 0.5*ka*(da*da);
+				U += 0.5 * ka * (da * da);
 
 				// shape force parameters
-				fa = da*(rho0/a0tmp);
-				fb = kb/rho0;
+				fa = da * (rho0 / a0tmp);
+				fb = kb / rho0;
 
 				// compute cell center of mass
-				xi = x[NDIM*gi];
-				yi = x[NDIM*gi + 1];
-				cx = xi; 
+				xi = x[NDIM * gi];
+				yi = x[NDIM * gi + 1];
+				cx = xi;
 				cy = yi;
-				for (vi=1; vi<nvtmp; vi++){
+				for (vi = 1; vi < nvtmp; vi++)
+				{
 					// get distances between vim1 and vi
-					dx = x[NDIM*(gi+vi)] - xi;
-					dy = x[NDIM*(gi+vi) + 1] - yi;
+					dx = x[NDIM * (gi + vi)] - xi;
+					dy = x[NDIM * (gi + vi) + 1] - yi;
 					if (pbc[0])
-						dx -= L[0]*round(dx/L[0]);
+						dx -= L[0] * round(dx / L[0]);
 					if (pbc[1])
-						dy -= L[1]*round(dy/L[1]);
+						dy -= L[1] * round(dy / L[1]);
 
 					// add to centers
 					xi += dx;
@@ -1167,29 +1220,29 @@ void dpm::shapeForces2D(){
 				cy /= nvtmp;
 
 				// get coordinates relative to center of mass
-				rix = x[NDIM*gi] - cx;
-				riy = x[NDIM*gi + 1] - cy;
+				rix = x[NDIM * gi] - cx;
+				riy = x[NDIM * gi + 1] - cy;
 
 				// get prior adjacent vertices
-				rim2x = x[NDIM*im1[im1[gi]]] - cx;
-				rim2y = x[NDIM*im1[im1[gi]] + 1] - cy;
+				rim2x = x[NDIM * im1[im1[gi]]] - cx;
+				rim2y = x[NDIM * im1[im1[gi]] + 1] - cy;
 				if (pbc[0])
-					rim2x -= L[0]*round(rim2x/L[0]);
+					rim2x -= L[0] * round(rim2x / L[0]);
 				if (pbc[1])
-					rim2y -= L[1]*round(rim2y/L[1]);
+					rim2y -= L[1] * round(rim2y / L[1]);
 
-				rim1x = x[NDIM*im1[gi]] - cx;
-				rim1y = x[NDIM*im1[gi] + 1] - cy;
+				rim1x = x[NDIM * im1[gi]] - cx;
+				rim1y = x[NDIM * im1[gi] + 1] - cy;
 				if (pbc[0])
-					rim1x -= L[0]*round(rim1x/L[0]);
+					rim1x -= L[0] * round(rim1x / L[0]);
 				if (pbc[1])
-					rim1y -= L[1]*round(rim1y/L[1]);
+					rim1y -= L[1] * round(rim1y / L[1]);
 
 				// get prior segment vectors
 				lim2x = rim1x - rim2x;
 				lim2y = rim1y - rim2y;
 
-				lim1x = rix - rim1x;	
+				lim1x = rix - rim1x;
 				lim1y = riy - rim1y;
 
 				// increment cell index
@@ -1201,66 +1254,64 @@ void dpm::shapeForces2D(){
 		l0i = l0[gi];
 
 		// get next adjacent vertices
-		rip1x = x[NDIM*ip1[gi]] - cx;
-		rip1y = x[NDIM*ip1[gi] + 1] - cy;
+		rip1x = x[NDIM * ip1[gi]] - cx;
+		rip1y = x[NDIM * ip1[gi] + 1] - cy;
 		if (pbc[0])
-			rip1x -= L[0]*round(rip1x/L[0]);
+			rip1x -= L[0] * round(rip1x / L[0]);
 		if (pbc[1])
-			rip1y -= L[1]*round(rip1y/L[1]);
-
+			rip1y -= L[1] * round(rip1y / L[1]);
 
 		// -- Area force
-		F[NDIM*gi] 		+= 0.5*fa*(rim1y - rip1y);
-		F[NDIM*gi + 1] 	+= 0.5*fa*(rip1x - rim1x);
-
+		F[NDIM * gi] += 0.5 * fa * (rim1y - rip1y);
+		F[NDIM * gi + 1] += 0.5 * fa * (rip1x - rim1x);
 
 		// -- Perimeter force
-		lix 	= rip1x - rix;
-		liy 	= rip1y - riy;
+		lix = rip1x - rix;
+		liy = rip1y - riy;
 
 		// segment lengths
-		lim1 	= sqrt(lim1x*lim1x + lim1y*lim1y);
-		li 		= sqrt(lix*lix + liy*liy);
+		lim1 = sqrt(lim1x * lim1x + lim1y * lim1y);
+		li = sqrt(lix * lix + liy * liy);
 
 		// segment deviations
-		dlim1  	= (lim1/l0im1) - 1.0;
-		dli 	= (li/l0i) - 1.0;
+		dlim1 = (lim1 / l0im1) - 1.0;
+		dli = (li / l0i) - 1.0;
 
 		// segment forces
-		flim1 	= kl*(rho0/l0im1);
-		fli 	= kl*(rho0/l0i);
+		flim1 = kl * (rho0 / l0im1);
+		fli = kl * (rho0 / l0i);
 
 		// add to forces
-		F[NDIM*gi] 		+= (fli*dli*lix/li) - (flim1*dlim1*lim1x/lim1);
-		F[NDIM*gi + 1] 	+= (fli*dli*liy/li) - (flim1*dlim1*lim1y/lim1);
-		
-		// update potential energy
-		U += 0.5*kl*(dli*dli);
+		F[NDIM * gi] += (fli * dli * lix / li) - (flim1 * dlim1 * lim1x / lim1);
+		F[NDIM * gi + 1] += (fli * dli * liy / li) - (flim1 * dlim1 * lim1y / lim1);
 
+		// update potential energy
+		U += 0.5 * kl * (dli * dli);
 
 		// -- Bending force
-		if (kb > 0){
+		if (kb > 0)
+		{
 			// get ip2 for third angle
-			rip2x = x[NDIM*ip1[ip1[gi]]] - cx;
-			rip2y = x[NDIM*ip1[ip1[gi]] + 1] - cy;
+			rip2x = x[NDIM * ip1[ip1[gi]]] - cx;
+			rip2y = x[NDIM * ip1[ip1[gi]] + 1] - cy;
 			if (pbc[0])
-				rip2x -= L[0]*round(rip2x/L[0]);
+				rip2x -= L[0] * round(rip2x / L[0]);
 			if (pbc[1])
-				rip2y -= L[1]*round(rip2y/L[1]);
+				rip2y -= L[1] * round(rip2y / L[1]);
 
 			// get last segment length
 			lip1x = rip2x - rip1x;
 			lip1y = rip2y - rip1y;
 
 			// get angles
-			sinim1 = lim1x*lim2y - lim1y*lim2x;
-			cosim1 = lim1x*lim2x + lim1y*lim2y;
+			sinim1 = lim1x * lim2y - lim1y * lim2x;
+			cosim1 = lim1x * lim2x + lim1y * lim2y;
 
-			sini = lix*lim1y - liy*lim1x;
-			cosi = lix*lim1x + liy*lim1y;
+			sini = lix * lim1y - liy * lim1x;
+			cosi = lix * lim1x + liy * lim1y;
 
-			sinip1 = lip1x*liy - lip1y*lix;
-			cosip1 = lip1x*lix + lip1y*liy;
+			sinip1 = lip1x * liy - lip1y * lix;
+			cosip1 = lip1x * lix + lip1y * liy;
 
 			// get normal vectors
 			nim1x = lim1y;
@@ -1270,23 +1321,21 @@ void dpm::shapeForces2D(){
 			niy = -lix;
 
 			// get change in angles
-			dtim1 = atan2(sinim1,cosim1) - t0[im1[gi]];
-			dti = atan2(sini,cosi) - t0[gi];
-			dtip1 = atan2(sinip1,cosip1) - t0[ip1[gi]];
+			dtim1 = atan2(sinim1, cosim1) - t0[im1[gi]];
+			dti = atan2(sini, cosi) - t0[gi];
+			dtip1 = atan2(sinip1, cosip1) - t0[ip1[gi]];
 
 			// get delta delta theta's
-			ddtim1 = (dti - dtim1)/(lim1*lim1);
-			ddti = (dti - dtip1)/(li*li);
+			ddtim1 = (dti - dtim1) / (lim1 * lim1);
+			ddti = (dti - dtip1) / (li * li);
 
 			// add to force
-			F[NDIM*gi] 		+= fb*(ddtim1*nim1x + ddti*nix);
-			F[NDIM*gi + 1] 	+= fb*(ddtim1*nim1y + ddti*niy);
+			F[NDIM * gi] += fb * (ddtim1 * nim1x + ddti * nix);
+			F[NDIM * gi + 1] += fb * (ddtim1 * nim1y + ddti * niy);
 
 			// update potential energy
-			U += 0.5*kb*(dti*dti);
+			U += 0.5 * kb * (dti * dti);
 		}
-		
-		
 
 		// update old coordinates
 		rim2x = rim1x;
@@ -1309,8 +1358,8 @@ void dpm::shapeForces2D(){
 	}
 }
 
-
-void dpm::vertexRepulsiveForces2D(){
+void dpm::vertexRepulsiveForces2D()
+{
 	// local variables
 	int ci, cj, gi, gj, vi, vj, bi, bj, pi, pj, boxid, sbtmp;
 	double sij, rij, dx, dy, rho0;
@@ -1326,13 +1375,15 @@ void dpm::vertexRepulsiveForces2D(){
 	fill(cij.begin(), cij.end(), 0);
 
 	// loop over boxes in neighbor linked list
-	for (bi=0; bi<NBX; bi++){
+	for (bi = 0; bi < NBX; bi++)
+	{
 
 		// get start of list of vertices
 		pi = head[bi];
 
 		// loop over linked list
-		while (pi > 0){
+		while (pi > 0)
+		{
 			// real particle index
 			gi = pi - 1;
 
@@ -1340,11 +1391,13 @@ void dpm::vertexRepulsiveForces2D(){
 			pj = list[pi];
 
 			// loop down neighbors of pi in same cell
-			while (pj > 0){
+			while (pj > 0)
+			{
 				// real index of pj
 				gj = pj - 1;
 
-				if (gj == ip1[gi] || gj == im1[gi]){
+				if (gj == ip1[gi] || gj == im1[gi])
+				{
 					pj = list[pj];
 					continue;
 				}
@@ -1353,44 +1406,47 @@ void dpm::vertexRepulsiveForces2D(){
 				sij = r[gi] + r[gj];
 
 				// particle distance
-				dx = x[NDIM*gj] - x[NDIM*gi];
+				dx = x[NDIM * gj] - x[NDIM * gi];
 				if (pbc[0])
-					dx -= L[0]*round(dx/L[0]);
-				if (dx < sij){
-					dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
+					dx -= L[0] * round(dx / L[0]);
+				if (dx < sij)
+				{
+					dy = x[NDIM * gj + 1] - x[NDIM * gi + 1];
 					if (pbc[1])
-						dy -= L[1]*round(dy/L[1]);
-					if (dy < sij){
-						rij = sqrt(dx*dx + dy*dy);
-						if (rij < sij){
+						dy -= L[1] * round(dy / L[1]);
+					if (dy < sij)
+					{
+						rij = sqrt(dx * dx + dy * dy);
+						if (rij < sij)
+						{
 							// force scale
-							ftmp 				= kc*(1 - (rij/sij))*(rho0/sij);
-							fx 					= ftmp*(dx/rij);
-							fy 					= ftmp*(dy/rij);
+							ftmp = kc * (1 - (rij / sij)) * (rho0 / sij);
+							fx = ftmp * (dx / rij);
+							fy = ftmp * (dy / rij);
 
 							// add to forces
-							F[NDIM*gi] 			-= fx;
-							F[NDIM*gi + 1] 		-= fy;
+							F[NDIM * gi] -= fx;
+							F[NDIM * gi + 1] -= fy;
 
-							F[NDIM*gj] 			+= fx;
-							F[NDIM*gj + 1] 		+= fy;
+							F[NDIM * gj] += fx;
+							F[NDIM * gj + 1] += fy;
 
 							// increae potential energy
-							U += 0.5*kc*pow((1 - (rij/sij)),2.0);
+							U += 0.5 * kc * pow((1 - (rij / sij)), 2.0);
 
 							// add to virial stress
-							stress[0] += dx*fx;
-							stress[1] += dy*fy;
-							stress[2] += 0.5*(dx*fy + dy*fx);
+							stress[0] += dx * fx;
+							stress[1] += dy * fy;
+							stress[2] += 0.5 * (dx * fy + dy * fx);
 
 							// add to contacts
 							cindices(ci, vi, gi);
 							cindices(cj, vj, gj);
 
 							if (ci > cj)
-								cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2]++;
+								cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2]++;
 							else if (ci < cj)
-								cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]++; 
+								cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2]++;
 						}
 					}
 				}
@@ -1400,7 +1456,8 @@ void dpm::vertexRepulsiveForces2D(){
 			}
 
 			// test overlaps with forward neighboring cells
-			for (bj=0; bj<NNN; bj++){
+			for (bj = 0; bj < NNN; bj++)
+			{
 				// only check if boundaries permit
 				if (nn[bi][bj] == -1)
 					continue;
@@ -1409,11 +1466,13 @@ void dpm::vertexRepulsiveForces2D(){
 				pj = head[nn[bi][bj]];
 
 				// loop down neighbors of pi in same cell
-				while (pj > 0){
+				while (pj > 0)
+				{
 					// real index of pj
 					gj = pj - 1;
 
-					if (gj == ip1[gi] || gj == im1[gi]){
+					if (gj == ip1[gi] || gj == im1[gi])
+					{
 						pj = list[pj];
 						continue;
 					}
@@ -1421,44 +1480,47 @@ void dpm::vertexRepulsiveForces2D(){
 					sij = r[gi] + r[gj];
 
 					// particle distance
-					dx = x[NDIM*gj] - x[NDIM*gi];
+					dx = x[NDIM * gj] - x[NDIM * gi];
 					if (pbc[0])
-						dx -= L[0]*round(dx/L[0]);
-					if (dx < sij){
-						dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
+						dx -= L[0] * round(dx / L[0]);
+					if (dx < sij)
+					{
+						dy = x[NDIM * gj + 1] - x[NDIM * gi + 1];
 						if (pbc[1])
-							dy -= L[1]*round(dy/L[1]);
-						if (dy < sij){
-							rij = sqrt(dx*dx + dy*dy);
-							if (rij < sij){
+							dy -= L[1] * round(dy / L[1]);
+						if (dy < sij)
+						{
+							rij = sqrt(dx * dx + dy * dy);
+							if (rij < sij)
+							{
 								// force scale
-								ftmp 				= kc*(1 - (rij/sij))*(rho0/sij);
-								fx 					= ftmp*(dx/rij);
-								fy 					= ftmp*(dy/rij);
+								ftmp = kc * (1 - (rij / sij)) * (rho0 / sij);
+								fx = ftmp * (dx / rij);
+								fy = ftmp * (dy / rij);
 
 								// add to forces
-								F[NDIM*gi] 			-= fx;
-								F[NDIM*gi + 1] 		-= fy;
+								F[NDIM * gi] -= fx;
+								F[NDIM * gi + 1] -= fy;
 
-								F[NDIM*gj] 			+= fx;
-								F[NDIM*gj + 1] 		+= fy;
+								F[NDIM * gj] += fx;
+								F[NDIM * gj + 1] += fy;
 
 								// increae potential energy
-								U += 0.5*kc*pow((1 - (rij/sij)),2.0);
+								U += 0.5 * kc * pow((1 - (rij / sij)), 2.0);
 
 								// add to virial stress
-								stress[0] += dx*fx;
-								stress[1] += dy*fy;
-								stress[2] += 0.5*(dx*fy + dy*fx);
+								stress[0] += dx * fx;
+								stress[1] += dy * fy;
+								stress[2] += 0.5 * (dx * fy + dy * fx);
 
 								// add to contacts
 								cindices(ci, vi, gi);
 								cindices(cj, vj, gj);
 
 								if (ci > cj)
-									cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2]++;
+									cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2]++;
 								else if (ci < cj)
-									cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]++; 
+									cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2]++;
 							}
 						}
 					}
@@ -1474,22 +1536,17 @@ void dpm::vertexRepulsiveForces2D(){
 	}
 
 	// normalize stress by box area, make dimensionless
-	stress[0] *= (rho0/(L[0]*L[1]));
-	stress[1] *= (rho0/(L[0]*L[1]));
-	stress[2] *= (rho0/(L[0]*L[1]));
+	stress[0] *= (rho0 / (L[0] * L[1]));
+	stress[1] *= (rho0 / (L[0] * L[1]));
+	stress[2] *= (rho0 / (L[0] * L[1]));
 }
 
-
-void dpm::forceUpdate(){
+void dpm::forceUpdate()
+{
 	resetForcesAndEnergy();
 	shapeForces2D();
 	vertexRepulsiveForces2D();
 }
-
-
-
-
-
 
 /******************************
 
@@ -1499,8 +1556,8 @@ void dpm::forceUpdate(){
 
 *******************************/
 
-
-void dpm::setdt(double dt0){
+void dpm::setdt(double dt0)
+{
 	// local variables
 	int i;
 	double ta, tl, tb, tmin, rho0;
@@ -1509,9 +1566,9 @@ void dpm::setdt(double dt0){
 	rho0 = sqrt(a0.at(0));
 
 	// set typical time scales
-	ta = rho0/sqrt(ka);
-	tl = (rho0*l0.at(0))/sqrt(ka*kl);
-	tb = (rho0*l0.at(0))/sqrt(ka*kb);
+	ta = rho0 / sqrt(ka);
+	tl = (rho0 * l0.at(0)) / sqrt(ka * kl);
+	tb = (rho0 * l0.at(0)) / sqrt(ka * kb);
 
 	// set main time scale as min
 	tmin = 1e8;
@@ -1523,11 +1580,11 @@ void dpm::setdt(double dt0){
 		tmin = tb;
 
 	// set dt
-	dt = dt0*tmin;
+	dt = dt0 * tmin;
 }
 
-
-void dpm::vertexFIRE2D(double Ftol, double dt0){
+void dpm::vertexFIRE2D(dpmMemFn forceCall, double Ftol, double dt0)
+{
 	// local variables
 	int i;
 	double rho0;
@@ -1546,19 +1603,19 @@ void dpm::vertexFIRE2D(double Ftol, double dt0){
 	setdt(dt0);
 
 	// Initialize FIRE variables
-	P  			= 0;	
-	fnorm 		= 0;
-	vnorm 		= 0;
-	alpha   	= alpha0;
+	P = 0;
+	fnorm = 0;
+	vnorm = 0;
+	alpha = alpha0;
 
-	dtmax   	= 10.0*dt;
-	dtmin   	= 1e-2*dt;
+	dtmax = 10.0 * dt;
+	dtmin = 1e-2 * dt;
 
-	npPos      	= 0;
-	npNeg      	= 0;
+	npPos = 0;
+	npNeg = 0;
 
-	fireit    	= 0;
-	fcheck  	= 10*Ftol;
+	fireit = 0;
+	fcheck = 10 * Ftol;
 
 	// reset forces and velocities
 	resetForcesAndEnergy();
@@ -1568,15 +1625,18 @@ void dpm::vertexFIRE2D(double Ftol, double dt0){
 	rho0 = sqrt(a0.at(0));
 
 	// relax forces using FIRE
-	while (fcheck > Ftol && fireit < itmax){
+	while (fcheck > Ftol && fireit < itmax)
+	{
 		// compute P
 		P = 0.0;
-		for (i=0; i<vertDOF; i++)
-			P += v[i]*F[i];
+		for (i = 0; i < vertDOF; i++)
+			P += v[i] * F[i];
 
 		// print to console
-		if (fireit % NSKIP == 0){
-			cout << endl << endl;
+		if (fireit % NSKIP == 0)
+		{
+			cout << endl
+				 << endl;
 			cout << "===========================================" << endl;
 			cout << " 	F I R E 						" << endl;
 			cout << "		M I N I M I Z A T I O N 	" << endl;
@@ -1593,7 +1653,8 @@ void dpm::vertexFIRE2D(double Ftol, double dt0){
 		}
 
 		// Adjust simulation based on net motion of degrees of freedom
-		if (P > 0){
+		if (P > 0)
+		{
 			// increase positive counter
 			npPos++;
 
@@ -1601,16 +1662,18 @@ void dpm::vertexFIRE2D(double Ftol, double dt0){
 			npNeg = 0;
 
 			// alter simulation if enough positive steps have been taken
-			if (npPos > NDELAY){
+			if (npPos > NDELAY)
+			{
 				// change time step
-				if (dt*finc < dtmax)
+				if (dt * finc < dtmax)
 					dt *= finc;
 
 				// decrease alpha
 				alpha *= falpha;
 			}
 		}
-		else{
+		else
+		{
 			// reset positive counter
 			npPos = 0;
 
@@ -1624,18 +1687,20 @@ void dpm::vertexFIRE2D(double Ftol, double dt0){
 			}
 
 			// take half step backwards, reset velocities
-			for (i=0; i<vertDOF; i++){
+			for (i = 0; i < vertDOF; i++)
+			{
 				// take half step backwards
-				x[i] -= 0.5*dt*v[i];
+				x[i] -= 0.5 * dt * v[i];
 
 				// reset vertex velocities
 				v[i] = 0.0;
 			}
 
 			// decrease time step if past initial delay
-			if (fireit > NDELAY){
-				// decrease time step 
-				if (dt*fdec > dtmin)
+			if (fireit > NDELAY)
+			{
+				// decrease time step
+				if (dt * fdec > dtmin)
 					dt *= fdec;
 
 				// reset alpha
@@ -1644,29 +1709,32 @@ void dpm::vertexFIRE2D(double Ftol, double dt0){
 		}
 
 		// VV VELOCITY UPDATE #1
-		for (i=0; i<vertDOF; i++)
-			v[i] += 0.5*dt*F[i];
+		for (i = 0; i < vertDOF; i++)
+			v[i] += 0.5 * dt * F[i];
 
 		// compute fnorm, vnorm and P
 		fnorm = 0.0;
 		vnorm = 0.0;
-		for (i=0; i<vertDOF; i++){
-			fnorm 	+= F[i]*F[i];
-			vnorm 	+= v[i]*v[i];
+		for (i = 0; i < vertDOF; i++)
+		{
+			fnorm += F[i] * F[i];
+			vnorm += v[i] * v[i];
 		}
 		fnorm = sqrt(fnorm);
 		vnorm = sqrt(vnorm);
 
 		// update velocities (s.d. vs inertial dynamics) only if forces are acting
-		if (fnorm > 0){
-			for (i=0; i<vertDOF; i++)
-				v[i] = (1 - alpha)*v[i] + alpha*(F[i]/fnorm)*vnorm;
+		if (fnorm > 0)
+		{
+			for (i = 0; i < vertDOF; i++)
+				v[i] = (1 - alpha) * v[i] + alpha * (F[i] / fnorm) * vnorm;
 		}
 
 		// VV POSITION UPDATE
-		for (i=0; i<vertDOF; i++){
+		for (i = 0; i < vertDOF; i++)
+		{
 			// update position
-			x[i] += dt*v[i];
+			x[i] += dt * v[i];
 
 			// recenter in box
 			if (x[i] > L[i % NDIM] && pbc[i % NDIM])
@@ -1676,27 +1744,32 @@ void dpm::vertexFIRE2D(double Ftol, double dt0){
 		}
 
 		// update forces (function passed as argument)
-		forceUpdate();
+		//std::invoke(forceCall, this);
+		CALL_MEMBER_FN(*this, forceCall)
+		();
+		//(this.*forceCall)();
 
 		// VV VELOCITY UPDATE #2
-		for (i=0; i<vertDOF; i++)
-			v[i] += 0.5*F[i]*dt;
+		for (i = 0; i < vertDOF; i++)
+			v[i] += 0.5 * F[i] * dt;
 
 		// update fcheck based on fnorm (= force per degree of freedom)
 		fcheck = 0.0;
-		for (i=0; i<vertDOF; i++)
-			fcheck += F[i]*F[i];
-		fcheck = sqrt(fcheck/vertDOF);
+		for (i = 0; i < vertDOF; i++)
+			fcheck += F[i] * F[i];
+		fcheck = sqrt(fcheck / vertDOF);
 
 		// update iterator
 		fireit++;
 	}
 	// check if FIRE converged
-	if (fireit == itmax){
+	if (fireit == itmax)
+	{
 		cout << "	** FIRE minimization did not converge, fireit = " << fireit << ", itmax = " << itmax << "; ending." << endl;
 		exit(1);
 	}
-	else{
+	else
+	{
 		cout << endl;
 		cout << "===========================================" << endl;
 		cout << " 	F I R E 						" << endl;
@@ -1713,20 +1786,10 @@ void dpm::vertexFIRE2D(double Ftol, double dt0){
 		cout << "	** dt 		= " << dt << endl;
 		cout << "	** P 		= " << P << endl;
 		cout << "	** alpha 	= " << alpha << endl;
-		cout << endl << endl;
+		cout << endl
+			 << endl;
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
 
 /******************************
 
@@ -1736,15 +1799,16 @@ void dpm::vertexFIRE2D(double Ftol, double dt0){
 
 *******************************/
 
-
-void dpm::vertexCompress2Target2D(double Ftol, double dt0, double phi0Target, double dphi0){
+void dpm::vertexCompress2Target2D(dpmMemFn forceCall, double Ftol, double dt0, double phi0Target, double dphi0)
+{
 	// local variables
 	int it = 0, itmax = 1e4;
 	double phi0 = vertexPreferredPackingFraction2D();
 	double scaleFactor, P, Sxy;
 
 	// loop while phi0 < phi0Target
-	while (phi0 < phi0Target && it < itmax){
+	while (phi0 < phi0Target && it < itmax)
+	{
 		// scale particle sizes
 		scaleParticleSizes2D(scaleFactor);
 
@@ -1752,17 +1816,18 @@ void dpm::vertexCompress2Target2D(double Ftol, double dt0, double phi0Target, do
 		phi0 = vertexPreferredPackingFraction2D();
 
 		// relax configuration (pass member function force update)
-		vertexFIRE2D(Ftol, dt0);
+		vertexFIRE2D(forceCall, Ftol, dt0);
 
 		// get scale factor
-		scaleFactor = sqrt((phi0 + dphi0)/phi0);
+		scaleFactor = sqrt((phi0 + dphi0) / phi0);
 
 		// get updated pressure
-		P = 0.5*(stress[0] + stress[1]);
+		P = 0.5 * (stress[0] + stress[1]);
 		Sxy = stress[2];
 
 		// print to console
-		cout << endl << endl;
+		cout << endl
+			 << endl;
 		cout << "===============================" << endl;
 		cout << "								" << endl;
 		cout << " 	C O M P R E S S I O N 		" << endl;
@@ -1779,18 +1844,19 @@ void dpm::vertexCompress2Target2D(double Ftol, double dt0, double phi0Target, do
 		cout << "	** Sxy 			= " << Sxy << endl;
 		cout << "	** U 			= " << U << endl;
 		printConfiguration2D();
-		cout << endl << endl;
+		cout << endl
+			 << endl;
 
 		// update iterate
 		it++;
 	}
 }
 
-
-void dpm::vertexJamming2D(double Ftol, double Ptol, double dt0, double dphi0, bool plotCompression){
+void dpm::vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double dt0, double dphi0, bool plotCompression)
+{
 	// local variables
-	int k=0, nr;
-	bool jammed=0, overcompressed=0, undercompressed=0;
+	int k = 0, nr;
+	bool jammed = 0, overcompressed = 0, undercompressed = 0;
 	double pcheck, phi0, rH, r0, rL, rho0, scaleFactor;
 
 	// initialize binary root search parameters
@@ -1800,13 +1866,13 @@ void dpm::vertexJamming2D(double Ftol, double Ptol, double dt0, double dphi0, bo
 
 	// initialize preferred packing fraction
 	phi0 = vertexPreferredPackingFraction2D();
-	
+
 	// save initial state
-	vector<double> xsave(vertDOF,0.0);
-	vector<double> rsave(vertDOF,0.0);
-	vector<double> l0save(vertDOF,0.0);
-	vector<double> t0save(vertDOF,0.0);
-	vector<double> a0save(vertDOF,0.0);
+	vector<double> xsave(vertDOF, 0.0);
+	vector<double> rsave(vertDOF, 0.0);
+	vector<double> l0save(vertDOF, 0.0);
+	vector<double> t0save(vertDOF, 0.0);
+	vector<double> a0save(vertDOF, 0.0);
 
 	xsave = x;
 	rsave = r;
@@ -1815,30 +1881,33 @@ void dpm::vertexJamming2D(double Ftol, double Ptol, double dt0, double dphi0, bo
 	a0save = a0;
 
 	// loop until jamming is found
-	while (!jammed && k < itmax){
+	while (!jammed && k < itmax)
+	{
 		// set length scale by 1st particle preferred area
 		rho0 = sqrt(a0.at(0));
 
 		// relax configuration (pass member function force update)
-		vertexFIRE2D(Ftol, dt0);
+		vertexFIRE2D(forceCall, Ftol, dt0);
 
 		// update pressure
-		pcheck = 0.5*(stress[0] + stress[1]);
+		pcheck = 0.5 * (stress[0] + stress[1]);
 
 		// remove rattlers
 		nr = removeRattlers();
 
 		// boolean checks for jamming
-		undercompressed = ((pcheck < 2.0*Ptol && rH < 0) || (pcheck < Ptol && rH > 0));
-		overcompressed = (pcheck > 2.0*Ptol);
-		jammed = (pcheck < 2.0*Ptol && pcheck > Ptol && rH > 0 && rL > 0);
+		undercompressed = ((pcheck < 2.0 * Ptol && rH < 0) || (pcheck < Ptol && rH > 0));
+		overcompressed = (pcheck > 2.0 * Ptol);
+		jammed = (pcheck < 2.0 * Ptol && pcheck > Ptol && rH > 0 && rL > 0);
 
 		// output to console
 		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
-		cout << "===============================================" << endl << endl;
+		cout << "===============================================" << endl
+			 << endl;
 		cout << " 	Q U A S I S T A T I C  				" << endl;
 		cout << " 	  	I S O T R O P I C 				" << endl;
-		cout << "			C O M P R E S S I O N 		" << endl << endl;
+		cout << "			C O M P R E S S I O N 		" << endl
+			 << endl;
 		cout << "===============================================" << endl;
 		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
 		cout << endl;
@@ -1853,27 +1922,33 @@ void dpm::vertexJamming2D(double Ftol, double Ptol, double dt0, double dphi0, bo
 		cout << "	* U 		 	= " << U << endl;
 		cout << "	* Nvv  			= " << vvContacts() << endl;
 		cout << "	* Ncc 			= " << ccContacts() << endl;
-		cout << "	* # of rattlers = " << nr << endl << endl;
+		cout << "	* # of rattlers = " << nr << endl
+			 << endl;
 		cout << "	* undercompressed = " << undercompressed << endl;
 		cout << "	* overcompressed = " << overcompressed << endl;
-		cout << "	* jammed = " << jammed << endl << endl;
+		cout << "	* jammed = " << jammed << endl
+			 << endl;
 		if (plotCompression)
 			printConfiguration2D();
-		cout << endl << endl;
+		cout << endl
+			 << endl;
 
 		// update particle scaleFactor based on target check
-		if (rH < 0){
+		if (rH < 0)
+		{
 			// if still undercompressed, then grow until overcompressed found
-			if (undercompressed){
+			if (undercompressed)
+			{
 				r0 = rho0;
-				scaleFactor = sqrt((phi0 + dphi0)/phi0);
+				scaleFactor = sqrt((phi0 + dphi0) / phi0);
 			}
 			// if first overcompressed, decompress by dphi/2 until unjamming
-			else if (overcompressed){
+			else if (overcompressed)
+			{
 				// current = upper bound length scale r
-	            rH = rho0;
+				rH = rho0;
 
-	            // save first overcompressed state
+				// save first overcompressed state
 				r0 = rH;
 				xsave = x;
 				rsave = r;
@@ -1881,17 +1956,20 @@ void dpm::vertexJamming2D(double Ftol, double Ptol, double dt0, double dphi0, bo
 				t0save = t0;
 				a0save = a0;
 
-	            // shrink particle sizes
-	            scaleFactor = sqrt((phi0 - 0.5*dphi0)/phi0);
+				// shrink particle sizes
+				scaleFactor = sqrt((phi0 - 0.5 * dphi0) / phi0);
 
-	            // print to console
+				// print to console
 				cout << "	-- -- overcompressed for the first time, scaleFactor = " << scaleFactor << endl;
 			}
 		}
-		else{
-			if (rL < 0){
+		else
+		{
+			if (rL < 0)
+			{
 				// if first undercompressed, save last overcompressed state, begin root search
-				if (undercompressed){
+				if (undercompressed)
+				{
 					// current = new lower bound length scale r
 					rL = rho0;
 
@@ -1903,18 +1981,19 @@ void dpm::vertexJamming2D(double Ftol, double Ptol, double dt0, double dphi0, bo
 					a0 = a0save;
 
 					// compute new scale factor by root search
-		            scaleFactor = 0.5*(rH + rL)/r0;
+					scaleFactor = 0.5 * (rH + rL) / r0;
 
 					// print to console
 					cout << "	-- -- undercompressed for the first time, scaleFactor = " << scaleFactor << endl;
 					cout << "	-- -- BEGINNING ROOT SEARCH IN ENTHALPY MIN PROTOCOL..." << endl;
 				}
 				// if still overcompressed, decrement again
-				else if (overcompressed){
+				else if (overcompressed)
+				{
 					// current = upper bound length scale r
-		            rH = rho0;
+					rH = rho0;
 
-		            // save overcompressed state
+					// save overcompressed state
 					r0 = rH;
 					xsave = x;
 					rsave = r;
@@ -1922,16 +2001,18 @@ void dpm::vertexJamming2D(double Ftol, double Ptol, double dt0, double dphi0, bo
 					t0save = t0;
 					a0save = a0;
 
-		            // keep shrinking at same rate until unjamming
-		            scaleFactor = sqrt((phi0 - 0.5*dphi0)/phi0);
+					// keep shrinking at same rate until unjamming
+					scaleFactor = sqrt((phi0 - 0.5 * dphi0) / phi0);
 
-		            // print to console
+					// print to console
 					cout << "	-- -- overcompressed, still no unjamming, scaleFactor = " << scaleFactor << endl;
 				}
 			}
-			else{
+			else
+			{
 				// if found undercompressed state, go to state between undercompressed and last overcompressed states (from saved state)
-				if (undercompressed){
+				if (undercompressed)
+				{
 					// current = new lower bound length scale r
 					rL = rho0;
 
@@ -1943,17 +2024,17 @@ void dpm::vertexJamming2D(double Ftol, double Ptol, double dt0, double dphi0, bo
 					a0 = a0save;
 
 					// compute new scale factor by root search
-		            scaleFactor = 0.5*(rH + rL)/r0;
+					scaleFactor = 0.5 * (rH + rL) / r0;
 
 					// print to console
 					cout << "	-- -- undercompressed, scaleFactor = " << scaleFactor << endl;
-
 				}
-				else if (overcompressed){
+				else if (overcompressed)
+				{
 					// current = upper bound length scale r
-		            rH = rho0;
+					rH = rho0;
 
-		            // load state
+					// load state
 					x = xsave;
 					r = rsave;
 					l0 = l0save;
@@ -1961,12 +2042,13 @@ void dpm::vertexJamming2D(double Ftol, double Ptol, double dt0, double dphi0, bo
 					a0 = a0save;
 
 					// compute new scale factor
-		            scaleFactor = 0.5*(rH + rL)/r0;
+					scaleFactor = 0.5 * (rH + rL) / r0;
 
 					// print to console
 					cout << "	-- -- overcompressed, scaleFactor = " << scaleFactor << endl;
 				}
-				else if (jammed){
+				else if (jammed)
+				{
 					cout << "	** At k = " << k << ", target pressure found!" << endl;
 					cout << " WRITING ENTHALPY-MINIMIZED CONFIG TO FILE" << endl;
 					cout << " ENDING COMPRESSION SIMULATION" << endl;
@@ -1989,11 +2071,6 @@ void dpm::vertexJamming2D(double Ftol, double Ptol, double dt0, double dphi0, bo
 	}
 }
 
-
-
-
-
-
 /******************************
 
 	D P M  
@@ -2002,10 +2079,10 @@ void dpm::vertexJamming2D(double Ftol, double Ptol, double dt0, double dphi0, bo
 
 *******************************/
 
-
 // wrapper function for total hessian
 // note: dynamical matrix M = H - S
-void dpm::dpmHessian2D(Eigen::MatrixXd& H, Eigen::MatrixXd& S){
+void dpm::dpmHessian2D(Eigen::MatrixXd &H, Eigen::MatrixXd &S)
+{
 	// local variables
 	int k, l;
 
@@ -2013,56 +2090,60 @@ void dpm::dpmHessian2D(Eigen::MatrixXd& H, Eigen::MatrixXd& S){
 	cout << "** Computing Hessian for configuration in dpmHessian2D ..." << endl;
 
 	// initialize all possible matrices
-	Eigen::MatrixXd Ha(vertDOF,vertDOF);		// stiffness matrix for area term
-	Eigen::MatrixXd Sa(vertDOF,vertDOF);		// stress matrix for area term
-	Eigen::MatrixXd Hl(vertDOF,vertDOF);		// stiffness matrix for perimeter term
-	Eigen::MatrixXd Sl(vertDOF,vertDOF);		// stress matrix for perimeter term
-	Eigen::MatrixXd Hb(vertDOF,vertDOF);		// stiffness matrix for bending energy
-	Eigen::MatrixXd Sb(vertDOF,vertDOF);		// stress matrix for bending term
-	Eigen::MatrixXd Hvv(vertDOF,vertDOF);		// stiffness matrix for interaction terms
-	Eigen::MatrixXd Svv(vertDOF,vertDOF);		// stress matrix for interaction terms
+	Eigen::MatrixXd Ha(vertDOF, vertDOF);  // stiffness matrix for area term
+	Eigen::MatrixXd Sa(vertDOF, vertDOF);  // stress matrix for area term
+	Eigen::MatrixXd Hl(vertDOF, vertDOF);  // stiffness matrix for perimeter term
+	Eigen::MatrixXd Sl(vertDOF, vertDOF);  // stress matrix for perimeter term
+	Eigen::MatrixXd Hb(vertDOF, vertDOF);  // stiffness matrix for bending energy
+	Eigen::MatrixXd Sb(vertDOF, vertDOF);  // stress matrix for bending term
+	Eigen::MatrixXd Hvv(vertDOF, vertDOF); // stiffness matrix for interaction terms
+	Eigen::MatrixXd Svv(vertDOF, vertDOF); // stress matrix for interaction terms
 
 	// initialize all matrices to be 0 initially
-	for (k=0; k<vertDOF; k++){
-		for (l=0; l<vertDOF; l++){
-			Ha(k,l) = 0.0;
-			Sa(k,l) = 0.0;
-			Hl(k,l) = 0.0;
-			Sl(k,l) = 0.0;
-			Hb(k,l) = 0.0;
-			Sb(k,l) = 0.0;
-			Hvv(k,l) = 0.0;
-			Svv(k,l) = 0.0;
-			S(k,l) = 0.0;
-			H(k,l) = 0.0;
+	for (k = 0; k < vertDOF; k++)
+	{
+		for (l = 0; l < vertDOF; l++)
+		{
+			Ha(k, l) = 0.0;
+			Sa(k, l) = 0.0;
+			Hl(k, l) = 0.0;
+			Sl(k, l) = 0.0;
+			Hb(k, l) = 0.0;
+			Sb(k, l) = 0.0;
+			Hvv(k, l) = 0.0;
+			Svv(k, l) = 0.0;
+			S(k, l) = 0.0;
+			H(k, l) = 0.0;
 		}
 	}
 
 	// find matrix elements for each term
 	if (ka > 0)
-		dpmAreaHessian2D(Ha,Sa);
+		dpmAreaHessian2D(Ha, Sa);
 
 	if (kl > 0)
-		dpmPerimeterHessian2D(Hl,Sl);
+		dpmPerimeterHessian2D(Hl, Sl);
 
 	// if (kb > 0)
-	// 	dpmBendingHessian2D(Hb,Sb);
+	// dpmBendingHessian2D(Hb,Sb);
 
 	if (kc > 0)
-		dpmRepulsiveHarmonicSprings2D(Hvv,Svv);
+		dpmRepulsiveHarmonicSprings2D(Hvv, Svv);
 
 	// construct matrices
-	for (k=0; k<vertDOF; k++){
-		for (l=0; l<vertDOF; l++){
-			H(k,l) = Ha(k,l) + Hl(k,l) + Hb(k,l) + Hvv(k,l);
-			S(k,l) = -Sa(k,l) - Sl(k,l) - Sb(k,l) - Svv(k,l);
+	for (k = 0; k < vertDOF; k++)
+	{
+		for (l = 0; l < vertDOF; l++)
+		{
+			H(k, l) = Ha(k, l) + Hl(k, l) + Hb(k, l) + Hvv(k, l);
+			S(k, l) = -Sa(k, l) - Sl(k, l) - Sb(k, l) - Svv(k, l);
 		}
 	}
 }
 
-
 // construct hessian for area term
-void dpm::dpmAreaHessian2D(Eigen::MatrixXd& Ha, Eigen::MatrixXd& Sa){
+void dpm::dpmAreaHessian2D(Eigen::MatrixXd &Ha, Eigen::MatrixXd &Sa)
+{
 	// local variables
 	int nvtmp, ci, vim1, vi, vip1, vjm1, vj, vjp1;
 	int kxm1, kx, kxp1, kym1, ky, kyp1, lxm1, lym1, lx, ly, lxp1, lyp1;
@@ -2071,118 +2152,121 @@ void dpm::dpmAreaHessian2D(Eigen::MatrixXd& Ha, Eigen::MatrixXd& Sa){
 
 	// loop over cells
 	rho0 = sqrt(a0[0]);
-	for (ci=0; ci<NCELLS; ci++){
+	for (ci = 0; ci < NCELLS; ci++)
+	{
 		// shape parameters for ci
 		nvtmp = nv[ci];
 		a0tmp = a0[ci];
-		a02tmp = a0tmp*a0tmp;
+		a02tmp = a0tmp * a0tmp;
 
 		// fractional area strain
-		da = (area(ci)/a0tmp) - 1.0;
+		da = (area(ci) / a0tmp) - 1.0;
 
 		// loop over vertices
-		for (vi=0; vi<nvtmp; vi++){
+		for (vi = 0; vi < nvtmp; vi++)
+		{
 			// wrap vertices
-			vim1 		= (vi - 1 + nvtmp) % nvtmp;
-			vip1 		= (vi + 1) % nvtmp;
+			vim1 = (vi - 1 + nvtmp) % nvtmp;
+			vip1 = (vi + 1) % nvtmp;
 
 			// matrix indices
-			kxm1 		= NDIM*(gindex(ci,vim1));
-			kym1 		= NDIM*(gindex(ci,vim1)) + 1;
+			kxm1 = NDIM * (gindex(ci, vim1));
+			kym1 = NDIM * (gindex(ci, vim1)) + 1;
 
-			kx 			= NDIM*(gindex(ci,vi));
-			ky 			= NDIM*(gindex(ci,vi)) + 1;
+			kx = NDIM * (gindex(ci, vi));
+			ky = NDIM * (gindex(ci, vi)) + 1;
 
-			kxp1 		= NDIM*(gindex(ci,vip1));
-			kyp1 		= NDIM*(gindex(ci,vip1)) + 1;
-
+			kxp1 = NDIM * (gindex(ci, vip1));
+			kyp1 = NDIM * (gindex(ci, vip1)) + 1;
 
 			// segment elements
-			lim1x 		= x[kx] - x[kxm1];
-			lim1y 		= x[ky] - x[kym1];
+			lim1x = x[kx] - x[kxm1];
+			lim1y = x[ky] - x[kym1];
 
-			lix 		= x[kxp1] - x[kx];
-			liy 		= x[kyp1] - x[ky];
+			lix = x[kxp1] - x[kx];
+			liy = x[kyp1] - x[ky];
 
-			if (pbc[0]){
-				lim1x 	-= L[0]*round(lim1x/L[0]);
-				lix		-= L[0]*round(lix/L[0]);
+			if (pbc[0])
+			{
+				lim1x -= L[0] * round(lim1x / L[0]);
+				lix -= L[0] * round(lix / L[0]);
 			}
-			if (pbc[1]){
-				lim1y 	-= L[1]*round(lim1y/L[1]);
-				liy 	-= L[1]*round(liy/L[1]);
+			if (pbc[1])
+			{
+				lim1y -= L[1] * round(lim1y / L[1]);
+				liy -= L[1] * round(liy / L[1]);
 			}
 
 			// stress matrix
-		    Sa(kx,kyp1) = 0.5*da*((rho0*rho0)/a0tmp);
-			Sa(ky,kxp1) = -0.5*da*((rho0*rho0)/a0tmp);
+			Sa(kx, kyp1) = 0.5 * da * ((rho0 * rho0) / a0tmp);
+			Sa(ky, kxp1) = -0.5 * da * ((rho0 * rho0) / a0tmp);
 
-			Sa(kyp1,kx) = Sa(kx,kyp1);
-			Sa(kxp1,ky) = Sa(ky,kxp1);
+			Sa(kyp1, kx) = Sa(kx, kyp1);
+			Sa(kxp1, ky) = Sa(ky, kxp1);
 
 			// area derivatives (for stiffness matrix)
-			da_dxi      = 0.5*(liy + lim1y);
-			da_dyi      = -0.5*(lim1x + lix);
+			da_dxi = 0.5 * (liy + lim1y);
+			da_dyi = -0.5 * (lim1x + lix);
 
 			// loop over other vertices, for area elasticity stiffness matrix
-			for (vj=vi; vj<nvtmp; vj++){
+			for (vj = vi; vj < nvtmp; vj++)
+			{
 
 				// wrap jp1 and jm1
-				vjp1 		= (vj + 1) % nvtmp;
-				vjm1 		= (vj - 1 + nvtmp) % nvtmp;
+				vjp1 = (vj + 1) % nvtmp;
+				vjm1 = (vj - 1 + nvtmp) % nvtmp;
 
 				// dof elements
-				lxm1 		= NDIM*(gindex(ci,vjm1));
-				lym1 		= lxm1 + 1;
+				lxm1 = NDIM * (gindex(ci, vjm1));
+				lym1 = lxm1 + 1;
 
-				lx 			= NDIM*(gindex(ci,vj));
-				ly 			= lx + 1;
+				lx = NDIM * (gindex(ci, vj));
+				ly = lx + 1;
 
-				lxp1		= NDIM*(gindex(ci,vjp1));
-				lyp1		= lxp1 + 1;
+				lxp1 = NDIM * (gindex(ci, vjp1));
+				lyp1 = lxp1 + 1;
 
 				// j segments
-				ljm1x 		= x[lx] - x[lxm1];
+				ljm1x = x[lx] - x[lxm1];
 				if (pbc[0])
-					ljm1x		-= L[0]*round(ljm1x/L[0]);
+					ljm1x -= L[0] * round(ljm1x / L[0]);
 
-				ljm1y 		= x[ly] - x[lym1];
+				ljm1y = x[ly] - x[lym1];
 				if (pbc[1])
-					ljm1y 		-= L[1]*round(ljm1y/L[1]);
+					ljm1y -= L[1] * round(ljm1y / L[1]);
 
-
-				ljx 		= x[lxp1] - x[lx];
+				ljx = x[lxp1] - x[lx];
 				if (pbc[0])
-					ljx			-= L[0]*round(ljx/L[0]);
+					ljx -= L[0] * round(ljx / L[0]);
 
-				ljy 		= x[lyp1] - x[ly];
+				ljy = x[lyp1] - x[ly];
 				if (pbc[1])
-					ljy 		-= L[1]*round(ljy/L[1]);
+					ljy -= L[1] * round(ljy / L[1]);
 
 				// area derivatives
-				da_dxj      = 0.5*(ljy + ljm1y);
-				da_dyj      = -0.5*(ljm1x + ljx);
+				da_dxj = 0.5 * (ljy + ljm1y);
+				da_dyj = -0.5 * (ljm1x + ljx);
 
 				// stiffness matrix
-				Ha(kx,lx) = da_dxi*da_dxj*((rho0*rho0)/a02tmp);
-		        Ha(kx,ly) = da_dxi*da_dyj*((rho0*rho0)/a02tmp);
-		        
-		        Ha(ky,lx) = da_dyi*da_dxj*((rho0*rho0)/a02tmp);
-		        Ha(ky,ly) = da_dyi*da_dyj*((rho0*rho0)/a02tmp);
-		        
-		        Ha(lx,kx) = Ha(kx,lx);
-		        Ha(ly,kx) = Ha(kx,ly);
-		        
-		        Ha(lx,ky) = Ha(ky,lx);
-		        Ha(ly,ky) = Ha(ky,ly);
-		    }
+				Ha(kx, lx) = da_dxi * da_dxj * ((rho0 * rho0) / a02tmp);
+				Ha(kx, ly) = da_dxi * da_dyj * ((rho0 * rho0) / a02tmp);
+
+				Ha(ky, lx) = da_dyi * da_dxj * ((rho0 * rho0) / a02tmp);
+				Ha(ky, ly) = da_dyi * da_dyj * ((rho0 * rho0) / a02tmp);
+
+				Ha(lx, kx) = Ha(kx, lx);
+				Ha(ly, kx) = Ha(kx, ly);
+
+				Ha(lx, ky) = Ha(ky, lx);
+				Ha(ly, ky) = Ha(ky, ly);
+			}
 		}
 	}
 }
 
-
 // construct hessian for perimeter term
-void dpm::dpmPerimeterHessian2D(Eigen::MatrixXd& Hl, Eigen::MatrixXd& Sl){
+void dpm::dpmPerimeterHessian2D(Eigen::MatrixXd &Hl, Eigen::MatrixXd &Sl)
+{
 	// local variables
 	int nvtmp, ci, vim1, vi, vip1;
 	int kxm1, kx, kxp1, kym1, ky, kyp1;
@@ -2192,120 +2276,119 @@ void dpm::dpmPerimeterHessian2D(Eigen::MatrixXd& Hl, Eigen::MatrixXd& Sl){
 
 	// loop over cells
 	rho0 = sqrt(a0[0]);
-	for (ci=0; ci<NCELLS; ci++){
+	for (ci = 0; ci < NCELLS; ci++)
+	{
 		// number of vertices
 		nvtmp = nv[ci];
 
 		// prefactor scaled by length, will come out as dimensionless
-		Kl = kl*(rho0*rho0);
+		Kl = kl * (rho0 * rho0);
 
-		for (vi=0; vi<nvtmp; vi++){
+		for (vi = 0; vi < nvtmp; vi++)
+		{
 			// wrap vertices
-			vim1 		= (vi - 1 + nvtmp) % nvtmp;
-			vip1 		= (vi + 1) % nvtmp;
+			vim1 = (vi - 1 + nvtmp) % nvtmp;
+			vip1 = (vi + 1) % nvtmp;
 
 			// matrix indices
-			kxm1 		= NDIM*(gindex(ci,vim1));
-			kym1 		= NDIM*(gindex(ci,vim1)) + 1;
+			kxm1 = NDIM * (gindex(ci, vim1));
+			kym1 = NDIM * (gindex(ci, vim1)) + 1;
 
-			kx 			= NDIM*(gindex(ci,vi));
-			ky 			= NDIM*(gindex(ci,vi)) + 1;
+			kx = NDIM * (gindex(ci, vi));
+			ky = NDIM * (gindex(ci, vi)) + 1;
 
-			kxp1 		= NDIM*(gindex(ci,vip1));
-			kyp1 		= NDIM*(gindex(ci,vip1)) + 1;
-
+			kxp1 = NDIM * (gindex(ci, vip1));
+			kyp1 = NDIM * (gindex(ci, vip1)) + 1;
 
 			// segment elements
-			lim1x 		= x[kx] - x[kxm1];
-			lim1y 		= x[ky] - x[kym1];
+			lim1x = x[kx] - x[kxm1];
+			lim1y = x[ky] - x[kym1];
 
-			lix 		= x[kxp1] - x[kx];
-			liy 		= x[kyp1] - x[ky];
+			lix = x[kxp1] - x[kx];
+			liy = x[kyp1] - x[ky];
 
-			if (pbc[0]){
-				lim1x 	-= L[0]*round(lim1x/L[0]);
-				lix		-= L[0]*round(lix/L[0]);
+			if (pbc[0])
+			{
+				lim1x -= L[0] * round(lim1x / L[0]);
+				lix -= L[0] * round(lix / L[0]);
 			}
-			if (pbc[1]){
-				lim1y 	-= L[1]*round(lim1y/L[1]);
-				liy 	-= L[1]*round(liy/L[1]);
+			if (pbc[1])
+			{
+				lim1y -= L[1] * round(lim1y / L[1]);
+				liy -= L[1] * round(liy / L[1]);
 			}
-
 
 			// segment lengths
-			lim1 		= sqrt(lim1x*lim1x + lim1y*lim1y);
-			li 			= sqrt(lix*lix + liy*liy);
+			lim1 = sqrt(lim1x * lim1x + lim1y * lim1y);
+			li = sqrt(lix * lix + liy * liy);
 
 			// segment strains
-			l0im1 		= l0[gindex(ci,vim1)];
-			l0i 		= l0[gindex(ci,vi)];
+			l0im1 = l0[gindex(ci, vim1)];
+			l0i = l0[gindex(ci, vi)];
 
-			dlim1 		= (lim1/l0im1) - 1.0;
-			dli 		= (li/l0i) - 1.0;
+			dlim1 = (lim1 / l0im1) - 1.0;
+			dli = (li / l0i) - 1.0;
 
-			l0im1_sq 	= l0im1*l0im1;
-			l0i_sq 		= l0i*l0i;
-
+			l0im1_sq = l0im1 * l0im1;
+			l0i_sq = l0i * l0i;
 
 			// -- PERIMETER SPRINGS
 
 			// unit vectors
-			ulim1x   = lim1x/lim1;
-			ulim1y   = lim1y/lim1;
+			ulim1x = lim1x / lim1;
+			ulim1y = lim1y / lim1;
 
-			ulix   = lix/li;
-			uliy   = liy/li;
+			ulix = lix / li;
+			uliy = liy / li;
 
 			// 	STIFFNESS MATRIX
 
 			// main diagonal
-		    Hl(kx,kx)       = Kl*((ulix*ulix)/l0i_sq + (ulim1x*ulim1x)/l0im1_sq);
-			Hl(ky,ky)       = Kl*((uliy*uliy)/l0i_sq + (ulim1y*ulim1y)/l0im1_sq);
+			Hl(kx, kx) = Kl * ((ulix * ulix) / l0i_sq + (ulim1x * ulim1x) / l0im1_sq);
+			Hl(ky, ky) = Kl * ((uliy * uliy) / l0i_sq + (ulim1y * ulim1y) / l0im1_sq);
 
-			Hl(kx,ky)       = Kl*((ulix*uliy)/l0i_sq + (ulim1x*ulim1y)/l0im1_sq);
-			Hl(ky,kx)       = Hl(kx,ky);
-		    
-		    // 1off diagonal
-		    Hl(kx,kxp1)     = -Kl*(ulix*ulix)/l0i_sq;
-			Hl(ky,kyp1)     = -Kl*(uliy*uliy)/l0i_sq;
+			Hl(kx, ky) = Kl * ((ulix * uliy) / l0i_sq + (ulim1x * ulim1y) / l0im1_sq);
+			Hl(ky, kx) = Hl(kx, ky);
 
-			Hl(kx,kyp1)     = -Kl*(ulix*uliy)/l0i_sq;
-			Hl(ky,kxp1)     = Hl(kx,kyp1);
-		    
-		    // enforce symmetry in lower triangle
-		    Hl(kxp1,kx)     = Hl(kx,kxp1);
-		    Hl(kyp1,ky)     = Hl(ky,kyp1);
-		    
-		    Hl(kyp1,kx)     = Hl(kx,kyp1);
-		    Hl(kxp1,ky)     = Hl(ky,kxp1);
+			// 1off diagonal
+			Hl(kx, kxp1) = -Kl * (ulix * ulix) / l0i_sq;
+			Hl(ky, kyp1) = -Kl * (uliy * uliy) / l0i_sq;
 
+			Hl(kx, kyp1) = -Kl * (ulix * uliy) / l0i_sq;
+			Hl(ky, kxp1) = Hl(kx, kyp1);
 
-		    // 	STRESS MATRIX
+			// enforce symmetry in lower triangle
+			Hl(kxp1, kx) = Hl(kx, kxp1);
+			Hl(kyp1, ky) = Hl(ky, kyp1);
 
-		    // main diagonal
-		    Sl(kx,kx)       = Kl*(dlim1*((ulim1y*ulim1y)/(l0im1*lim1)) + dli*((uliy*uliy)/(l0i*li)));
-		    Sl(ky,ky)       = Kl*(dlim1*((ulim1x*ulim1x)/(l0im1*lim1)) + dli*((ulix*ulix)/(l0i*li)));
-		    
-		    Sl(kx,ky)       = -Kl*(dlim1*((ulim1x*ulim1y)/(l0im1*lim1)) + dli*((ulix*uliy)/(l0i*li)));
-		    Sl(ky,kx)       = Sl(kx,ky);
-		    
-		    // 1off diagonal
-		    Sl(kx,kxp1)     = -Kl*dli*((uliy*uliy)/(l0i*li));
-		    Sl(ky,kyp1)     = -Kl*dli*((ulix*ulix)/(l0i*li));
-		    
-		    Sl(kx,kyp1)     = Kl*dli*((ulix*uliy)/(l0i*li));
-		    Sl(ky,kxp1)     = Sl(kx,kyp1);
+			Hl(kyp1, kx) = Hl(kx, kyp1);
+			Hl(kxp1, ky) = Hl(ky, kxp1);
 
-		    // enforce symmetry in lower triangle
-		    Sl(kxp1,kx)     = Sl(kx,kxp1);
-    		Sl(kyp1,ky)     = Sl(ky,kyp1);
-    
-    		Sl(kyp1,kx)     = Sl(kx,kyp1);
-    		Sl(kxp1,ky)     = Sl(ky,kxp1);
+			// 	STRESS MATRIX
+
+			// main diagonal
+			Sl(kx, kx) = Kl * (dlim1 * ((ulim1y * ulim1y) / (l0im1 * lim1)) + dli * ((uliy * uliy) / (l0i * li)));
+			Sl(ky, ky) = Kl * (dlim1 * ((ulim1x * ulim1x) / (l0im1 * lim1)) + dli * ((ulix * ulix) / (l0i * li)));
+
+			Sl(kx, ky) = -Kl * (dlim1 * ((ulim1x * ulim1y) / (l0im1 * lim1)) + dli * ((ulix * uliy) / (l0i * li)));
+			Sl(ky, kx) = Sl(kx, ky);
+
+			// 1off diagonal
+			Sl(kx, kxp1) = -Kl * dli * ((uliy * uliy) / (l0i * li));
+			Sl(ky, kyp1) = -Kl * dli * ((ulix * ulix) / (l0i * li));
+
+			Sl(kx, kyp1) = Kl * dli * ((ulix * uliy) / (l0i * li));
+			Sl(ky, kxp1) = Sl(kx, kyp1);
+
+			// enforce symmetry in lower triangle
+			Sl(kxp1, kx) = Sl(kx, kxp1);
+			Sl(kyp1, ky) = Sl(ky, kyp1);
+
+			Sl(kyp1, kx) = Sl(kx, kyp1);
+			Sl(kxp1, ky) = Sl(ky, kxp1);
 		}
 	}
 }
-
 
 // TO-DO: need to make hessian function for bending term (th - th0)^2
 // void dpm::dpmBendingHessian2D(Eigen::MatrixXd& Hb, Eigen::MatrixXd& Sb){
@@ -2315,7 +2398,8 @@ void dpm::dpmPerimeterHessian2D(Eigen::MatrixXd& Hl, Eigen::MatrixXd& Sl){
 // }
 
 // construct hessian for interaction term
-void dpm::dpmRepulsiveHarmonicSprings2D(Eigen::MatrixXd& Hvv, Eigen::MatrixXd& Svv){
+void dpm::dpmRepulsiveHarmonicSprings2D(Eigen::MatrixXd &Hvv, Eigen::MatrixXd &Svv)
+{
 	// local variables
 	int ci, cj, vi, vj, gi, gj;
 	int mxi, myi, mxj, myj;
@@ -2323,24 +2407,29 @@ void dpm::dpmRepulsiveHarmonicSprings2D(Eigen::MatrixXd& Hvv, Eigen::MatrixXd& S
 
 	// loop over cell pairs
 	rho0 = sqrt(a0[0]);
-	for (ci=0; ci<NCELLS; ci++){
-		for (cj=ci+1; cj<NCELLS; cj++){
+	for (ci = 0; ci < NCELLS; ci++)
+	{
+		for (cj = ci + 1; cj < NCELLS; cj++)
+		{
 
 			// check if pair of cells is contact, only proceed if true
-			if (cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2] > 0){
+			if (cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2] > 0)
+			{
 
 				// loop over pairs of vertices on both cells, check for overlap, compute matrix elements
-				for (vi=0; vi<nv[ci]; vi++){
+				for (vi = 0; vi < nv[ci]; vi++)
+				{
 
 					// matrix element indices (cell ci, vertex vi)
-					gi = gindex(ci,vi);
-					mxi = NDIM*gi;
+					gi = gindex(ci, vi);
+					mxi = NDIM * gi;
 					myi = mxi + 1;
 
-					for (vj=0; vj<nv[cj]; vj++){
+					for (vj = 0; vj < nv[cj]; vj++)
+					{
 						// matrix element indices (cell cj, vertex vj)
-						gj = gindex(cj,vj);
-						mxj = NDIM*gj;
+						gj = gindex(cj, vj);
+						mxj = NDIM * gj;
 						myj = mxj + 1;
 
 						// contact distance
@@ -2350,76 +2439,74 @@ void dpm::dpmRepulsiveHarmonicSprings2D(Eigen::MatrixXd& Hvv, Eigen::MatrixXd& S
 						// particle distance
 						dx = x[mxj] - x[mxi];
 						if (pbc[0])
-							dx -= L[0]*round(dx/L[0]);
-						if (dx < sij){
+							dx -= L[0] * round(dx / L[0]);
+						if (dx < sij)
+						{
 							dy = x[myj] - x[myi];
 							if (pbc[1])
-								dy -= L[1]*round(dy/L[1]);
-							if (dy < sij){
-								rij = sqrt(dx*dx + dy*dy);
-								if (rij < sij){
+								dy -= L[1] * round(dy / L[1]);
+							if (dy < sij)
+							{
+								rij = sqrt(dx * dx + dy * dy);
+								if (rij < sij)
+								{
 									// spring constant
-									kij = (kc*rho0*rho0)/(sij*rij);
+									kij = (kc * rho0 * rho0) / (sij * rij);
 
 									// dimensionless overlap
-									h = rij/sij;
+									h = rij / sij;
 
 									// derivatives of distance w.r.t. coordinates
-									uxij = dx/rij;
-									uyij = dy/rij;
+									uxij = dx / rij;
+									uyij = dy / rij;
 
 									// compute stiffness and stress matrices (off diagonal, enforce symmetry in lower triangles)
 
 									// -- stiffness matrix
-									Hvv(mxi,mxj) = -((kc*rho0*rho0)/(sij*sij))*(uxij*uxij);
-									Hvv(myi,myj) = -((kc*rho0*rho0)/(sij*sij))*(uyij*uyij);
-									Hvv(mxi,myj) = -((kc*rho0*rho0)/(sij*sij))*(uxij*uyij);
-									Hvv(myi,mxj) = -((kc*rho0*rho0)/(sij*sij))*(uyij*uxij);
+									Hvv(mxi, mxj) = -((kc * rho0 * rho0) / (sij * sij)) * (uxij * uxij);
+									Hvv(myi, myj) = -((kc * rho0 * rho0) / (sij * sij)) * (uyij * uyij);
+									Hvv(mxi, myj) = -((kc * rho0 * rho0) / (sij * sij)) * (uxij * uyij);
+									Hvv(myi, mxj) = -((kc * rho0 * rho0) / (sij * sij)) * (uyij * uxij);
 
-									Hvv(mxj,mxi) = Hvv(mxi,mxj);
-									Hvv(myj,myi) = Hvv(myi,myj);
-									Hvv(mxj,myi) = Hvv(myi,mxj);
-									Hvv(myj,mxi) = Hvv(mxi,myj);
-
-
+									Hvv(mxj, mxi) = Hvv(mxi, mxj);
+									Hvv(myj, myi) = Hvv(myi, myj);
+									Hvv(mxj, myi) = Hvv(myi, mxj);
+									Hvv(myj, mxi) = Hvv(mxi, myj);
 
 									// -- stress matrix
-									Svv(mxi,mxj) = kij*(1.0 - h)*(uyij*uyij);
-									Svv(myi,myj) = kij*(1.0 - h)*(uxij*uxij);
-									Svv(mxi,myj) = -kij*(1.0 - h)*(uxij*uyij);
-									Svv(myi,mxj) = -kij*(1.0 - h)*(uxij*uyij);
+									Svv(mxi, mxj) = kij * (1.0 - h) * (uyij * uyij);
+									Svv(myi, myj) = kij * (1.0 - h) * (uxij * uxij);
+									Svv(mxi, myj) = -kij * (1.0 - h) * (uxij * uyij);
+									Svv(myi, mxj) = -kij * (1.0 - h) * (uxij * uyij);
 
-									Svv(mxj,mxi) = Svv(mxi,mxj);
-					                Svv(myj,myi) = Svv(myi,myj);
-					                Svv(mxj,myi) = Svv(myi,mxj);
-					                Svv(myj,mxi) = Svv(mxi,myj);
+									Svv(mxj, mxi) = Svv(mxi, mxj);
+									Svv(myj, myi) = Svv(myi, myj);
+									Svv(mxj, myi) = Svv(myi, mxj);
+									Svv(myj, mxi) = Svv(mxi, myj);
 
+									// add to diagonal, using off diagonals and reciprocity
 
-					                
-					                // add to diagonal, using off diagonals and reciprocity
+									// -- stiffness matrix
+									Hvv(mxi, mxi) -= Hvv(mxi, mxj);
+									Hvv(myi, myi) -= Hvv(myi, myj);
+									Hvv(mxi, myi) -= Hvv(mxi, myj);
+									Hvv(myi, mxi) -= Hvv(myi, mxj);
 
-					                // -- stiffness matrix
-					                Hvv(mxi,mxi) -= Hvv(mxi,mxj);
-					                Hvv(myi,myi) -= Hvv(myi,myj);
-					                Hvv(mxi,myi) -= Hvv(mxi,myj);
-					                Hvv(myi,mxi) -= Hvv(myi,mxj);
-					                
-					                Hvv(mxj,mxj) -= Hvv(mxi,mxj);
-					                Hvv(myj,myj) -= Hvv(myi,myj);
-					                Hvv(mxj,myj) -= Hvv(mxi,myj);
-					                Hvv(myj,mxj) -= Hvv(myi,mxj);
+									Hvv(mxj, mxj) -= Hvv(mxi, mxj);
+									Hvv(myj, myj) -= Hvv(myi, myj);
+									Hvv(mxj, myj) -= Hvv(mxi, myj);
+									Hvv(myj, mxj) -= Hvv(myi, mxj);
 
+									// -- stress matrix
+									Svv(mxi, mxi) -= Svv(mxi, mxj);
+									Svv(myi, myi) -= Svv(myi, myj);
+									Svv(mxi, myi) -= Svv(mxi, myj);
+									Svv(myi, mxi) -= Svv(myi, mxj);
 
-					                // -- stress matrix
-					                Svv(mxi,mxi) -= Svv(mxi,mxj);
-					                Svv(myi,myi) -= Svv(myi,myj);
-					                Svv(mxi,myi) -= Svv(mxi,myj);
-					                Svv(myi,mxi) -= Svv(myi,mxj);
-					                
-					                Svv(mxj,mxj) -= Svv(mxi,mxj);
-					                Svv(myj,myj) -= Svv(myi,myj);
-					                Svv(mxj,myj) -= Svv(mxi,myj);
-					                Svv(myj,mxj) -= Svv(myi,mxj);
+									Svv(mxj, mxj) -= Svv(mxi, mxj);
+									Svv(myj, myj) -= Svv(myi, myj);
+									Svv(mxj, myj) -= Svv(mxi, myj);
+									Svv(myj, mxj) -= Svv(myi, mxj);
 								}
 							}
 						}
@@ -2430,8 +2517,6 @@ void dpm::dpmRepulsiveHarmonicSprings2D(Eigen::MatrixXd& Hvv, Eigen::MatrixXd& S
 	}
 }
 
-
-
 /******************************
 
 	P R I N T   T O
@@ -2440,15 +2525,18 @@ void dpm::dpmRepulsiveHarmonicSprings2D(Eigen::MatrixXd& Hvv, Eigen::MatrixXd& S
 
 *******************************/
 
-void dpm::printContactMatrix(){
+void dpm::printContactMatrix()
+{
 	int ci, cj;
 
-	for (ci=0; ci<NCELLS; ci++){
-		for (cj=0; cj<NCELLS; cj++){
+	for (ci = 0; ci < NCELLS; ci++)
+	{
+		for (cj = 0; cj < NCELLS; cj++)
+		{
 			if (ci > cj)
-				cout << setw(5) << cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2];
+				cout << setw(5) << cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2];
 			else if (ci < cj)
-				cout << setw(5) << cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]; 
+				cout << setw(5) << cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2];
 			else
 				cout << setw(5) << 0;
 		}
@@ -2456,7 +2544,8 @@ void dpm::printContactMatrix(){
 	}
 }
 
-void dpm::printConfiguration2D(){
+void dpm::printConfiguration2D()
+{
 	// local variables
 	int ci, cj, vi, gi, ctmp, zc, zv;
 	double xi, yi, dx, dy, Lx, Ly;
@@ -2474,7 +2563,8 @@ void dpm::printConfiguration2D(){
 	Ly = L.at(1);
 
 	// print information starting information
-	posout << setw(w) << left << "NEWFR" << " " << endl;
+	posout << setw(w) << left << "NEWFR"
+		   << " " << endl;
 	posout << setw(w) << left << "NUMCL" << setw(w) << left << NCELLS << endl;
 	posout << setw(w) << left << "PACKF" << setw(wnum) << setprecision(pnum) << left << vertexPackingFraction2D() << endl;
 
@@ -2492,24 +2582,27 @@ void dpm::printConfiguration2D(){
 	posout << endl;
 
 	// print coordinate for rest of the cells
-	for (ci=0; ci<NCELLS; ci++){
+	for (ci = 0; ci < NCELLS; ci++)
+	{
 
 		// get cell contact data
 		zc = 0;
 		zv = 0;
-		for (cj=0; cj<NCELLS; cj++){
-			if (ci != cj){
+		for (cj = 0; cj < NCELLS; cj++)
+		{
+			if (ci != cj)
+			{
 				// contact info from entry ci, cj
 				if (ci < cj)
-					ctmp = cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]; 
+					ctmp = cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2];
 				else
-					ctmp = cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2]; 
+					ctmp = cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2];
 
 				// add to contact information
 				zv += ctmp;
 				if (ctmp > 0)
 					zc++;
-			}	
+			}
 		}
 
 		// cell information
@@ -2523,13 +2616,13 @@ void dpm::printConfiguration2D(){
 		posout << endl;
 
 		// get initial vertex positions
-		gi = gindex(ci,0);
-		xi = x.at(NDIM*gi);
-		yi = x.at(NDIM*gi + 1);
+		gi = gindex(ci, 0);
+		xi = x.at(NDIM * gi);
+		yi = x.at(NDIM * gi + 1);
 
 		// place back in box center
-		xi = fmod(xi,Lx);
-		yi = fmod(yi,Ly);
+		xi = fmod(xi, Lx);
+		yi = fmod(yi, Ly);
 
 		posout << setw(w) << left << "VINFO";
 		posout << setw(w) << left << ci;
@@ -2544,19 +2637,20 @@ void dpm::printConfiguration2D(){
 		posout << endl;
 
 		// vertex information for next vertices
-		for (vi=1; vi<nv.at(ci); vi++){
+		for (vi = 1; vi < nv.at(ci); vi++)
+		{
 			// get global vertex index for next vertex
 			gi++;
 
 			// get next vertex positions
-			dx = x.at(NDIM*gi) - xi;
+			dx = x.at(NDIM * gi) - xi;
 			if (pbc[0])
-				dx -= Lx*round(dx/Lx);
+				dx -= Lx * round(dx / Lx);
 			xi += dx;
 
-			dy = x.at(NDIM*gi + 1) - yi;
+			dy = x.at(NDIM * gi + 1) - yi;
 			if (pbc[1])
-				dy -= Ly*round(dy/Ly);
+				dy -= Ly * round(dy / Ly);
 			yi += dy;
 
 			// Print indexing information
@@ -2575,7 +2669,8 @@ void dpm::printConfiguration2D(){
 	}
 
 	// print end frame
-	posout << setw(w) << left << "ENDFR" << " " << endl;
+	posout << setw(w) << left << "ENDFR"
+		   << " " << endl;
 }
 
 void dpm::printHessianEigenvalues2D(ofstream& hessout, Eigen::MatrixXd& M){
@@ -2587,7 +2682,6 @@ void dpm::printHessianEigenvalues2D(ofstream& hessout, Eigen::MatrixXd& M){
 	else
 		cout << "** In printMatrixEigenvalues2D, printing particle positions to file..." << endl;
 
-
 	// compute eigenvalues from matrix, plot
 	Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> dynamicalMatrixEigenmodes(M);
 
@@ -2595,5 +2689,3 @@ void dpm::printHessianEigenvalues2D(ofstream& hessout, Eigen::MatrixXd& M){
 	hessout << vertDOF << endl;
 	hessout << dynamicalMatrixEigenmodes.eigenvalues() << endl;
 }
-
-

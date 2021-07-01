@@ -111,7 +111,7 @@ int main(int argc, char const *argv[])
 	configobj2D.initializeNeighborLinkedList2D(boxLengthScale);
 
 	// compress to target packing fraction
-	configobj2D.vertexJamming2D(Ftol,Ptol,dt0,dphi0,plotCompression);
+	configobj2D.vertexJamming2D(&dpm::forceUpdate, Ftol,Ptol,dt0,dphi0,plotCompression);
 
 	// say goodbye
 	cout << "\n** Finished bidisperseSinusoidalParticleJamming.cpp, ending. " << endl;

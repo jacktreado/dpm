@@ -28,30 +28,33 @@
 #include <Eigen/Dense>
 #include <Eigen/Eigenvalues>
 
+class dpm;
+typedef void (dpm::*dpmMemFn)(void);
+
 // global constants
-const double PI 			= 4.0*atan(1.0);
-const int nvmin 			= 12;
+const double PI = 4.0 * atan(1.0);
+const int nvmin = 12;
 
 // printing constants
-const int w 				= 10;
-const int wnum 				= 25;
-const int pnum 				= 14;
+const int w = 10;
+const int wnum = 25;
+const int pnum = 14;
 
 // FIRE constants
-const double alpha0      	= 0.2;
-const double finc        	= 1.1;
-const double fdec        	= 0.5;
-const double falpha      	= 0.99;
+const double alpha0 = 0.2;
+const double finc = 1.1;
+const double fdec = 0.5;
+const double falpha = 0.99;
 
-const int NSKIP 			= 20000;
-const int NMIN 				= 10;
-const int NNEGMAX 			= 1000;
-const int NDELAY 			= 20;
-const int itmax 			= 5e7;
+const int NSKIP = 20000;
+const int NMIN = 10;
+const int NNEGMAX = 1000;
+const int NDELAY = 20;
+const int itmax = 5e7;
 
-class dpm{
+class dpm
+{
 protected:
-
 	// int scalars
 	int NCELLS;
 	int NDIM;
@@ -87,7 +90,6 @@ protected:
 	std::vector<int> im1;
 	std::vector<int> ip1;
 
-
 	// dynamical variables
 	std::vector<double> x;
 	std::vector<double> v;
@@ -103,29 +105,25 @@ protected:
 	int NBX;
 	std::vector<int> sb;
 	std::vector<double> lb;
-	std::vector< std::vector<int> > nn;
+	std::vector<std::vector<int>> nn;
 	std::vector<int> head;
 	std::vector<int> last;
 	std::vector<int> list;
-
 
 	// output objects
 	std::ofstream posout;
 
 public:
-
 	// Constructors and Destructors
 	dpm(int n, int ndim, int seed);
-	dpm(int n, int seed) : dpm(n,2,seed) {}
+	dpm(int n, int seed) : dpm(n, 2, seed) {}
 	~dpm();
-
-
 
 	// -- G E T T E R S
 
 	// main ints
 	int getNCELLS() { return NCELLS; };
-	int getNDIM() { return NDIM; }; 
+	int getNDIM() { return NDIM; };
 	int getNNN() { return NNN; };
 	int getNVTOT() { return NVTOT; };
 	int getvertDOF() { return vertDOF; };
@@ -134,8 +132,8 @@ public:
 	// force parameters
 	double getdt() { return dt; };
 	double getka() { return ka; };
-	double getkl() { return kl; }; 
-	double getkb() { return kb; }; 
+	double getkl() { return kl; };
+	double getkb() { return kb; };
 	double getkc() { return kc; };
 
 	// static cell info
@@ -145,9 +143,9 @@ public:
 	double getr(int gi) { return r[gi]; };
 
 	// dynamic cell info
-	double getx(int gi, int d) { return x[NDIM*gi + d]; };
-	double getv(int gi, int d) { return v[NDIM*gi + d]; };
-	double getF(int gi, int d) { return F[NDIM*gi + d]; };
+	double getx(int gi, int d) { return x[NDIM * gi + d]; };
+	double getv(int gi, int d) { return v[NDIM * gi + d]; };
+	double getF(int gi, int d) { return F[NDIM * gi + d]; };
 	double getU() { return U; };
 
 	// boundary variables
@@ -156,10 +154,10 @@ public:
 
 	// cell shape indexing + information
 	int gindex(int ci, int vi);
-	void cindices(int& ci, int& vi, int gi);
+	void cindices(int &ci, int &vi, int gi);
 	double area(int ci);
 	double perimeter(int ci);
-	void com2D(int ci, double& cx, double& cy);
+	void com2D(int ci, double &cx, double &cy);
 	double vertexPackingFraction2D();
 	double vertexPreferredPackingFraction2D();
 	double vertexKineticEnergy();
@@ -175,10 +173,9 @@ public:
 	void setkb(double val) { kb = val; };
 	void setkc(double val) { kc = val; };
 
-
-
 	// File openers
-	void openPosObject(std::string& str){
+	void openPosObject(std::string &str)
+	{
 		posout.open(str.c_str());
 		if (!posout.is_open()) {
 			std::cerr << "	ERROR: posout could not open " << str << "..." << std::endl;
@@ -187,7 +184,7 @@ public:
 		else
 			std::cout << "** Opening pos file " << str << " ..." << std::endl;
 	}
-
+    
 	// Initialize particles (two dimensions)
 	void monodisperse2D(int n);
 	void bidisperse2D(double calA0, int nsmall, double smallfrac, double sizefrac);
@@ -197,7 +194,6 @@ public:
 	void initializeVertexIndexing2D();
 	void initializePositions2D(double phi0, double Ftol);
 	void initializeNeighborLinkedList2D(double boxLengthScale);
-
 
 	// editing & updating
 	void sortNeighborLinkedList2D();
@@ -212,25 +208,23 @@ public:
 	void forceUpdate();
 
 	// simple integrators
-	void vertexFIRE2D(double Ftol, double dt0);
+	void vertexFIRE2D(dpmMemFn forceCall, double Ftol, double dt0);
 
 	// protocols
-	void vertexCompress2Target2D(double Ftol, double dt0, double phi0Target, double dphi0);
-	void vertexJamming2D(double Ftol, double Ptol, double dt0, double dphi0, bool plotCompression);
-
+	void vertexCompress2Target2D(dpmMemFn forceCall, double Ftol, double dt0, double phi0Target, double dphi0);
+	void vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double dt0, double dphi0, bool plotCompression);
 
 	// hessian methods
 	// note: dynamical matrix contribution is always M = H - S
-	void dpmHessian2D(Eigen::MatrixXd& H, Eigen::MatrixXd& S);
-	void dpmAreaHessian2D(Eigen::MatrixXd& Ha, Eigen::MatrixXd& Sa);
-	void dpmPerimeterHessian2D(Eigen::MatrixXd& Hl, Eigen::MatrixXd& Sl);
-	void dpmRepulsiveHarmonicSprings2D(Eigen::MatrixXd& Hvv, Eigen::MatrixXd& Svv);
+	void dpmHessian2D(Eigen::MatrixXd &H, Eigen::MatrixXd &S);
+	void dpmAreaHessian2D(Eigen::MatrixXd &Ha, Eigen::MatrixXd &Sa);
+	void dpmPerimeterHessian2D(Eigen::MatrixXd &Hl, Eigen::MatrixXd &Sl);
+	void dpmRepulsiveHarmonicSprings2D(Eigen::MatrixXd &Hvv, Eigen::MatrixXd &Svv);
 
 	// print vertex information to file
 	void printContactMatrix();
 	void printConfiguration2D();
 	void printHessianEigenvalues2D(std::ofstream& hessout, Eigen::MatrixXd& M);
-
 };
 
 #endif
