@@ -28,6 +28,9 @@
 #include <Eigen/Dense>
 #include <Eigen/Eigenvalues>
 
+// pointer-to-member function call macro
+#define CALL_MEMBER_FN(object, ptrToMember) ((object).*(ptrToMember))
+
 class dpm;
 typedef void (dpm::*dpmMemFn)(void);
 
@@ -73,6 +76,9 @@ protected:
 	double kl;
 	double kb;
 	double kc;
+
+	// particle attraction constants
+	double l1, l2;
 
 	// boundary parameters
 	std::vector<double> L;
@@ -172,6 +178,8 @@ public:
 	void setkl(double val) { kl = val; };
 	void setkb(double val) { kb = val; };
 	void setkc(double val) { kc = val; };
+	void setl1(double val) { l1 = val; };
+	void setl2(double val) { l2 = val; };
 
 	// File openers
 	void openPosObject(std::string &str)
@@ -201,11 +209,15 @@ public:
 	int removeRattlers();
 	void drawVelocities2D(double T);
 
-	// force updates
+	// force definitions
 	void resetForcesAndEnergy();
 	void shapeForces2D();
 	void vertexRepulsiveForces2D();
-	void forceUpdate();
+	void vertexAttractiveForces2D();
+
+	// force updates
+	void repulsiveForceUpdate();
+	void attractiveForceUpdate();
 
 	// simple integrators
 	void vertexFIRE2D(dpmMemFn forceCall, double Ftol, double dt0);
@@ -224,7 +236,7 @@ public:
 	// print vertex information to file
 	void printContactMatrix();
 	void printConfiguration2D();
-	void printHessianEigenvalues2D(std::ofstream& hessout, Eigen::MatrixXd& M);
+	void printHessianEigenvalues2D(std::ofstream &hessout, Eigen::MatrixXd &M);
 };
 
 #endif

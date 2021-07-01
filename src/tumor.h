@@ -24,9 +24,6 @@ protected:
 	// temporary number of tumor cells
 	int ntmp;
 
-	// adhesion parameters
-	double l1, l2;
-
 	// motility parameters
 	double v0, Dr, Ds;
 
@@ -35,7 +32,7 @@ public:
 	// Constructors and Destructors
 
 	// monolayer constructor
-	tumor(int n, int seed) : dpm(n,seed) { ntmp=0; l1=0.0; l2=0.0; v0=0.0; Dr=0.0; Ds=0.0; pbc[0]=0; pbc[1]=0; };
+	tumor(int n, int seed) : dpm(n,seed) { ntmp=0; v0=0.0; Dr=0.0; Ds=0.0; pbc[0]=0; pbc[1]=0; };
 
 	// setters
 	void setl1(double val) { l1 = val; };

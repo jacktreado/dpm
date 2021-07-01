@@ -2,8 +2,10 @@
 //
 // 	Will create bidisperse DPM particles, set constants,
 // 	place particle centers, relax shapes + positions, print configuration
-// g++ -O3 -std=c++11 -I src main/test/firetest2.cpp src/*.cpp -o firetest2.o
-// ./firetest2.o
+// 
+//  Compilation command:
+//  g++ -O3 -std=c++11 -I src main/test/firetest2.cpp src/*.cpp -o firetest2.o
+//  ./firetest2.o
 
 // header files
 #include "dpm.h"
@@ -50,14 +52,14 @@ int main()
     configobj2D.initializeNeighborLinkedList2D(boxLengthScale);
 
     // use FIRE to relax configuration interacting via bumps to energy minimum
-    dpmMemFn forceCall = &dpm::forceUpdate;
+    dpmMemFn forceCall = &dpm::repulsiveForceUpdate;
     configobj2D.vertexFIRE2D(forceCall, Ftol, dt0);
 
     // print config
     configobj2D.printConfiguration2D();
 
     // say goodbye
-    cout << "\n\n** Finished firetest.cpp, ending. " << endl;
+    cout << "\n\n** Finished firetest2.cpp, ending. " << endl;
 
     return 0;
 }

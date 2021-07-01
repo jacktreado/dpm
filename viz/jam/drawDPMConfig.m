@@ -37,7 +37,7 @@ phi = dpmData.phi;
 %% Draw cells
 
 % show vertices or not
-showverts = 1;
+showverts = 0;
 
 % get cell colors
 [nvUQ, ~, IC] = unique(nv);
@@ -51,7 +51,7 @@ if showverts == 0
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
-    FSTART = NFRAMES;
+    FSTART = 1;
     FSTEP = 1;
     FEND = FSTART;
 end
@@ -67,6 +67,7 @@ end
 
 fnum = 1;
 figure(fnum), clf, hold on, box on;
+pactual = zeros(NFRAMES,NCELLS);
 for ff = FSTART:FSTEP:FEND
     % reset figure for this frame
     figure(fnum), clf, hold on, box on;
@@ -80,6 +81,11 @@ for ff = FSTART:FSTEP:FEND
     for nn = 1:NCELLS
         xtmp = xf{nn};
         ytmp = yf{nn};
+        lx = xtmp([2:end 1]) - xtmp;
+        ly = ytmp([2:end 1]) - ytmp;
+        l = sqrt(lx.^2 + ly.^2);
+        ptmp = sum(l);
+        pactual(ff,nn) = ptmp;
         rtmp = rf{nn};
         clr = cellCLR(IC(nn),:);
         if showverts == 1
@@ -146,11 +152,11 @@ if NFRAMES > 5
     
     figure(10), clf, hold on, box on;
     
-    plot(1-phi(Sxx<0),abs(Sxx(Sxx<0)),'ks','markersize',10,'MarkerFaceColor','r');
-    plot(1-phi(Sxx>0),Sxx(Sxx>0),'ro','markersize',10);
+    plot(phi(Sxx<0),abs(Sxx(Sxx<0)),'ks','markersize',10,'MarkerFaceColor','r');
+    plot(phi(Sxx>0),Sxx(Sxx>0),'ro','markersize',10);
     
-    plot(1-phi(Syy<0),abs(Syy(Syy<0)),'ks','markersize',10,'MarkerFaceColor','b');
-    plot(1-phi(Syy>0),Syy(Syy>0),'bo','markersize',10);
+    plot(phi(Syy<0),abs(Syy(Syy<0)),'ks','markersize',10,'MarkerFaceColor','b');
+    plot(phi(Syy>0),Syy(Syy>0),'bo','markersize',10);
     
     xlabel('$\phi$','Interpreter','latex');
     ylabel('$\Sigma_{xx}$, $\Sigma_{yy}$','Interpreter','latex');
@@ -160,8 +166,8 @@ if NFRAMES > 5
     
     figure(11), clf, hold on, box on;
     
-    plot(1-phi(Sxy<0),abs(Sxy(Sxy<0)),'ks','markersize',10,'MarkerFaceColor','k');
-    plot(1-phi(Sxy>0),Sxy(Sxy>0),'ko','markersize',10);
+    plot(phi(Sxy<0),abs(Sxy(Sxy<0)),'ks','markersize',10,'MarkerFaceColor','k');
+    plot(phi(Sxy>0),Sxy(Sxy>0),'ko','markersize',10);
     
     xlabel('$\phi$','Interpreter','latex');
     ylabel('$\Sigma_{xy}$','Interpreter','latex');
@@ -170,10 +176,10 @@ if NFRAMES > 5
 %     ax.YScale = 'log';
     
     figure(12), clf, hold on, box on;
-    plot(1-phi,calA,'-','color',[0.5 0.5 0.5],'linewidth',1.2);
-    errorbar(1-phi,mean(calA,2),std(calA,0,2),'k--','linewidth',2);
+    plot(phi,calA,'-','color',[0.5 0.5 0.5],'linewidth',1.2);
+    errorbar(phi,mean(calA,2),std(calA,0,2),'k--','linewidth',2);
     
-    xlabel('$1-\phi$','Interpreter','latex');
+    xlabel('$\phi$','Interpreter','latex');
     ylabel('$\mathcal{A}$','Interpreter','latex');
     ax = gca;
     ax.FontSize = 22;    

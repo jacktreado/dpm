@@ -8,27 +8,27 @@ clc;
 fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
-dpmData = readMesoNetwork2D(fstr);
+mesoData = readMesoNetwork2D(fstr);
 
 % get number of frames
-NFRAMES = dpmData.NFRAMES;
+NFRAMES = mesoData.NFRAMES;
 
 % sim info
-NCELLS = dpmData.NCELLS;
-nv = dpmData.nv(1,:);
-L = dpmData.L(1,:);
+NCELLS = mesoData.NCELLS;
+nv = mesoData.nv(1,:);
+L = mesoData.L(1,:);
 Lx = L(1);
 Ly = L(2);
-x = dpmData.x;
-y = dpmData.y;
-r = dpmData.r;
-zc = dpmData.zc;
-zv = dpmData.zv;
-zg = dpmData.zg;
-a0 = dpmData.a0;
-l0 = dpmData.l0;
-t0 = dpmData.t0;
-kb = dpmData.kb;
+x = mesoData.x;
+y = mesoData.y;
+r = mesoData.r;
+zc = mesoData.zc;
+zv = mesoData.zv;
+zg = mesoData.zg;
+a0 = mesoData.a0;
+l0 = mesoData.l0;
+t0 = mesoData.t0;
+kb = mesoData.kb;
 
 % get preferred shape
 calA0 = zeros(NFRAMES,NCELLS);
@@ -42,16 +42,16 @@ for ff = 1:NFRAMES
 end
 
 % particle shape data
-p = dpmData.p;
-a = dpmData.a;
+p = mesoData.p;
+a = mesoData.a;
 calA = p.^2./(4.0*pi*a);
 
 % stress data
-S = dpmData.S;
+S = mesoData.S;
 P = 0.5*(S(:,1) + S(:,2));
 
 % packing fraction
-phi = dpmData.phi;
+phi = mesoData.phi;
 
 %% Draw cells
 
@@ -78,7 +78,7 @@ else
 end
 
 % draw cell cell contacts
-if exist(ctcstr,'var')
+if ~isempty(who('ctcstr'))
     % can choose to draw contacts
     drawCTCS = 1;
 

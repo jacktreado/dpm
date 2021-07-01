@@ -294,7 +294,7 @@ void meso2D::initializeMesophyllBondNetwork(){
 
 
 // mesophyll specific shape forces
-void meso2D::mesoShapeForces2D(){
+void meso2D::mesoShapeForces(){
 	// local variables
 	int ci, gi, vi, nvtmp;
 	double fa, fli, flim1, fb, cx, cy, xi, yi;
@@ -328,7 +328,7 @@ void meso2D::mesoShapeForces2D(){
 				U += 0.5*ka*(da*da);
 
 				// shape force parameters
-				fa = da*(rho0/a0tmp);
+				fa = ka*da*(rho0/a0tmp);
 
 				// compute cell center of mass
 				xi = x[NDIM*gi];
@@ -425,9 +425,8 @@ void meso2D::mesoShapeForces2D(){
 		// update potential energy
 		U += 0.5*kl*(dli*dli);
 
-
 		// -- Bending force
-		fb = kbi[gi]/rho0;
+		fb = kbi[gi];
 
 		if (fb > 0){
 			// get ip2 for third angle
@@ -512,7 +511,7 @@ void meso2D::mesoNetworkForceUpdate(){
 
 	// normal update (shape + repulsive forces) from base class
 	resetForcesAndEnergy();
-	mesoShapeForces2D();
+	mesoShapeForces();
 	vertexRepulsiveForces2D();
 
 	// update bonded forces
@@ -632,8 +631,9 @@ void meso2D::mesoPinForceUpdate(vector<double>& xpin, double kcspring){
 
 *******************************/
 
+
 // use FIRE to minimize potential energy in mesophyll cell network
-void meso2D::mesoNetworkFIRE(double Ftol, double dt0){
+void meso2D::mesoFIRE(meso2DMemFn forceCall, double Ftol, double dt0){
 	// local variables
 	int i;
 	double rho0;
@@ -782,8 +782,8 @@ void meso2D::mesoNetworkFIRE(double Ftol, double dt0){
 				x[i] += L[i % NDIM];
 		}
 
-		// update forces in mesophyll network 
-		mesoNetworkForceUpdate();
+		// update forces (function passed as argument)
+		CALL_MEMBER_FN(*this, forceCall)();
 
 		// VV VELOCITY UPDATE #2
 		for (i=0; i<vertDOF; i++)
@@ -827,7 +827,7 @@ void meso2D::mesoNetworkFIRE(double Ftol, double dt0){
 
 
 // use FIRE to minimize potential energy in mesophyll cells sinking toward center of box
-void meso2D::mesoPinFIRE(vector<double>& xpin, double Ftol, double dt0, double kcspring){
+void meso2D::mesoPinFIRE(vector<double> &xpin, double Ftol, double dt0, double kcspring){
 	// local variables
 	int i, ci, vi, gi, k;
 	double cxtmp, cytmp;
@@ -1025,13 +1025,16 @@ void meso2D::mesoPinFIRE(vector<double>& xpin, double Ftol, double dt0, double k
 
 
 // mesophyll network in the mesophyll ensemble
-void meso2D::mesoNetworkNVE(double T, double dt0, int NT, int NPRINTSKIP){
+void meso2D::mesoNetworkNVE(ofstream &enout, meso2DMemFn forceCall, double T, double dt0, int NT, int NPRINTSKIP){
 	// local variables
 	int t, i;
-	double K;
+	double K, simclock;
 
 	// set time step magnitude
 	setdt(dt0);
+
+	// initialize time keeper
+	simclock = 0.0;
 
 	// initialize velocities
 	drawVelocities2D(T);
@@ -1054,12 +1057,15 @@ void meso2D::mesoNetworkNVE(double T, double dt0, int NT, int NPRINTSKIP){
 				x[i] += L[i % NDIM];
 		}
 
-		// VV FORCE UPDATE
-		mesoNetworkForceUpdate();
+		// FORCE UPDATE
+		CALL_MEMBER_FN(*this, forceCall)();
 
 		// VV VELOCITY UPDATE #2
 		for (i=0; i<vertDOF; i++)
 			v[i] += 0.5*F[i]*dt;
+
+		// update sim clock
+		simclock += dt;
 
 		// print to console and file
 		if (t % NPRINTSKIP == 0){
@@ -1078,6 +1084,16 @@ void meso2D::mesoNetworkNVE(double T, double dt0, int NT, int NPRINTSKIP){
 			cout << "	** U 		= " << setprecision(12) << U << endl;
 			cout << "	** K 		= " << setprecision(12) << K << endl;
 			cout << "	** E 		= " << setprecision(12) << U + K << endl;
+
+			// print to energy file
+			cout << "** printing energy" << endl;
+			enout << setw(w) << left << t;
+			enout << setw(wnum) << left << simclock;
+			enout << setw(wnum) << setprecision(12) << U;
+			enout << setw(wnum) << setprecision(12) << K;
+			enout << endl;
+
+			// print to configuration only if position file is open
 			if (posout.is_open())
 				printConfiguration2D();
 		}
@@ -1104,7 +1120,7 @@ void meso2D::mesoNetworkNVE(double T, double dt0, int NT, int NPRINTSKIP){
 
 
 // simulate network extension using decompression
-void meso2D::mesoNetworkExtension(double Ftol, double dt0, double delShrink, double dphiPrint, double phiMin){
+void meso2D::mesoNetworkExtension(meso2DMemFn forceCall, double Ftol, double dt0, double delShrink, double dphiPrint, double phiMin){
 	// local variables
 	int k = 0;
 	double lastPrintPhi, scaleFactor = 1.0 - 2.0*delShrink;
@@ -1116,7 +1132,7 @@ void meso2D::mesoNetworkExtension(double Ftol, double dt0, double delShrink, dou
 	// loop until phi0 < phiMin
 	while (phi0 > phiMin && k < itmax){
 		// relax current configuration
-		mesoNetworkFIRE(Ftol, dt0);
+		mesoFIRE(forceCall, Ftol, dt0);
 
 		// break contact network
 		updateMesophyllBondNetwork();
@@ -1171,6 +1187,119 @@ void meso2D::mesoNetworkExtension(double Ftol, double dt0, double delShrink, dou
 		k++;
 	}
 }
+
+// drag cell pins away from center
+void meso2D::mesoPinExtension(double Ftol, double dt0, double hmax, double dh, double dhprint, double kcspring){
+	// local variables
+	int k=0, ci;
+	double cx, cy, dcx, dcy, rho0, h=0.0, lastPrinth=0.0;
+	vector<double> th(NCELLS,0.0);
+	vector<double> xpin(NDIM*NCELLS,0.0);
+
+	// determine extension direction angles + initial pin placement
+	for (ci=0; ci<NCELLS; ci++){
+		// get center of mass
+		com2D(ci,cx,cy);
+
+		// get distances to box center
+		dcx = cx - 0.5*L[0];
+		if (pbc[0])
+			dcx -= L[0]*round(dcx/L[0]);
+
+		dcy = cy - 0.5*L[1];
+		if (pbc[1])
+			dcy -= L[1]*round(dcy/L[1]);
+
+		// get angle
+		th[ci] = atan2(dcy,dcx);
+
+		// save pin location
+		xpin[NDIM*ci] = cx;
+		xpin[NDIM*ci + 1] = cy;
+	}
+
+	// loop over extension steps
+	rho0 = sqrt(a0[0]);
+	while (h < hmax && k < itmax){
+		// relax current configuration
+		mesoPinFIRE(xpin,Ftol,dt0,kcspring);
+
+		// update contact network
+		updateMesophyllBondNetwork();
+
+		// age particle shapes
+		ageMesophyllShapeParameters();
+
+		// output to console
+		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
+		cout << "===============================================" << endl << endl;
+		cout << "												" << endl;
+		cout << " 	M E S O P H Y L L 							" << endl;
+		cout << "	 											" << endl;
+		cout << " 	N E T W O R K . P I N   					" << endl;
+		cout << "												" << endl;
+		cout << "	E X T E N S I O N 							" << endl;
+		cout << " 												" << endl;
+		cout << "===============================================" << endl;
+		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
+		cout << endl;
+		cout << "	* k 			= " << k << endl;
+		cout << "	* h 			= " << h << endl;
+		cout << "	* lastPrinth 	= " << lastPrinth << endl;
+		cout << "	* P 			= " << 0.5*(stress[0] + stress[1]) << endl;
+		cout << "	* U 		 	= " << U << endl << endl;
+		cout << "	* Contacts:" << endl;
+		cout << "	* Nvv 			= " << vvContacts() << endl;
+		cout << "	* Ncc 			= " << ccContacts() << endl << endl;
+		cout << "	* Aging:" << endl;
+		cout << "	* meanl0 		= " << meanl0() << endl;
+		cout << "	* meancalA0 	= " << meancalA0() << endl;
+		cout << "	* meant0 		= " << meant0() << endl;
+		cout << "	* meankb 		= " << meankb() << endl;
+		cout << endl << endl;
+		for (ci=0; ci<NCELLS; ci++)
+			cout << "px=" << xpin[NDIM*ci] << ",   py=" << xpin[NDIM*ci+1] << endl;
+
+		// print positions if change in packing fraction is large enough
+		if (abs(lastPrinth - h) > dhprint){
+			// print positions
+			printMesoPin2D(xpin, h);
+
+			// update last print h
+			lastPrinth = h;
+		}
+
+		// move pins
+		for (ci=0; ci<NCELLS; ci++){
+			xpin[NDIM*ci] += dh*rho0*cos(th[ci]);
+			xpin[NDIM*ci + 1] += dh*rho0*sin(th[ci]);
+		}
+
+		// update new h
+		h += dh;
+
+		// update iterate
+		k++;
+	}
+}
+
+
+
+
+
+
+
+
+
+/******************************
+
+	M E S O P H Y L L
+
+	P R O T O C O L
+
+	H E L P E R S
+
+*******************************/
 
 
 // update mesophyll network using MC
@@ -1303,106 +1432,6 @@ void meso2D::ageMesophyllShapeParameters(){
 		kbi[gi] += cKb;
 	}
 }
-
-
-
-// drag cell pins away from center
-void meso2D::mesophyllPinExtension(double Ftol, double dt0, double hmax, double dh, double dhprint, double kcspring){
-	// local variables
-	int k=0, ci;
-	double cx, cy, dcx, dcy, rho0, h=0.0, lastPrinth=0.0;
-	vector<double> th(NCELLS,0.0);
-	vector<double> xpin(NDIM*NCELLS,0.0);
-
-	// determine extension direction angles + initial pin placement
-	for (ci=0; ci<NCELLS; ci++){
-		// get center of mass
-		com2D(ci,cx,cy);
-
-		// get distances to box center
-		dcx = cx - 0.5*L[0];
-		if (pbc[0])
-			dcx -= L[0]*round(dcx/L[0]);
-
-		dcy = cy - 0.5*L[1];
-		if (pbc[1])
-			dcy -= L[1]*round(dcy/L[1]);
-
-		// get angle
-		th[ci] = atan2(dcy,dcx);
-
-		// save pin location
-		xpin[NDIM*ci] = cx;
-		xpin[NDIM*ci + 1] = cy;
-	}
-
-	// loop over extension steps
-	rho0 = sqrt(a0[0]);
-	while (h < hmax && k < itmax){
-		// relax current configuration
-		mesoPinFIRE(xpin,Ftol,dt0,kcspring);
-
-		// update contact network
-		updateMesophyllBondNetwork();
-
-		// age particle shapes
-		ageMesophyllShapeParameters();
-
-		// output to console
-		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
-		cout << "===============================================" << endl << endl;
-		cout << "												" << endl;
-		cout << " 	M E S O P H Y L L 							" << endl;
-		cout << "	 											" << endl;
-		cout << " 	N E T W O R K . P I N   					" << endl;
-		cout << "												" << endl;
-		cout << "	E X T E N S I O N 							" << endl;
-		cout << " 												" << endl;
-		cout << "===============================================" << endl;
-		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
-		cout << endl;
-		cout << "	* k 			= " << k << endl;
-		cout << "	* h 			= " << h << endl;
-		cout << "	* lastPrinth 	= " << lastPrinth << endl;
-		cout << "	* P 			= " << 0.5*(stress[0] + stress[1]) << endl;
-		cout << "	* U 		 	= " << U << endl << endl;
-		cout << "	* Contacts:" << endl;
-		cout << "	* Nvv 			= " << vvContacts() << endl;
-		cout << "	* Ncc 			= " << ccContacts() << endl << endl;
-		cout << "	* Aging:" << endl;
-		cout << "	* meanl0 		= " << meanl0() << endl;
-		cout << "	* meancalA0 	= " << meancalA0() << endl;
-		cout << "	* meant0 		= " << meant0() << endl;
-		cout << "	* meankb 		= " << meankb() << endl;
-		cout << endl << endl;
-		for (ci=0; ci<NCELLS; ci++)
-			cout << "px=" << xpin[NDIM*ci] << ",   py=" << xpin[NDIM*ci+1] << endl;
-
-		// print positions if change in packing fraction is large enough
-		if (abs(lastPrinth - h) > dhprint){
-			// print positions
-			printMesoPin2D(xpin, h);
-
-			// update last print h
-			lastPrinth = h;
-		}
-
-		// move pins
-		for (ci=0; ci<NCELLS; ci++){
-			xpin[NDIM*ci] += dh*rho0*cos(th[ci]);
-			xpin[NDIM*ci + 1] += dh*rho0*sin(th[ci]);
-		}
-
-		// update new h
-		h += dh;
-
-		// update iterate
-		k++;
-	}
-}
-
-
-
 
 
 

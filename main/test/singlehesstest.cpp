@@ -59,7 +59,7 @@ int main(){
 	configobj2D.initializeNeighborLinkedList2D(boxLengthScale);
 
 	// use FIRE to relax vertex positions
-	configobj2D.vertexFIRE2D(&dpm::forceUpdate, Ftol, dt0);
+	configobj2D.vertexFIRE2D(&dpm::repulsiveForceUpdate, Ftol, dt0);
 
 	// compute Hessian
 	int vertDOF = configobj2D.getvertDOF();

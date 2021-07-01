@@ -106,10 +106,9 @@ int main(int argc, char const *argv[])
 	double Ftoltmp = Ftol;
 	if (Ftol < 1e-10)
 		Ftoltmp = Ftol * 100;
-	//dpmMemFn forceCall = std::bind(&meso2D::forceUpdate, &meso2Dobj);
-	//dpmMemFn forceCall = &dpm::forceUpdate;
-	meso2Dobj.vertexJamming2D(&dpm::forceUpdate, Ftoltmp, Ptol, dt0, dphiGrow, plotCompression);
-	//meso2Dobj.vertexJamming2D(Ftoltmp, Ptol, dt0, dphiGrow, plotCompression);
+
+	// jam to target pressure
+	meso2Dobj.vertexJamming2D(&dpm::repulsiveForceUpdate, Ftoltmp, Ptol, dt0, dphiGrow, plotCompression);
 
 	// set aging parameters
 	meso2Dobj.setbetaEff(betaEff);
@@ -119,12 +118,10 @@ int main(int argc, char const *argv[])
 
 	// relax configuration using network
 	meso2Dobj.initializeMesophyllBondNetwork();
-	//dpmMemFn networkForceUpdate = &meso2D::mesoNetworkForceUpdate;
-	meso2Dobj.vertexFIRE2D(&meso2D::mesoNetworkForceUpdate, Ftol, dt0);
-	//meso2Dobj.mesoNetworkFIRE(Ftol, dt0);
+	meso2Dobj.mesoFIRE(&meso2D::mesoNetworkForceUpdate, Ftol, dt0);
 
 	// run stretching simulation to create network
-	meso2Dobj.mesoNetworkExtension(Ftol, dt0, delShrink, dphiPrint, phiMin);
+	meso2Dobj.mesoNetworkExtension(&meso2D::mesoNetworkForceUpdate, Ftol, dt0, delShrink, dphiPrint, phiMin);
 
 	// say goodbye
 	cout << "\n** Finished mesoNetwork2D.cpp, ending. " << endl;

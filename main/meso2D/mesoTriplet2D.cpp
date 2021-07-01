@@ -20,6 +20,8 @@
 // 7. Ftol: 			force tolerance, sets distance to each energy minimum
 // 8. seed: 			seed for random number generator
 // 9. positionFile: 	string of path to output file with position/configuration data
+// 
+// NOTE: no need to pass member function as argument, pin simulations need specific member functions
 
 
 // header files
@@ -117,7 +119,7 @@ int main(int argc, char const *argv[])
 	meso2Dobj.initializeMesophyllBondNetwork();
 
 	// run stretching simulation to create network
-	meso2Dobj.mesophyllPinExtension(Ftol, dt0, hmax, dh, dhprint, 2.0*kcspring);
+	meso2Dobj.mesoPinExtension(Ftol, dt0, hmax, dh, dhprint, 2.0*kcspring);
 
 
 	// say goodbye

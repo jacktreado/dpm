@@ -17,6 +17,8 @@
 
 #include "dpm.h"
 
+class meso2D;
+typedef void (meso2D::*meso2DMemFn)(void);
 
 class meso2D : public dpm{
 protected:
@@ -47,7 +49,7 @@ public:
 	meso2D(int n, int seed) : dpm(n,seed) { betaEff=0.0; cL=0.0; cB=0.0; cKb=0.0; z.resize(n); };
 
 	// File openers
-	void openHessObject(std::string& str){
+	void openHessObject(std::string& str) {
 		hessout.open(str.c_str());
 		if (!hessout.is_open()) {
 			std::cout << "	ERROR: hessout could not open " << str << "..." << std::endl;
@@ -57,7 +59,7 @@ public:
 			std::cout << "** Opening hess file " << str << " ..." << std::endl;
 	}
 
-	void openCTCObject(std::string& str){
+	void openCTCObject(std::string& str) {
 		ctcout.open(str.c_str());
 		if (!ctcout.is_open()) {
 			std::cout << "	ERROR: ctcout could not open " << str << "..." << std::endl;
@@ -87,25 +89,26 @@ public:
 
 	// mesophyll cell interactions
 	void initializeMesophyllBondNetwork();
-	void mesoShapeForces2D();
+	void mesoShapeForces();
 	void mesoNetworkForceUpdate();
 	void mesoPinForceUpdate(std::vector<double>& xpin, double kcspring);
 
 	// integrators
-	void mesoNetworkFIRE(double Ftol, double dt0);
-	void mesoPinFIRE(std::vector<double>& xpin, double Ftol, double dt0, double kcspring);
-	void mesoNetworkNVE(double T, double dt0, int NT, int NPRINTSKIP);
+	void mesoFIRE(meso2DMemFn forceCall, double Ftol, double dt0);
+	void mesoPinFIRE(std::vector<double> &xpin, double Ftol, double dt0, double kcspring);
+	void mesoNetworkNVE(std::ofstream &enout, meso2DMemFn forceCall, double T, double dt0, int NT, int NPRINTSKIP);
 
 	// protocols
-	void mesoNetworkExtension(double Ftol, double dt0, double delShrink, double dphiPrint, double phiMin);
+	void mesoNetworkExtension(meso2DMemFn forceCall, double Ftol, double dt0, double delShrink, double dphiPrint, double phiMin);
+	void mesoPinExtension(double Ftol, double dt0, double hmax, double dh, double dhprint, double kcspring);
+
+	// protocol helpers
 	void updateMesophyllBondNetwork();
 	void ageMesophyllShapeParameters();
-	void mesophyllPinExtension(double Ftol, double dt0, double hmax, double dh, double dhprint, double kcspring);
-
 
 	// printing functions
 	void printMesoNetwork2D();
-	void printMesoPin2D(std::vector<double>& xpin, double h);
+	void printMesoPin2D(std::vector<double> &xpin, double h);
 };
 
 #endif
