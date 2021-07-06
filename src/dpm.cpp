@@ -1629,6 +1629,216 @@ void dpm::vertexAttractiveForces2D() {
   stress[2] *= (rho0 / (L[0] * L[1]));
 }
 
+void dpm::vertexAttractiveForces2D_2() {
+  // local variables
+  int ci, cj, gi, gj, vi, vj, bi, bj, pi, pj, boxid, sbtmp;
+  double sij, rij, dx, dy, rho0;
+  double ftmp, fx, fy;
+
+  // attraction shell parameters
+  double shellij, cutij, xij, kint = (kc * l1) / (l2 - l1);
+
+  // sort particles
+  sortNeighborLinkedList2D();
+
+  // get fundamental length
+  rho0 = sqrt(a0[0]);
+
+  // reset contact network
+  fill(cij.begin(), cij.end(), 0);
+
+  // loop over boxes in neighbor linked list
+  for (bi = 0; bi < NBX; bi++) {
+    // get start of list of vertices
+    pi = head[bi];
+
+    // loop over linked list
+    while (pi > 0) {
+      // real particle index
+      gi = pi - 1;
+
+      // cell index of gi
+      cindices(ci, vi, gi);
+
+      // next particle in list
+      pj = list[pi];
+
+      // loop down neighbors of pi in same cell
+      while (pj > 0) {
+        // real index of pj
+        gj = pj - 1;
+
+        // cell index of j
+        cindices(cj, vj, gj);
+
+        if (ci == cj) {
+          pj = list[pj];
+          continue;
+        }
+
+        // contact distance
+        sij = r[gi] + r[gj];
+
+        // attraction distances
+        shellij = (1.0 + l2) * sij;
+        cutij = (1.0 + l1) * sij;
+
+        // particle distance
+        dx = x[NDIM * gj] - x[NDIM * gi];
+        if (pbc[0])
+          dx -= L[0] * round(dx / L[0]);
+        if (dx < shellij) {
+          dy = x[NDIM * gj + 1] - x[NDIM * gi + 1];
+          if (pbc[1])
+            dy -= L[1] * round(dy / L[1]);
+          if (dy < shellij) {
+            rij = sqrt(dx * dx + dy * dy);
+            if (rij < shellij) {
+              // scaled distance
+              xij = rij / sij;
+
+              // pick force based on vertex-vertex distance
+              if (rij > cutij) {
+                // force scale
+                ftmp = kint * (xij - 1.0 - l2) / sij;
+
+                // increase potential energy
+                U += -0.5 * kint * pow(1.0 + l2 - xij, 2.0);
+              } else {
+                // force scale
+                ftmp = kc * (1 - xij) / sij;
+
+                // increase potential energy
+                U += 0.5 * kc * (pow(1.0 - xij, 2.0) - l1 * l2);
+              }
+
+              // force elements
+              fx = ftmp * (dx / rij);
+              fy = ftmp * (dy / rij);
+
+              // add to forces
+              F[NDIM * gi] -= fx;
+              F[NDIM * gi + 1] -= fy;
+
+              F[NDIM * gj] += fx;
+              F[NDIM * gj + 1] += fy;
+
+              // add to virial stress
+              stress[0] += dx * fx;
+              stress[1] += dy * fy;
+              stress[2] += 0.5 * (dx * fy + dy * fx);
+
+              // add to contacts
+              if (ci > cj)
+                cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2]++;
+              else if (ci < cj)
+                cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2]++;
+            }
+          }
+        }
+
+        // update pj
+        pj = list[pj];
+      }
+
+      // test overlaps with forward neighboring cells
+      for (bj = 0; bj < NNN; bj++) {
+        // only check if boundaries permit
+        if (nn[bi][bj] == -1)
+          continue;
+
+        // get first particle in neighboring cell
+        pj = head[nn[bi][bj]];
+
+        // loop down neighbors of pi in same cell
+        while (pj > 0) {
+          // real index of pj
+          gj = pj - 1;
+
+          // cell index of j
+          cindices(cj, vj, gj);
+
+          if (ci == cj) {
+            pj = list[pj];
+            continue;
+          }
+
+          // contact distance
+          sij = r[gi] + r[gj];
+
+          // attraction distances
+          shellij = (1.0 + l2) * sij;
+          cutij = (1.0 + l1) * sij;
+
+          // particle distance
+          dx = x[NDIM * gj] - x[NDIM * gi];
+          if (pbc[0])
+            dx -= L[0] * round(dx / L[0]);
+          if (dx < shellij) {
+            dy = x[NDIM * gj + 1] - x[NDIM * gi + 1];
+            if (pbc[1])
+              dy -= L[1] * round(dy / L[1]);
+            if (dy < shellij) {
+              rij = sqrt(dx * dx + dy * dy);
+              if (rij < shellij) {
+                // scaled distance
+                xij = rij / sij;
+
+                // pick force based on vertex-vertex distance
+                if (rij > cutij) {
+                  // force scale
+                  ftmp = kint * (xij - 1.0 - l2) / sij;
+
+                  // increase potential energy
+                  U += -0.5 * kint * pow(1.0 + l2 - xij, 2.0);
+                } else {
+                  // force scale
+                  ftmp = kc * (1 - xij) / sij;
+
+                  // increase potential energy
+                  U += 0.5 * kc * (pow(1.0 - xij, 2.0) - l1 * l2);
+                }
+
+                // force elements
+                fx = ftmp * (dx / rij);
+                fy = ftmp * (dy / rij);
+
+                // add to forces
+                F[NDIM * gi] -= fx;
+                F[NDIM * gi + 1] -= fy;
+
+                F[NDIM * gj] += fx;
+                F[NDIM * gj + 1] += fy;
+
+                // add to virial stress
+                stress[0] += dx * fx;
+                stress[1] += dy * fy;
+                stress[2] += 0.5 * (dx * fy + dy * fx);
+
+                if (ci > cj)
+                  cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2]++;
+                else if (ci < cj)
+                  cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2]++;
+              }
+            }
+          }
+
+          // update pj
+          pj = list[pj];
+        }
+      }
+
+      // update pi index to be next
+      pi = list[pi];
+    }
+  }
+
+  // normalize stress by box area, make dimensionless
+  stress[0] *= (rho0 / (L[0] * L[1]));
+  stress[1] *= (rho0 / (L[0] * L[1]));
+  stress[2] *= (rho0 / (L[0] * L[1]));
+}
+
 void dpm::repulsiveForceUpdate() {
   resetForcesAndEnergy();
   shapeForces2D();
@@ -1639,6 +1849,12 @@ void dpm::attractiveForceUpdate() {
   resetForcesAndEnergy();
   shapeForces2D();
   vertexAttractiveForces2D();
+}
+
+void dpm::attractiveForceUpdate_2() {
+  resetForcesAndEnergy();
+  shapeForces2D();
+  vertexAttractiveForces2D_2();
 }
 
 /******************************

@@ -16,17 +16,17 @@
 
 */
 
-#include <iostream>
-#include <iomanip>
-#include <string>
-#include <fstream>
-#include <cstdlib>
-#include <cmath>
-#include <vector>
-#include <functional>
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <Eigen/Eigenvalues>
+#include <cmath>
+#include <cstdlib>
+#include <fstream>
+#include <functional>
+#include <iomanip>
+#include <iostream>
+#include <string>
+#include <vector>
 
 // pointer-to-member function call macro
 #define CALL_MEMBER_FN(object, ptrToMember) ((object).*(ptrToMember))
@@ -55,189 +55,196 @@ const int NNEGMAX = 1000;
 const int NDELAY = 20;
 const int itmax = 5e7;
 
-class dpm
-{
-protected:
-	// int scalars
-	int NCELLS;
-	int NDIM;
-	int NNN;
-	int NVTOT;
-	int vertDOF;
+class dpm {
+ protected:
+  // int scalars
+  int NCELLS;
+  int NDIM;
+  int NNN;
+  int NVTOT;
+  int vertDOF;
 
-	// time step size
-	double dt;
+  // time step size
+  double dt;
 
-	// potential energy
-	double U;
+  // potential energy
+  double U;
 
-	// particle spring constants
-	double ka;
-	double kl;
-	double kb;
-	double kc;
+  // particle spring constants
+  double ka;
+  double kl;
+  double kb;
+  double kc;
 
-	// particle attraction constants
-	double l1, l2;
+  // particle attraction constants
+  double l1, l2;
 
-	// boundary parameters
-	std::vector<double> L;
-	std::vector<bool> pbc;
+  // boundary parameters
+  std::vector<double> L;
+  std::vector<bool> pbc;
 
-	// particle shape parameters
-	std::vector<double> a0;
-	std::vector<double> l0;
-	std::vector<double> t0;
-	std::vector<double> r;
+  // particle shape parameters
+  std::vector<double> a0;
+  std::vector<double> l0;
+  std::vector<double> t0;
+  std::vector<double> r;
 
-	// indexing variables
-	std::vector<int> nv;
-	std::vector<int> szList;
-	std::vector<int> im1;
-	std::vector<int> ip1;
+  // indexing variables
+  std::vector<int> nv;
+  std::vector<int> szList;
+  std::vector<int> im1;
+  std::vector<int> ip1;
 
-	// dynamical variables
-	std::vector<double> x;
-	std::vector<double> v;
-	std::vector<double> F;
+  // dynamical variables
+  std::vector<double> x;
+  std::vector<double> v;
+  std::vector<double> F;
 
-	// macroscopic stress vector
-	std::vector<double> stress;
+  // macroscopic stress vector
+  std::vector<double> stress;
 
-	// contact network
-	std::vector<int> cij;
+  // contact network
+  std::vector<int> cij;
 
-	// Box linked-list variables
-	int NBX;
-	std::vector<int> sb;
-	std::vector<double> lb;
-	std::vector<std::vector<int>> nn;
-	std::vector<int> head;
-	std::vector<int> last;
-	std::vector<int> list;
+  // Box linked-list variables
+  int NBX;
+  std::vector<int> sb;
+  std::vector<double> lb;
+  std::vector<std::vector<int>> nn;
+  std::vector<int> head;
+  std::vector<int> last;
+  std::vector<int> list;
 
-	// output objects
-	std::ofstream posout;
+  // output objects
+  std::ofstream posout;
 
-public:
-	// Constructors and Destructors
-	dpm(int n, int ndim, int seed);
-	dpm(int n, int seed) : dpm(n, 2, seed) {}
-	~dpm();
+ public:
+  // Constructors and Destructors
+  dpm(int n, int ndim, int seed);
+  dpm(int n, int seed)
+      : dpm(n, 2, seed) {}
+  ~dpm();
 
-	// -- G E T T E R S
+  // -- G E T T E R S
 
-	// main ints
-	int getNCELLS() { return NCELLS; };
-	int getNDIM() { return NDIM; };
-	int getNNN() { return NNN; };
-	int getNVTOT() { return NVTOT; };
-	int getvertDOF() { return vertDOF; };
-	int getNV(int ci) { return nv.at(ci); };
+  // main ints
+  int getNCELLS() { return NCELLS; };
+  int getNDIM() { return NDIM; };
+  int getNNN() { return NNN; };
+  int getNVTOT() { return NVTOT; };
+  int getvertDOF() { return vertDOF; };
+  int getNV(int ci) { return nv.at(ci); };
 
-	// force parameters
-	double getdt() { return dt; };
-	double getka() { return ka; };
-	double getkl() { return kl; };
-	double getkb() { return kb; };
-	double getkc() { return kc; };
+  // force parameters
+  double getdt() { return dt; };
+  double getka() { return ka; };
+  double getkl() { return kl; };
+  double getkb() { return kb; };
+  double getkc() { return kc; };
 
-	// static cell info
-	double geta0(int ci) { return a0[ci]; };
-	double getl0(int gi) { return l0[gi]; };
-	double gett0(int gi) { return t0[gi]; };
-	double getr(int gi) { return r[gi]; };
+  // static cell info
+  double geta0(int ci) { return a0[ci]; };
+  double getl0(int gi) { return l0[gi]; };
+  double gett0(int gi) { return t0[gi]; };
+  double getr(int gi) { return r[gi]; };
 
-	// dynamic cell info
-	double getx(int gi, int d) { return x[NDIM * gi + d]; };
-	double getv(int gi, int d) { return v[NDIM * gi + d]; };
-	double getF(int gi, int d) { return F[NDIM * gi + d]; };
-	double getU() { return U; };
+  // dynamic cell info
+  double getx(int gi, int d) { return x[NDIM * gi + d]; };
+  double getv(int gi, int d) { return v[NDIM * gi + d]; };
+  double getF(int gi, int d) { return F[NDIM * gi + d]; };
+  double getU() { return U; };
 
-	// boundary variables
-	double getL(int d) { return L.at(d); };
-	bool getpbc(int d) { return pbc.at(d); };
+  // boundary variables
+  double getL(int d) { return L.at(d); };
+  bool getpbc(int d) { return pbc.at(d); };
 
-	// cell shape indexing + information
-	int gindex(int ci, int vi);
-	void cindices(int &ci, int &vi, int gi);
-	double area(int ci);
-	double perimeter(int ci);
-	void com2D(int ci, double &cx, double &cy);
-	double vertexPackingFraction2D();
-	double vertexPreferredPackingFraction2D();
-	double vertexKineticEnergy();
-	int vvContacts();
-	int ccContacts();
+  // cell shape indexing + information
+  int gindex(int ci, int vi);
+  void cindices(int& ci, int& vi, int gi);
+  double area(int ci);
+  double perimeter(int ci);
+  void com2D(int ci, double& cx, double& cy);
+  double vertexPackingFraction2D();
+  double vertexPreferredPackingFraction2D();
+  double vertexKineticEnergy();
+  int vvContacts();
+  int ccContacts();
 
-	// Setters
-	void setpbc(int d, bool val) { pbc.at(d) = val; };
-	void setNCELLS(int val) { NCELLS = val; };
-	void setdt(double val);
-	void setka(double val) { ka = val; };
-	void setkl(double val) { kl = val; };
-	void setkb(double val) { kb = val; };
-	void setkc(double val) { kc = val; };
-	void setl1(double val) { l1 = val; };
-	void setl2(double val) { l2 = val; };
+  // Setters
+  void setpbc(int d, bool val) { pbc.at(d) = val; };
+  void setNCELLS(int val) { NCELLS = val; };
+  void setdt(double val);
+  void setka(double val) { ka = val; };
+  void setkl(double val) { kl = val; };
+  void setkb(double val) { kb = val; };
+  void setkc(double val) { kc = val; };
+  void setl1(double val) { l1 = val; };
+  void setl2(double val) { l2 = val; };
 
-	// File openers
-	void openPosObject(std::string &str)
-	{
-		posout.open(str.c_str());
-		if (!posout.is_open()) {
-			std::cerr << "	ERROR: posout could not open " << str << "..." << std::endl;
-			exit(1);
-		}
-		else
-			std::cout << "** Opening pos file " << str << " ..." << std::endl;
-	}
-    
-	// Initialize particles (two dimensions)
-	void monodisperse2D(int n);
-	void bidisperse2D(double calA0, int nsmall, double smallfrac, double sizefrac);
-	void gaussian2D(double dispersion, double calA0, int n1);
-	void sinusoidalPreferredAngle(double thA, double thK);
-	void initializeVertexShapeParameters(double calA0, int nref);
-	void initializeVertexIndexing2D();
-	void initializePositions2D(double phi0, double Ftol);
-	void initializeNeighborLinkedList2D(double boxLengthScale);
+  // File openers
+  void openPosObject(std::string& str) {
+    posout.open(str.c_str());
+    if (!posout.is_open()) {
+      std::cerr << "	ERROR: posout could not open " << str << "..." << std::endl;
+      exit(1);
+    } else
+      std::cout << "** Opening pos file " << str << " ..." << std::endl;
+  }
 
-	// editing & updating
-	void sortNeighborLinkedList2D();
-	void scaleParticleSizes2D(double scaleFactor);
-	int removeRattlers();
-	void drawVelocities2D(double T);
+  // Initialize particles (two dimensions)
+  void monodisperse2D(int n);
+  void bidisperse2D(double calA0, int nsmall, double smallfrac, double sizefrac);
+  void gaussian2D(double dispersion, double calA0, int n1);
+  void sinusoidalPreferredAngle(double thA, double thK);
+  void initializeVertexShapeParameters(double calA0, int nref);
+  void initializeVertexIndexing2D();
+  void initializePositions2D(double phi0, double Ftol);
+  void initializeNeighborLinkedList2D(double boxLengthScale);
 
-	// force definitions
-	void resetForcesAndEnergy();
-	void shapeForces2D();
-	void vertexRepulsiveForces2D();
-	void vertexAttractiveForces2D();
+  // editing & updating
+  void sortNeighborLinkedList2D();
+  void scaleParticleSizes2D(double scaleFactor);
+  int removeRattlers();
+  void drawVelocities2D(double T);
 
-	// force updates
-	void repulsiveForceUpdate();
-	void attractiveForceUpdate();
+  // force definitions
+  void resetForcesAndEnergy();
+  void shapeForces2D();
+  void vertexRepulsiveForces2D();
+  virtual void vertexAttractiveForces2D();
+  void vertexAttractiveForces2D_2();
 
-	// simple integrators
-	void vertexFIRE2D(dpmMemFn forceCall, double Ftol, double dt0);
-	void vertexNVE2D(std::ofstream &enout, dpmMemFn forceCall, double T, double dt0, int NT, int NPRINTSKIP);
+  // force updates
+  void repulsiveForceUpdate();
+  void attractiveForceUpdate();
+  void attractiveForceUpdate_2();
 
-	// protocols
-	void vertexCompress2Target2D(dpmMemFn forceCall, double Ftol, double dt0, double phi0Target, double dphi0);
-	void vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double dt0, double dphi0, bool plotCompression);
+  // simple integrators
+  // generic class, enables child to use base class methods with child method arguments
+  // e.g. epithelial.vertexCompress2Target2D(&epi2D::attractiveForceUpdate, Ftol, dt0, phiMax, dphi0);
+  //typedef void (T::*TemplateMemFn)(void); // want to use this, but illegal >> use alias declaration instead
+  //using TemplateMemFn = void (T::*)(void);
+  //void vertexFIRE2D(TemplateMemFn<T> forceCall, double Ftol, double dt0);
+  //dpmMemFn forceCall compiles equally as void (dpm::*ForceCall)(void)
+  void vertexFIRE2D(dpmMemFn forceCall, double Ftol, double dt0);
+  void vertexNVE2D(std::ofstream& enout, dpmMemFn forceCall, double T, double dt0, int NT, int NPRINTSKIP);
 
-	// hessian methods
-	// note: dynamical matrix contribution is always M = H - S
-	void dpmHessian2D(Eigen::MatrixXd &H, Eigen::MatrixXd &S);
-	void dpmAreaHessian2D(Eigen::MatrixXd &Ha, Eigen::MatrixXd &Sa);
-	void dpmPerimeterHessian2D(Eigen::MatrixXd &Hl, Eigen::MatrixXd &Sl);
-	void dpmRepulsiveHarmonicSprings2D(Eigen::MatrixXd &Hvv, Eigen::MatrixXd &Svv);
+  // protocols
 
-	// print vertex information to file
-	void printContactMatrix();
-	void printConfiguration2D();
-	void printHessianEigenvalues2D(std::ofstream &hessout, Eigen::MatrixXd &M);
+  void vertexCompress2Target2D(dpmMemFn forceCall, double Ftol, double dt0, double phi0Target, double dphi0);
+  void vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double dt0, double dphi0, bool plotCompression);
+
+  // hessian methods
+  // note: dynamical matrix contribution is always M = H - S
+  void dpmHessian2D(Eigen::MatrixXd& H, Eigen::MatrixXd& S);
+  void dpmAreaHessian2D(Eigen::MatrixXd& Ha, Eigen::MatrixXd& Sa);
+  void dpmPerimeterHessian2D(Eigen::MatrixXd& Hl, Eigen::MatrixXd& Sl);
+  void dpmRepulsiveHarmonicSprings2D(Eigen::MatrixXd& Hvv, Eigen::MatrixXd& Svv);
+
+  // print vertex information to file
+  void printContactMatrix();
+  void printConfiguration2D();
+  void printHessianEigenvalues2D(std::ofstream& hessout, Eigen::MatrixXd& M);
 };
 
 #endif
