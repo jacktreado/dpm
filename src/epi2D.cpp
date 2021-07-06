@@ -305,6 +305,60 @@ void epi2D::attractiveForceUpdate() {
 
 *******************************/
 
+void epi2D::vertexCompress2Target2D(dpmMemFn forceCall, double Ftol, double dt0, double phi0Target, double dphi0) {
+  // same as for dpm, but with less printing at the end
+  // local variables
+  int it = 0, itmax = 1e4;
+  double phi0 = vertexPreferredPackingFraction2D();
+  double scaleFactor, P, Sxy;
+
+  // loop while phi0 < phi0Target
+  while (phi0 < phi0Target && it < itmax) {
+    // scale particle sizes
+    scaleParticleSizes2D(scaleFactor);
+
+    // update phi0
+    phi0 = vertexPreferredPackingFraction2D();
+
+    // relax configuration (pass member function force update)
+    vertexFIRE2D(forceCall, Ftol, dt0);
+
+    // get scale factor
+    scaleFactor = sqrt((phi0 + dphi0) / phi0);
+
+    // get updated pressure
+    P = 0.5 * (stress[0] + stress[1]);
+    Sxy = stress[2];
+
+    // print to console
+    if (it % 50 == 0) {
+      cout << endl
+           << endl;
+      cout << "===============================" << endl;
+      cout << "								" << endl;
+      cout << " 	C O M P R E S S I O N 		" << endl;
+      cout << "								" << endl;
+      cout << "	P R O T O C O L 	  		" << endl;
+      cout << "								" << endl;
+      cout << "===============================" << endl;
+      cout << endl;
+      cout << "	** it 			= " << it << endl;
+      cout << "	** phi0 curr	= " << phi0 << endl;
+      if (phi0 + dphi0 < phi0Target)
+        cout << "	** phi0 next 	= " << phi0 + dphi0 << endl;
+      cout << "	** P 			= " << P << endl;
+      cout << "	** Sxy 			= " << Sxy << endl;
+      cout << "	** U 			= " << U << endl;
+      printConfiguration2D();
+      cout << endl
+           << endl;
+    }
+
+    // update iterate
+    it++;
+  }
+}
+
 void epi2D::dampedNVE2D(ofstream& enout, dpmMemFn forceCall, double B, double T, double dt0, int NT, int NPRINTSKIP) {
   // local variables
   int t, i;
@@ -384,6 +438,23 @@ void epi2D::dampedNVE2D(ofstream& enout, dpmMemFn forceCall, double B, double T,
   }
 }
 
+void epi2D::zeroMomentum() {
+  //subtract off any linear momentum by reducing momentum of each particle by momentum/#vertices
+  double v_cm_x = 0.0, v_cm_y = 0.0;
+
+  //accumulate global vertex velocities
+  for (int gi = 1; gi < NVTOT; gi++) {
+    v_cm_x += v[NDIM * gi];
+    v_cm_y += v[NDIM * gi + 1];
+  }
+
+  //subtract off center of mass drift
+  for (int gi = 0; gi < NVTOT; gi++) {
+    v[NDIM * gi] -= v_cm_x / NVTOT;
+    v[NDIM * gi + 1] -= v_cm_y / NVTOT;
+  }
+}
+
 int epi2D::getIndexOfCellLocatedHere(double xLoc, double yLoc) {
   // return cell index of cell nearest specified (xLoc,yLoc) coordinate.
   // loop through global indices, compute all centers of mass (stored in
@@ -438,7 +509,7 @@ int epi2D::getIndexOfCellLocatedHere(double xLoc, double yLoc) {
   return argmin;
 }
 
-void epi2D::deleteCell(double sizeRatio, int nsmall) {
+void epi2D::deleteCell(double sizeRatio, int nsmall, double xLoc, double yLoc) {
   /*need to touch smallN, largeN, NCELLS, NVTOT, cellDOF, vertDOF, szList, nv, list, vvel, vpos, vF, vrad, im1, ip1, vim1, vip1,
   a0, l0, NCTCS, cij, calA0, psi, DrList (this list of items is from jamFracture.cpp)
   and possibly others 
@@ -450,7 +521,7 @@ void epi2D::deleteCell(double sizeRatio, int nsmall) {
   int largeNV = round(sizeRatio * smallNV);
 
   //cell index of center cell, to be deleted
-  int deleteIndex = getIndexOfCellLocatedHere(0.0, 0.0);
+  int deleteIndex = getIndexOfCellLocatedHere(xLoc, yLoc);
 
   //isDeleteLarge is true if deleting a large particle, false if small.
   bool isDeleteLarge = (nv[deleteIndex] == largeNV);
@@ -514,7 +585,7 @@ void epi2D::deleteCell(double sizeRatio, int nsmall) {
   list.erase(list.begin() + deleteIndexGlobal,
              list.begin() + deleteIndexGlobal + numVertsDeleted);
   r.erase(r.begin() + deleteIndexGlobal,
-          r.begin() + deleteIndexGlobal + numVertsDeleted);
+          r.begin() + deleteIndexGlobal + numVertsDeleted - 1);
 
   // sum up number of vertices of each cell until reaching the cell to delete
   int sumVertsUntilGlobalIndex = szList[deleteIndex];
@@ -561,9 +632,14 @@ void epi2D::deleteCell(double sizeRatio, int nsmall) {
   }
 }
 
-/*void laserAblate() {
+void epi2D::laserAblate(int numCellsAblated, double sizeRatio, int nsmall, double xLoc, double yLoc) {
+  for (int i = 0; i < numCellsAblated; i++) {
+    deleteCell(sizeRatio, nsmall, xLoc, yLoc);
+  }
+  cout << "deleting cell!\n";
+  zeroMomentum();
 }
-
+/*
 void isotropicDistanceScaling() {
   //use dpm::scaleParticleSize2D
 }*/

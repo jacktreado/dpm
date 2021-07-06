@@ -1729,10 +1729,12 @@ void dpm::vertexAttractiveForces2D_2() {
               stress[2] += 0.5 * (dx * fy + dy * fx);
 
               // add to contacts
-              if (ci > cj)
-                cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2]++;
-              else if (ci < cj)
-                cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2]++;
+              if (ci != cj) {
+                if (ci > cj)
+                  cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2]++;
+                else if (ci < cj)
+                  cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2]++;
+              }
             }
           }
         }
@@ -1815,10 +1817,12 @@ void dpm::vertexAttractiveForces2D_2() {
                 stress[1] += dy * fy;
                 stress[2] += 0.5 * (dx * fy + dy * fx);
 
-                if (ci > cj)
-                  cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2]++;
-                else if (ci < cj)
-                  cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2]++;
+                if (ci != cj) {
+                  if (ci > cj)
+                    cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2]++;
+                  else if (ci < cj)
+                    cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2]++;
+                }
               }
             }
           }

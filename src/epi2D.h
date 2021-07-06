@@ -73,14 +73,14 @@ class epi2D : public dpm {
   void vertexAttractiveForces2D();
   void attractiveForceUpdate();
 
-  // protocols (epi needs its own protocols because of a specific use case where the sticky attraction is super strong
-  // so I had to redefine attractiveForceUpdate above. only difference is the type definition of forceCall)
-  //void epiCompress2Target2D(epi2DMemFn forceCall, double Ftol, double dt0, double phi0Target, double dphi0);
-  //void epiJamming2D(epi2DMemFn forceCall, double Ftol, double Ptol, double dt0, double dphi0, bool plotCompression);
+  // protocols
+  void vertexCompress2Target2D(dpmMemFn forceCall, double Ftol, double dt0, double phi0Target, double dphi0);
+  void zeroMomentum();
   void dampedNVE2D(ofstream& enout, dpmMemFn forceCall, double B, double T, double dt0, int NT, int NPRINTSKIP);
 
   int getIndexOfCellLocatedHere(double xLoc, double yLoc);
-  void deleteCell(double sizeRatio, int nsmall);
+  void deleteCell(double sizeRatio, int nsmall, double xLoc, double yLoc);
+  void laserAblate(int numCellsAblated, double sizeRatio, int nsmall, double xLoc, double yLoc);
 };
 
 #endif
