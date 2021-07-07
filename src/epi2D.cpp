@@ -25,9 +25,6 @@ using namespace std;
 
 *******************************/
 
-//
-//
-
 /******************************
 
 	E P I 2 D 
@@ -80,8 +77,8 @@ double epi2D::meankb() {
   return val;
 }
 
-void epi2D::vertexAttractiveForces2D() {
-  // overwrite dpm attractive forces to work with larger attractions
+void epi2D::vertexAttractiveForces2D_2() {
+  // altered from dpm attractive force code, because it works with larger l2 values. (warning: probably won't work with bending.)
   // local variables
   int ci, cj, gi, gj, vi, vj, bi, bj, pi, pj, boxid, sbtmp;
   double sij, rij, dx, dy, rho0;
@@ -181,10 +178,12 @@ void epi2D::vertexAttractiveForces2D() {
               stress[2] += 0.5 * (dx * fy + dy * fx);
 
               // add to contacts
-              if (ci > cj)
-                cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2]++;
-              else if (ci < cj)
-                cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2]++;
+              if (ci != cj) {
+                if (ci > cj)
+                  cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2]++;
+                else if (ci < cj)
+                  cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2]++;
+              }
             }
           }
         }
@@ -267,10 +266,12 @@ void epi2D::vertexAttractiveForces2D() {
                 stress[1] += dy * fy;
                 stress[2] += 0.5 * (dx * fy + dy * fx);
 
-                if (ci > cj)
-                  cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2]++;
-                else if (ci < cj)
-                  cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2]++;
+                if (ci != cj) {
+                  if (ci > cj)
+                    cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2]++;
+                  else if (ci < cj)
+                    cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2]++;
+                }
               }
             }
           }
@@ -291,10 +292,120 @@ void epi2D::vertexAttractiveForces2D() {
   stress[2] *= (rho0 / (L[0] * L[1]));
 }
 
-void epi2D::attractiveForceUpdate() {
+void epi2D::attractiveForceUpdate_2() {
   resetForcesAndEnergy();
   shapeForces2D();
-  vertexAttractiveForces2D();
+  vertexAttractiveForces2D_2();
+}
+
+void epi2D::activeAttractiveForceUpdate() {
+  //compute forces for shape, attractive, and active contributions
+
+  //reset forces, then get shape and attractive forces.
+  attractiveForceUpdate_2();
+
+  //compute active forces
+  int gi = 0, ci = 0;
+  double psiMean = 0.0, psiStd = 0.0, dpsi = 0.0, psitmp = 0.0;
+  double xi, yi, vi, nvtmp, dx, dy, cx, cy, r1, r2, grv,
+      v0tmp, vmin, v0, Ds, rnorm, ux, uy, rix, riy;
+
+  v0 = 0.5;         // max velocity
+  vmin = 1e-2 * v0; // min velocity
+  Ds = 0.1;         // active velocity spread parameter
+
+  std::vector<double> DrList(NCELLS, Dr0);
+
+  for (int gi = 0; gi < NVTOT; gi++) {
+    if (ci < NCELLS) {
+      if (gi == szList[ci]) {
+        nvtmp = nv[ci];
+
+        // compute cell center of mass
+        xi = x[NDIM * gi];
+        yi = x[NDIM * gi + 1];
+        cx = xi;
+        cy = yi;
+        for (vi = 1; vi < nvtmp; vi++) {
+          dx = x[NDIM * (gi + vi)] - xi;
+          dx -= L[0] * round(dx / L[0]);
+
+          dy = x[NDIM * (gi + vi) + 1] - yi;
+          dy -= L[1] * round(dy / L[1]);
+
+          xi += dx;
+          yi += dy;
+
+          cx += xi;
+          cy += yi;
+        }
+        cx /= nvtmp;
+        cy /= nvtmp;
+
+        // get coordinates relative to center of mass
+        rix = x[NDIM * gi] - cx;
+        riy = x[NDIM * gi + 1] - cy;
+
+        r1 = drand48();
+        r2 = drand48();
+        grv = sqrt(-2.0 * log(r1)) * cos(2.0 * PI * r2);
+
+        //update director
+        psi[ci] += sqrt(dt * 2.0 * DrList[ci]) * grv;
+
+        // add to mean and std dev of directors
+        psiMean += psi[ci];
+        psiStd += psi[ci] * psi[ci];
+        ci++;
+
+        if (ci % NCELLS == 0) {
+          cout << endl
+               << endl;
+          cout << "===============================" << endl;
+          cout << "								" << endl;
+          cout << " 	A C T I V I T Y  		" << endl;
+          cout << "								" << endl;
+          cout << "	P R O T O C O L 	  		" << endl;
+          cout << "								" << endl;
+          cout << "===============================" << endl;
+          cout << endl;
+          cout << "	** grv 			= " << grv << endl;
+          cout << "	** psi[0]	= " << psi[0] << endl;
+          //cout << "	** psiMean 	= " << psiMean << endl;
+          cout << "	** F[0] 			= " << F[0] << endl;
+          cout << "	** nvtmp 			= " << nvtmp << endl;
+          cout << "	** v0tmp 			= " << v0tmp << endl;
+          cout << "	** ux 			= " << ux << endl;
+          cout << "	** uy 			= " << uy << endl;
+          cout << "	** dpsi 			= " << dpsi << endl;
+          cout << endl
+               << endl;
+        }
+      }
+    }
+    // get angular distance from psi
+    psitmp = atan2(riy, rix);
+    dpsi = psitmp - psi[ci - 1];
+    dpsi -= 2.0 * PI * round(dpsi / (2.0 * PI));
+
+    // get velocity scale
+    v0tmp = vmin + (v0 - vmin) * exp(-pow(dpsi, 2.0) / (2.0 * Ds * Ds));
+
+    // get unit vectors
+    rnorm = sqrt(rix * rix + riy * riy);
+    ux = rix / rnorm;
+    uy = riy / rnorm;
+
+    // add to forces
+    F[NDIM * gi] += v0tmp * ux;
+    F[NDIM * gi + 1] += v0tmp * uy;
+  }
+  psiMean /= NCELLS;
+  psiStd /= NCELLS;
+  psiStd -= psiMean * psiMean;
+  psiStd = sqrt(psiStd);
+  cout << "psiMean = " << psiMean << '\n';
+  cout << "psiStd = " << psiStd << '\n';
 }
 
 /******************************
@@ -359,7 +470,8 @@ void epi2D::vertexCompress2Target2D(dpmMemFn forceCall, double Ftol, double dt0,
   }
 }
 
-void epi2D::dampedNVE2D(ofstream& enout, dpmMemFn forceCall, double B, double T, double dt0, int NT, int NPRINTSKIP) {
+void epi2D::dampedNVE2D(ofstream& enout, dpmMemFn forceCall, double B, double dt0, int NT, int NPRINTSKIP) {
+  // make sure velocities exist or are already initialized before calling this
   // local variables
   int t, i;
   double K, simclock;
@@ -369,11 +481,6 @@ void epi2D::dampedNVE2D(ofstream& enout, dpmMemFn forceCall, double B, double T,
 
   // initialize time keeper
   simclock = 0.0;
-
-  // initialize velocities
-  drawVelocities2D(T);
-
-  //need to zero momentum?
 
   // loop over time, print energy
   for (t = 0; t < NT; t++) {
@@ -639,7 +746,34 @@ void epi2D::laserAblate(int numCellsAblated, double sizeRatio, int nsmall, doubl
   cout << "deleting cell!\n";
   zeroMomentum();
 }
-/*
-void isotropicDistanceScaling() {
+
+void epi2D::isotropicDistanceScaling(ofstream& enout, dpmMemFn forceCall, double B, int NT, int NPRINTSKIP) {
   //use dpm::scaleParticleSize2D
-}*/
+  //clean up unused parameters in a bit.
+  int it = 0, itmax = 10;
+  double scaleFactor = 0.98;
+  while (it < itmax) {
+    scaleParticleSizes2D(scaleFactor);
+    dampedNVE2D(enout, forceCall, B, dt, NT, NPRINTSKIP);
+    it++;
+    //should have another escape condition in the loop
+  }
+}
+
+void epi2D::holePunching(double sizeRatio, int nsmall, ofstream& enout, dpmMemFn forceCall, double B, int NT, int NPRINTSKIP) {
+  //generate rng
+  //select xloc, yloc
+  //deleteCell
+  // loop
+  int numCellsDeleted = 1;
+  int it = 0, maxit = 10;
+  double xLoc, yLoc;
+  for (int i = 0; i < 3; i++) {
+    xLoc = (drand48() - 0.5) * L[0];
+    yLoc = (drand48() - 0.5) * L[1];
+    cout << " xLoc and yLoc = " << xLoc << '\t' << yLoc << '\n';
+    laserAblate(numCellsDeleted, sizeRatio, nsmall, xLoc, yLoc);
+    isotropicDistanceScaling(enout, forceCall, B, NT, NPRINTSKIP);
+    //probably don't need a separate function for isotropicDistanceScaling
+  }
+}

@@ -211,26 +211,17 @@ class dpm {
   void resetForcesAndEnergy();
   void shapeForces2D();
   void vertexRepulsiveForces2D();
-  virtual void vertexAttractiveForces2D();
-  void vertexAttractiveForces2D_2();
+  void vertexAttractiveForces2D();
 
   // force updates
   void repulsiveForceUpdate();
   void attractiveForceUpdate();
-  void attractiveForceUpdate_2();
 
   // simple integrators
-  // generic class, enables child to use base class methods with child method arguments
-  // e.g. epithelial.vertexCompress2Target2D(&epi2D::attractiveForceUpdate, Ftol, dt0, phiMax, dphi0);
-  //typedef void (T::*TemplateMemFn)(void); // want to use this, but illegal >> use alias declaration instead
-  //using TemplateMemFn = void (T::*)(void);
-  //void vertexFIRE2D(TemplateMemFn<T> forceCall, double Ftol, double dt0);
-  //dpmMemFn forceCall compiles equally as void (dpm::*ForceCall)(void)
   void vertexFIRE2D(dpmMemFn forceCall, double Ftol, double dt0);
   void vertexNVE2D(std::ofstream& enout, dpmMemFn forceCall, double T, double dt0, int NT, int NPRINTSKIP);
 
   // protocols
-
   void vertexCompress2Target2D(dpmMemFn forceCall, double Ftol, double dt0, double phi0Target, double dphi0);
   void vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double dt0, double dphi0, bool plotCompression);
 
