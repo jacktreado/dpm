@@ -328,7 +328,7 @@ void epi2D::activeAttractiveForceUpdate() {
         cy = yi;
         for (vi = 1; vi < nvtmp; vi++) {
           dx = x[NDIM * (gi + vi)] - xi;
-          //dx -= L[0] * round(dx / L[0]);
+          dx -= L[0] * round(dx / L[0]);
 
           dy = x[NDIM * (gi + vi) + 1] - yi;
           dy -= L[1] * round(dy / L[1]);

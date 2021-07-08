@@ -581,6 +581,10 @@ void dpm::initializePositions2D(double phi0, double Ftol) {
 
   // initial step size
   dt = dt0;
+  /*cout << "dt = " << dt << '\n';
+  cout << "dt0 = " << dt0 << '\n';
+  cout << "finc = " << finc << '\n';
+  cout << "fdec = " << fdec << '\n';*/
 
   // loop until force relaxes
   while ((fcheck > Ftol) && fireit < itmax) {

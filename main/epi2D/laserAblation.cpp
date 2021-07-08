@@ -119,8 +119,10 @@ int main(int argc, char const* argv[]) {
 
   epithelial.bidisperse2D(calA0, nsmall, smallfrac, sizeratio);
 
+  cout << "initializePositions2D\n";
   epithelial.initializePositions2D(phi0, Ftol);
 
+  cout << "initializeNeighborLinkedList2D\n";
   epithelial.initializeNeighborLinkedList2D(boxLengthScale);
 
   // set base dpm force, upcast derived epi2D forces
@@ -128,6 +130,7 @@ int main(int argc, char const* argv[]) {
   dpmMemFn attractiveForceUpdate = static_cast<void (dpm::*)()>(&epi2D::attractiveForceUpdate_2);
   dpmMemFn activeForceUpdate = static_cast<void (dpm::*)()>(&epi2D::activeAttractiveForceUpdate);
 
+  cout << "starting vertexCompress2Target2D\n";
   epithelial.vertexCompress2Target2D(repulsiveForceUpdate, Ftol, dt0, phiMax, dphi0);
 
   //after compress, turn on damped NVE
