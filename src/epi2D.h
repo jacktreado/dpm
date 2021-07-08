@@ -46,8 +46,6 @@ class epi2D : public dpm {
   // specific output objects
   std::ofstream fileout;
 
-
-
  public:
   // constructor and destructor
   epi2D(int n, double att1, double att2, double Dr, int seed)
@@ -59,8 +57,11 @@ class epi2D : public dpm {
     Dr0 = Dr;
     vector<double> temp(NCELLS, 0.0);
     psi = temp;
-    for (int ci = 0; ci < NCELLS; ci++)
-      psi.at(ci) = 2 * PI * (drand48() - 0.5);
+    for (int ci = 0; ci < NCELLS; ci++) {
+      //psi.at(ci) = 2 * PI * (drand48() - 0.5);  // [-pi,pi) coordinates
+      //psi.at(ci) = 2 * PI * drand48();  // [0, 2pi) coordinates
+      psi.at(ci) = PI / 2 * (ci % 2) - PI / 2 * ((ci + 1) % 2);  //should be : right if odd, left if even
+    }
   };
 
   // File openers
@@ -75,6 +76,11 @@ class epi2D : public dpm {
 
   // setters
   void setkbi(double val) { fill(kbi.begin(), kbi.end(), val); };
+
+  // getters
+
+  // main double
+  double getPsi(int ci) { return psi.at(ci); };
 
   // editors & updates
   double meanl0();
@@ -97,6 +103,7 @@ class epi2D : public dpm {
 
   void isotropicDistanceScaling(ofstream& enout, dpmMemFn forceCall, double B, int NT, int NPRINTSKIP);
   void holePunching(double sizeRatio, int nsmall, ofstream& enout, dpmMemFn forceCall, double B, int NT, int NPRINTSKIP);
+  void orientDirector(int ci, double xLoc, double yLoc);
 };
 
 #endif

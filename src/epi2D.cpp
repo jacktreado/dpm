@@ -310,9 +310,9 @@ void epi2D::activeAttractiveForceUpdate() {
   double xi, yi, vi, nvtmp, dx, dy, cx, cy, r1, r2, grv,
       v0tmp, vmin, v0, Ds, rnorm, ux, uy, rix, riy;
 
-  v0 = 0.5;         // max velocity
-  vmin = 1e-2 * v0; // min velocity
-  Ds = 0.1;         // active velocity spread parameter
+  v0 = 0.1;          // max velocity
+  vmin = 1e-2 * v0;  // min velocity
+  Ds = 0.1;          // active velocity spread parameter
 
   std::vector<double> DrList(NCELLS, Dr0);
 
@@ -328,7 +328,7 @@ void epi2D::activeAttractiveForceUpdate() {
         cy = yi;
         for (vi = 1; vi < nvtmp; vi++) {
           dx = x[NDIM * (gi + vi)] - xi;
-          dx -= L[0] * round(dx / L[0]);
+          //dx -= L[0] * round(dx / L[0]);
 
           dy = x[NDIM * (gi + vi) + 1] - yi;
           dy -= L[1] * round(dy / L[1]);
@@ -342,10 +342,6 @@ void epi2D::activeAttractiveForceUpdate() {
         cx /= nvtmp;
         cy /= nvtmp;
 
-        // get coordinates relative to center of mass
-        rix = x[NDIM * gi] - cx;
-        riy = x[NDIM * gi + 1] - cy;
-
         r1 = drand48();
         r2 = drand48();
         grv = sqrt(-2.0 * log(r1)) * cos(2.0 * PI * r2);
@@ -358,7 +354,7 @@ void epi2D::activeAttractiveForceUpdate() {
         psiStd += psi[ci] * psi[ci];
         ci++;
 
-        if (ci % NCELLS == 0) {
+        /*if (ci % NCELLS == 0) {
           cout << endl
                << endl;
           cout << "===============================" << endl;
@@ -380,13 +376,18 @@ void epi2D::activeAttractiveForceUpdate() {
           cout << "	** dpsi 			= " << dpsi << endl;
           cout << endl
                << endl;
-        }
+        }*/
       }
     }
+
+    // get coordinates relative to center of mass
+    rix = x[NDIM * gi] - cx;
+    riy = x[NDIM * gi + 1] - cy;
+
     // get angular distance from psi
     psitmp = atan2(riy, rix);
     dpsi = psitmp - psi[ci - 1];
-    dpsi -= 2.0 * PI * round(dpsi / (2.0 * PI));
+    dpsi -= 2 * PI * round(dpsi / PI);
 
     // get velocity scale
     v0tmp = vmin + (v0 - vmin) * exp(-pow(dpsi, 2.0) / (2.0 * Ds * Ds));
@@ -399,13 +400,18 @@ void epi2D::activeAttractiveForceUpdate() {
     // add to forces
     F[NDIM * gi] += v0tmp * ux;
     F[NDIM * gi + 1] += v0tmp * uy;
+    //v[NDIM * gi] += v0tmp * ux;
+    //v[NDIM * gi + 1] += v0tmp * uy;
+    /*cout << "psitmp = " << psitmp << " , dpsi = " << dpsi << " , v0tmp = " << v0tmp << ", ux = " << ux << " , uy = " << uy << '\n';
+    cout << "Fx = " << v0tmp * ux << " , Fy = " << v0tmp * uy << '\n'
+         << "Fx tot = " << F[NDIM * gi] << ", Fy tot = " << F[NDIM * gi + 1] << '\n';*/
   }
   psiMean /= NCELLS;
   psiStd /= NCELLS;
   psiStd -= psiMean * psiMean;
   psiStd = sqrt(psiStd);
-  cout << "psiMean = " << psiMean << '\n';
-  cout << "psiStd = " << psiStd << '\n';
+  //cout << "psiMean = " << psiMean << '\n';
+  //cout << "psiStd = " << psiStd << '\n';
 }
 
 /******************************
@@ -596,7 +602,7 @@ int epi2D::getIndexOfCellLocatedHere(double xLoc, double yLoc) {
     cx /= nv.at(ci);
     cy /= nv.at(ci);
 
-    // cx,cy are relative to the bottom left corner of the box.
+    // what coordinate system do cx, cy use?
 
     distanceSq[ci] =
         pow(cx - (L.at(0) / 2 + xLoc), 2) + pow(cy - (L.at(1) / 2 + yLoc), 2);
@@ -776,4 +782,42 @@ void epi2D::holePunching(double sizeRatio, int nsmall, ofstream& enout, dpmMemFn
     isotropicDistanceScaling(enout, forceCall, B, NT, NPRINTSKIP);
     //probably don't need a separate function for isotropicDistanceScaling
   }
+}
+
+void epi2D::orientDirector(int ci, double xLoc, double yLoc) {
+  // point the director of cell ci towards (xLoc, yLoc)
+
+  double dx, dy;
+
+  // compute center of mass of cell ci
+  int gi = szList.at(ci);
+  // compute cell center of mass
+
+  double xi = x[NDIM * gi];
+  double yi = x[NDIM * gi + 1];
+  double cx = xi;
+  double cy = yi;
+  for (int vi = 1; vi < nv[ci]; vi++) {
+    dx = x.at(NDIM * (gi + vi)) - xi;
+    if (pbc[0])
+      dx -= L[0] * round(dx / L[0]);
+
+    dy = x.at(NDIM * (gi + vi) + 1) - yi;
+    if (pbc[1])
+      dy -= L[1] * round(dy / L[1]);
+
+    xi += dx;
+    yi += dy;
+
+    cx += xi;
+    cy += yi;
+  }
+  cx /= nv.at(ci);
+  cy /= nv.at(ci);
+
+  // compute angle needed for psi to point towards (xLoc,yLoc)
+  double theta = atan2(cy, cx) + PI;
+  theta -= 2 * PI * round(theta / PI);
+
+  psi.at(ci) = theta;
 }
