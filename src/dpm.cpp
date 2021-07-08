@@ -1694,8 +1694,10 @@ void dpm::vertexFIRE2D(dpmMemFn forceCall, double Ftol, double dt0) {
   double P, fnorm, fcheck, vnorm, alpha, dtmax, dtmin;
   int npPos, npNeg, fireit;
 
+  cout << "before setdt in FIRE, dt = " << dt << '\n';
   // set dt based on geometric parameters
   setdt(dt0);
+  cout << "after setdt in FIRE, dt = " << dt << "and dt0 = " << dt0 << '\n';
 
   // Initialize FIRE variables
   P = 0;
@@ -1975,8 +1977,10 @@ void dpm::vertexCompress2Target2D(dpmMemFn forceCall, double Ftol, double dt0, d
     // update phi0
     phi0 = vertexPreferredPackingFraction2D();
 
+    cout << "before FIRE in compress, dt = " << dt << '\n';
     // relax configuration (pass member function force update)
     vertexFIRE2D(forceCall, Ftol, dt0);
+    cout << "after FIRE in compress, dt = " << dt << '\n';
 
     // get scale factor
     scaleFactor = sqrt((phi0 + dphi0) / phi0);
