@@ -1,8 +1,7 @@
 #!/bin/bash
 # directories with code
 
-#example call: bash bash/epi2D/submit_laserAblation.sh 24 24 1.08 0.2 1e-7 1.0 0 0.0 0.05 4e6 pi_ohern,day,scavenge 0-12:00:00 1 1
-
+#example call: bash bash/epi2D/submit_laserAblation.sh 24 24 1.08 0.7 0.9 1.0 0.5 0.5 1.0 1000 pi_ohern,day,scavenge 0-12:00:00 1 1
 cellsdir=~/dpm
 srcdir=$cellsdir/src
 maindir=$cellsdir/main/epi2D
@@ -22,6 +21,7 @@ mkdir -p slurm
 mkdir -p out
 
 # inputs
+# NT = simulation time (in tau), time = human time
 NCELLS=$1
 NV=$2
 calA0=$3
@@ -51,7 +51,7 @@ mkdir -p $simdatadir
 
 # compile into binary using packing.h
 binf=bin/"$runstr".o
-mainf=$maindir/fracture/laserAblation.cpp
+mainf=$maindir/ablate/laserAblation.cpp
 
 echo Running laserAblation simulations with parameters:
 echo NCELLS = "$NCELLS"
