@@ -51,7 +51,7 @@ mkdir -p $simdatadir
 
 # compile into binary using packing.h
 binf=bin/"$runstr".o
-mainf=$maindir/ablate/laserAblation.cpp
+mainf=$maindir/laserAblation.cpp
 
 echo Running laserAblation simulations with parameters:
 echo NCELLS = "$NCELLS"
