@@ -20,7 +20,7 @@
 // 3. calA0: 			  preferred shape parameter for all particles
 // 4. phiMin: 			p ?
 // 5. phiMax: 			p
-// 6. kl: 				  perimeter spring constant			    
+// 6. kl: 				  perimeter spring constant
 // 7. att:          attraction range and strength parameter
 // 8. B:            damping coefficient
 // 9. Dr0:          rotational diffusion constant for protrusion activity
@@ -47,7 +47,7 @@ const double boxLengthScale = 2.5;  // neighbor list box size in units of initia
 //const double phi0 = 0.5;            // initial packing fraction
 const double smallfrac = 0.5;  // fraction of small particles
 const double sizeratio = 1.4;  // size ratio between small and large particles
-const double dt0 = 0.01;       // initial magnitude of time step in units of MD time
+const double dt0 = 0.005;      // initial magnitude of time step in units of MD time
 const double Ptol = 1e-8;
 const double Ftol = 1e-12;
 
@@ -100,7 +100,7 @@ int main(int argc, char const* argv[]) {
   std::ofstream enout(energyFile);
 
   // number of time steps
-  int NT = int(time_dbl/dt0);
+  int NT = int(time_dbl / dt0);
 
   const double phi0 = phiMin;
 
@@ -133,17 +133,27 @@ int main(int argc, char const* argv[]) {
   //after compress, turn on damped NVE
   double T = 1e-4;
   epithelial.drawVelocities2D(T);
-  epithelial.dampedNVE2D(enout, attractiveForceUpdate, B, dt0, NT/10, NT/10);
+  epithelial.dampedNVE2D(enout, attractiveForceUpdate, B, dt0, NT / 10, NT / 10);
 
   /*********** placeholder: LASER ABLATION SCHEME ************************/
   double xLoc = 0.0, yLoc = 0.0;
   int numCellsToAblate = 3;
-  epithelial.laserAblate(numCellsToAblate, sizeratio, nsmall, xLoc, yLoc);
-  epithelial.dampedNVE2D(enout, activeForceUpdate, B, dt0, NT, NT/10);
+  //epithelial.laserAblate(numCellsToAblate, sizeratio, nsmall, xLoc, yLoc);
+  cout << "numCells = " << epithelial.getNCELLS() << '\n';
+  for (int ci = 0; ci < epithelial.getNCELLS(); ci++) {
+    cout << "Psi(" << ci << ") = " << epithelial.getPsi(ci) << '\n';
+    //epithelial.orientDirector(ci, 0.0, 0.0);
+    cout << "Psi(" << ci << ") = " << epithelial.getPsi(ci) << '\n';
+  }
+  epithelial.dampedNVE2D(enout, activeForceUpdate, B, dt0, NT, NT / 10);
+  for (int ci = 0; ci < epithelial.getNCELLS(); ci++) {
+    cout << "Psi(" << ci << ") = " << epithelial.getPsi(ci) << '\n';
+    //epithelial.orientDirector(ci, 0.0, 0.0);
+    cout << "Psi(" << ci << ") = " << epithelial.getPsi(ci) << '\n';
+  }
 
   /*********placeholder: ELASTIC SHEET FRACTURE SCHEME*********************/
   //epithelial.holePunching(sizeratio, nsmall, enout, attractiveForceUpdate, B, =1000, 1000);
-
 
   cout << "\n** Finished laserAblation.cpp, ending. " << endl;
 
