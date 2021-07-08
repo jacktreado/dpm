@@ -10,7 +10,7 @@ maindir=$cellsdir/main/epi2D
 outputdir=/gpfs/loomis/project/fas/ohern/at965/dpm
 
 # directory for simulations specific to laserAblation
-simtypedir=$outputdir/ablate/
+simtypedir=$outputdir/ablate
 
 # make directories, unless they already exist
 mkdir -p $outputdir
