@@ -427,7 +427,7 @@ void epi2D::vertexCompress2Target2D(dpmMemFn forceCall, double Ftol, double dt0,
   // local variables
   int it = 0, itmax = 1e4;
   double phi0 = vertexPreferredPackingFraction2D();
-  double scaleFactor, P, Sxy;
+  double scaleFactor = 1.0, P, Sxy;
 
   // loop while phi0 < phi0Target
   while (phi0 < phi0Target && it < itmax) {
@@ -815,7 +815,7 @@ void epi2D::orientDirector(int ci, double xLoc, double yLoc) {
   cx /= nv.at(ci);
   cy /= nv.at(ci);
 
-  // compute angle needed for psi to point towards (xLoc,yLoc)
+  // compute angle needed for psi to point towards (xLoc,yLoc) - for now, just towards origin
   double theta = atan2(cy, cx) + PI;
   theta -= 2 * PI * round(theta / PI);
 

@@ -54,7 +54,7 @@ const double Ftol = 1e-12;
 int main(int argc, char const* argv[]) {
   // local variables to be read in
   int NCELLS, nsmall, seed;
-  double calA0, kl, kb, phiMin, phiMax, att, B, NT_dbl, Dr0, time_dbl;
+  double calA0, kl, kb = 0.0, phiMin, phiMax, att, B, Dr0, time_dbl;
 
   // read in parameters from command line input
   string NCELLS_str = argv[1];
@@ -139,8 +139,8 @@ int main(int argc, char const* argv[]) {
   epithelial.dampedNVE2D(enout, attractiveForceUpdate, B, dt0, NT / 10, NT / 10);
 
   /*********** placeholder: LASER ABLATION SCHEME ************************/
-  double xLoc = 0.0, yLoc = 0.0;
-  int numCellsToAblate = 3;
+  //double xLoc = 0.0, yLoc = 0.0;
+  //int numCellsToAblate = 3;
   //epithelial.laserAblate(numCellsToAblate, sizeratio, nsmall, xLoc, yLoc);
   cout << "numCells = " << epithelial.getNCELLS() << '\n';
   for (int ci = 0; ci < epithelial.getNCELLS(); ci++) {
@@ -149,11 +149,11 @@ int main(int argc, char const* argv[]) {
     cout << "Psi(" << ci << ") = " << epithelial.getPsi(ci) << '\n';
   }
   epithelial.dampedNVE2D(enout, activeForceUpdate, B, dt0, NT, NT / 10);
-  for (int ci = 0; ci < epithelial.getNCELLS(); ci++) {
+  /*for (int ci = 0; ci < epithelial.getNCELLS(); ci++) {
     cout << "Psi(" << ci << ") = " << epithelial.getPsi(ci) << '\n';
     //epithelial.orientDirector(ci, 0.0, 0.0);
     cout << "Psi(" << ci << ") = " << epithelial.getPsi(ci) << '\n';
-  }
+  }*/
 
   /*********placeholder: ELASTIC SHEET FRACTURE SCHEME*********************/
   //epithelial.holePunching(sizeratio, nsmall, enout, attractiveForceUpdate, B, =1000, 1000);

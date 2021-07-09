@@ -581,10 +581,6 @@ void dpm::initializePositions2D(double phi0, double Ftol) {
 
   // initial step size
   dt = dt0;
-  /*cout << "dt = " << dt << '\n';
-  cout << "dt0 = " << dt0 << '\n';
-  cout << "finc = " << finc << '\n';
-  cout << "fdec = " << fdec << '\n';*/
 
   // loop until force relaxes
   while ((fcheck > Ftol) && fireit < itmax) {
@@ -1468,6 +1464,8 @@ void dpm::vertexAttractiveForces2D() {
         // real index of pj
         gj = pj - 1;
 
+        cindices(cj, vj, gj);
+
         if (gj == ip1[gi] || gj == im1[gi]) {
           pj = list[pj];
           continue;
@@ -1525,6 +1523,7 @@ void dpm::vertexAttractiveForces2D() {
               stress[1] += dy * fy;
               stress[2] += 0.5 * (dx * fy + dy * fx);
 
+              cindices(cj, vj, gj);
               // add to contacts
               if (ci > cj)
                 cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2]++;
@@ -1551,6 +1550,8 @@ void dpm::vertexAttractiveForces2D() {
         while (pj > 0) {
           // real index of pj
           gj = pj - 1;
+
+          cindices(cj, vj, gj);
 
           if (gj == ip1[gi] || gj == im1[gi]) {
             pj = list[pj];
@@ -1655,8 +1656,8 @@ void dpm::attractiveForceUpdate() {
 
 void dpm::setdt(double dt0) {
   // local variables
-  int i;
-  double ta, tl, tb, tmin, rho0;
+  int i = 0;
+  double ta = 0, tl = 0, tb = 0, tmin = 0, rho0 = 0;
 
   // typical length
   rho0 = sqrt(a0.at(0));
@@ -1694,10 +1695,8 @@ void dpm::vertexFIRE2D(dpmMemFn forceCall, double Ftol, double dt0) {
   double P, fnorm, fcheck, vnorm, alpha, dtmax, dtmin;
   int npPos, npNeg, fireit;
 
-  cout << "before setdt in FIRE, dt = " << dt << '\n';
   // set dt based on geometric parameters
   setdt(dt0);
-  cout << "after setdt in FIRE, dt = " << dt << "and dt0 = " << dt0 << '\n';
 
   // Initialize FIRE variables
   P = 0;
@@ -1967,7 +1966,7 @@ void dpm::vertexCompress2Target2D(dpmMemFn forceCall, double Ftol, double dt0, d
   // local variables
   int it = 0, itmax = 1e4;
   double phi0 = vertexPreferredPackingFraction2D();
-  double scaleFactor, P, Sxy;
+  double scaleFactor = 1.0, P, Sxy;
 
   // loop while phi0 < phi0Target
   while (phi0 < phi0Target && it < itmax) {
@@ -1977,10 +1976,8 @@ void dpm::vertexCompress2Target2D(dpmMemFn forceCall, double Ftol, double dt0, d
     // update phi0
     phi0 = vertexPreferredPackingFraction2D();
 
-    cout << "before FIRE in compress, dt = " << dt << '\n';
     // relax configuration (pass member function force update)
     vertexFIRE2D(forceCall, Ftol, dt0);
-    cout << "after FIRE in compress, dt = " << dt << '\n';
 
     // get scale factor
     scaleFactor = sqrt((phi0 + dphi0) / phi0);
@@ -2020,7 +2017,7 @@ void dpm::vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double d
   // local variables
   int k = 0, nr;
   bool jammed = 0, overcompressed = 0, undercompressed = 0;
-  double pcheck, phi0, rH, r0, rL, rho0, scaleFactor;
+  double pcheck, phi0, rH, r0, rL, rho0, scaleFactor = 1.0;
 
   // initialize binary root search parameters
   r0 = sqrt(a0.at(0));
