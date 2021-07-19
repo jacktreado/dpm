@@ -8,8 +8,8 @@ maindir=$cellsdir/main/tumor2D
 # directory for all output for cell simulations
 outputdir=/gpfs/loomis/project/fas/ohern/"$USER"/dpm
 
-# directory for simulations specific to jamming
-simtypedir=$outputdir/tumor2D
+# directory for specific simulations
+simtypedir=$outputdir/tumor2D/intInit
 
 # make directories, unless they already exist
 mkdir -p $outputdir
