@@ -21,13 +21,53 @@ using namespace std;
 
 *******************************/
 
+// Constructor with only one input (dim)
+dpm::dpm(int ndim) {
+	// local variables
+	int d, i;
+
+	// print to console
+	cout << "** Instantiating dpm object, ndim = " << ndim << endl;
+
+	// main variables
+	NDIM = ndim;
+	NNN = 4;
+
+	// set scalars to default values
+	dt = 0.0;
+
+	ka = 0.0;
+	kl = 0.0;
+	kb = 0.0;
+	kc = 0.0;
+
+	l1 = 0.0;
+	l2 = 0.0;
+
+	// default boundary variables
+	L.resize(NDIM);
+	pbc.resize(NDIM);
+	for (d = 0; d < NDIM; d++) {
+		L[d] = 1.0;
+		pbc[d] = 1;
+	}
+
+	// macroscopic stress vector
+	stress.resize(NDIM * (NDIM + 1) / 2);
+	for (i = 0; i < NDIM * (NDIM + 1) / 2; i++)
+		stress.at(i) = 0.0;
+
+	// initialize nearest neighbor info
+	NBX = -1;
+}
+
 // Main constructor
 dpm::dpm(int n, int ndim, int seed) {
 	// local variables
 	int d, i;
 
 	// print to console
-	cout << "** Instantiating configobj2D object, NCELLS = " << n << ",  ndim = " << ndim << ", seed = " << seed << " ..." << endl;
+	cout << "** Instantiating dpm object, NCELLS = " << n << ",  ndim = " << ndim << ", seed = " << seed << " ..." << endl;
 
 	// main variables
 	NCELLS = n;
@@ -383,7 +423,7 @@ void dpm::initializeVertexIndexing2D() {
 void dpm::initializeVertexShapeParameters(double calA0, int nref) {
 	// local variables
 	int gi, ci, vi, nvtmp;
-	double rtmp, calA0tmp, calAntmp;
+	double lenscale, calA0tmp, calAntmp;
 
 	// check that vertDOF has been assigned
 	if (NVTOT <= 0){
@@ -396,7 +436,7 @@ void dpm::initializeVertexShapeParameters(double calA0, int nref) {
 	}
 	else if (nv.size() == 0){
 		cerr << "	** ERROR: in initializeVertexShapeParameters, nv vector not assigned. Ending here." << endl;
-    exit(1);
+    	exit(1);
 	}
 
 	// resize shape paramters
@@ -404,27 +444,70 @@ void dpm::initializeVertexShapeParameters(double calA0, int nref) {
 	t0.resize(NVTOT);
 	r.resize(NVTOT);
 
-	// loop over cells, determine shape parameters
-	for (ci = 0; ci < NCELLS; ci++) {
-		// number of vertices on cell ci
-		nvtmp = nv.at(ci);
+	// loop over cells, give each cell the same shape parameters based on calA0 + nv
+	for (ci = 0; ci < NCELLS; ci++){
+		lenscale = (double) nv.at(ci)/nref;
+		initializeVertexShapeParameters(ci,calA0,lenscale);
+	}
+}
 
-		// a0 based on nv
-		rtmp = (double)nvtmp / nref;
-		a0.at(ci) = rtmp * rtmp;
 
-		// shape parameter
-		calAntmp = nvtmp * tan(PI / nvtmp) / PI;
-		calA0tmp = calA0 * calAntmp;
+// initialize vertex shape parameters for SPECIFIC CELL ci
+void dpm::initializeVertexShapeParameters(int ci, double calA0, double lenscale) {
+	// local variables
+	int gi, vi, nvtmp;
+	double calA0tmp, calAntmp;
 
-		// l0 and vertex radii
-		gi = szList.at(ci);
-		for (vi = 0; vi < nv.at(ci); vi++)
-		{
-			l0.at(gi + vi) = 2.0 * sqrt(PI * calA0tmp * a0.at(ci)) / nvtmp;
-			t0.at(gi + vi) = 0.0;
-			r.at(gi + vi) = 0.5 * l0.at(gi + vi);
-		}
+	// check that vertDOF has been assigned
+	if (NVTOT <= 0){
+		cerr << "	** ERROR: in initializeVertexShapeParameters, NVTOT not assigned. Ending here." << endl;
+		exit(1);
+	}
+	if (vertDOF <= 0){
+		cerr << "	** ERROR: in initializeVertexShapeParameters, vertDOF not assigned. Ending here." << endl;
+		exit(1);
+	}
+	else if (nv.size() == 0){
+		cerr << "	** ERROR: in initializeVertexShapeParameters, nv vector not assigned. Ending here." << endl;
+    	exit(1);
+	}
+
+	// check that ci is within bounds
+	if (ci >= NCELLS){
+		cerr << "	** ERROR: in initializeVertexShapeParameters, ci = " << ci << ", but NCELLS = " << NCELLS << ". Will cause out of bounds error, so ending here. " << endl;
+		exit(1);
+	}
+
+	// check that l0, t0 and r have been resized correctly
+	if (l0.size() != NVTOT){
+		cerr << "	** ERROR: in initializeVertexShapeParameters, l0 vector assigned incorrectly. l0.size() = " << l0.size() << ", while NVTOT = " << NVTOT << ". Ending here." << endl;
+    	exit(1);
+	}
+	if (t0.size() != NVTOT){
+		cerr << "	** ERROR: in initializeVertexShapeParameters, t0 vector assigned incorrectly. t0.size() = " << t0.size() << ", while NVTOT = " << NVTOT << ". Ending here." << endl;
+    	exit(1);
+	}
+	if (r.size() != NVTOT){
+		cerr << "	** ERROR: in initializeVertexShapeParameters, r vector assigned incorrectly. r.size() = " << r.size() << ", while NVTOT = " << NVTOT << ". Ending here." << endl;
+    	exit(1);
+	}
+
+	// since everything has been pre-allocated at this point, determine shape parameters based on input calA0
+	nvtmp = nv.at(ci);
+
+	// a0 based on input lengthscale
+	a0.at(ci) = lenscale * lenscale;
+
+	// shape parameter
+	calAntmp = nvtmp * tan(PI / nvtmp) / PI;
+	calA0tmp = calA0 * calAntmp;
+
+	// l0 and vertex radii
+	gi = szList.at(ci);
+	for (vi = 0; vi < nvtmp; vi++) {
+		l0.at(gi + vi) = 2.0 * sqrt(PI * calA0tmp * a0.at(ci)) / nvtmp;
+		t0.at(gi + vi) = 0.0;
+		r.at(gi + vi) = 0.5 * l0.at(gi + vi);
 	}
 }
 
@@ -503,7 +586,7 @@ void dpm::gaussian2D(double dispersion, double calA0, int n1) {
 	}
 	vertDOF = NDIM * NVTOT;
 
-	// initialize vertex shape parameters
+	// initialize vertex shape parameters (give all cells same calA0 / calAn)
 	initializeVertexShapeParameters(calA0, n1);
 
 	// initialize vertex indexing
@@ -788,11 +871,14 @@ void dpm::initializePositions2D(double phi0, double Ftol) {
 // initialize neighbor linked list
 void dpm::initializeNeighborLinkedList2D(double boxLengthScale) {
 	// local variables
-	double llscale = 2.0 * r.at(0);
+	double llscale;
 	int i, d, nntmp, scx;
 
 	// print to console
 	cout << "** initializing neighbor linked list, boxLengthScale = " << boxLengthScale;
+
+	// get largest radius as llscale
+	llscale = 2.0 * (*max_element(r.begin(),r.end()));
 
 	// initialize box length vectors
 	NBX = 1;
@@ -822,28 +908,53 @@ void dpm::initializeNeighborLinkedList2D(double boxLengthScale) {
 		// reshape entry
 		nn[i].resize(NNN);
 
-		// neighbors
-		nn[i][0] = (i + 1) % NBX; // right neighbor (i+1)
+		// right neighbor (i+1)
+		nn[i][0] = (i + 1) % NBX; 
 
-		if (pbc[1])						// top neighbor (j+1)
-			nn[i][1] = (i + scx) % NBX; // ** top neighbor (j+1) (with pbc)
+		// top neighbors (i,j+1), (i+1,j+1)
+		if (pbc[1]){
+			// (i,j+1) w/ pbc
+			nn[i][1] = (i + scx) % NBX;
+
+			// (i+1,j+1) w/ pbc
+			nn[i][2] = (nn[i][1] + 1) % NBX;
+		}
 		else {
-			if (i >= NBX - scx)
-				nn[i][1] = -1; // ** NO top neighbor (j+1) when !pbc and on top row
-			else
-				nn[i][1] = i + scx; // ** top neighbor (j+1) (without pbc, but not on top row)
+			// if on top row, both = -1
+			if (i >= NBX - scx){
+				nn[i][1] = -1;
+				nn[i][2] = -1;
+			}
+			// if not on top row, still add
+			else{
+				nn[i][1] = i + scx; 
+				nn[i][2] = nn[i][1] + 1;
+			}
 		}
 
-		nntmp = (i + NBX - scx) % NBX;	 // bottom neighbor (j-1)
-		nn[i][2] = (nn[i][1] + 1) % NBX; // top-right neighbor (i+1, j+1)
-		nn[i][3] = nntmp + 1;			 // bottom-right neighbor (i+1, j-1)
+		// bottom neighbor w/ pbc (j-1)
+		nntmp = (i + NBX - scx) % NBX;	
+
+		// bottom-right neighbor (i+1, j-1)
+		if (pbc[1])
+			nn[i][3] = nntmp + 1;
+		else{
+			// if on bottom row, skip
+			if (i < scx)
+				nn[i][3] = -1;
+			// otherwise, set
+			else
+				nn[i][3] = nntmp + 1;
+		}
 
 		// right-hand bc (periodic)
 		if ((i + 1) % scx == 0) {
 			if (pbc[0]) {
 				nn[i][0] = i - scx + 1;
-				nn[i][2] = nn[i][1] - scx + 1;
-				nn[i][3] = nntmp - scx + 1;
+				if (pbc[1]){
+					nn[i][2] = nn[i][1] - scx + 1;
+					nn[i][3] = nntmp - scx + 1;
+				}
 			}
 			else {
 				nn[i][0] = -1;
@@ -1483,6 +1594,9 @@ void dpm::vertexAttractiveForces2D() {
 					continue;
 				}
 
+				// cell index of gj
+				cindices(cj, vj, gj);
+
 				// contact distance
 				sij = r[gi] + r[gj];
 
@@ -1567,6 +1681,9 @@ void dpm::vertexAttractiveForces2D() {
 						pj = list[pj];
 						continue;
 					}
+
+					// cell index of gj
+					cindices(cj, vj, gj);
 
 					// contact distance
 					sij = r[gi] + r[gj];
@@ -1983,7 +2100,7 @@ void dpm::vertexCompress2Target2D(dpmMemFn forceCall, double Ftol, double dt0, d
 	// local variables
 	int it = 0, itmax = 1e4;
 	double phi0 = vertexPreferredPackingFraction2D();
-	double scaleFactor, P, Sxy;
+	double scaleFactor=1.0, P, Sxy;
 
 	// loop while phi0 < phi0Target
 	while (phi0 < phi0Target && it < itmax) {
@@ -2034,7 +2151,7 @@ void dpm::vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double d
 	// local variables
 	int k = 0, nr;
 	bool jammed = 0, overcompressed = 0, undercompressed = 0;
-	double pcheck, phi0, rH, r0, rL, rho0, scaleFactor;
+	double pcheck, phi0, rH, r0, rL, rho0, scaleFactor = 1.0;
 
 	// initialize binary root search parameters
 	r0 = sqrt(a0.at(0));
@@ -2281,8 +2398,8 @@ void dpm::dpmHessian2D(Eigen::MatrixXd &H, Eigen::MatrixXd &S) {
 	if (kl > 0)
 		dpmPerimeterHessian2D(Hl, Sl);
 
-	// if (kb > 0)
-	// dpmBendingHessian2D(Hb,Sb);
+	if (kb > 0)
+		dpmBendingHessian2D(Hb,Sb);
 
 	if (kc > 0)
 		dpmRepulsiveHarmonicSprings2D(Hvv, Svv);
@@ -2535,11 +2652,178 @@ void dpm::dpmPerimeterHessian2D(Eigen::MatrixXd &Hl, Eigen::MatrixXd &Sl) {
 }
 
 // TO-DO: need to make hessian function for bending term (th - th0)^2
-// void dpm::dpmBendingHessian2D(Eigen::MatrixXd& Hb, Eigen::MatrixXd& Sb){
-// 	// local variables
+// CHECK non-dimensionalization
+// DEBUG negative eigenvalue in bending Hessian
+void dpm::dpmBendingHessian2D(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb){
+	// local variables
+	int gi, kxm1, kym1, kx, ky, kxp1, kyp1, kxp2, kyp2;
+	double lxim1, lyim1, lx, ly, ulx, uly, ltmp, si, ci, th;
+	double dtiim1x, dtiim1y, dtiix, dtiiy, dtiip1x, dtiip1y;
+	double dtip1ix, dtip1iy, dtip1ip2x, dtip1ip2y, dtip1ip1x, dtip1ip1y;
+	double dtim1, dti, dtip1;
 
-// 	// 
-// }
+	// non-dimensionalization
+	double rho0, Kb;
+	rho0 = sqrt(a0.at(0));
+	Kb = kb * rho0 * rho0;
+
+	// compute segment unit vectors matrix elements, segment lengths, normals & angle strain
+	vector<double> ulxy(NVTOT,0.0);
+	vector<double> uld(NVTOT,0.0);
+	vector<double> l(NVTOT,0.0);
+	vector<double> nx(NVTOT,0.0);
+	vector<double> ny(NVTOT,0.0);
+	vector<double> dth(NVTOT,0.0);
+	for (gi=0; gi<NVTOT; gi++){
+		// indexing
+		kxm1 = NDIM*im1[gi];
+		kym1 = kxm1 + 1;
+
+		kx = NDIM*gi;
+		ky = kx + 1;
+
+		kxp1 = NDIM*ip1[gi];
+		kyp1 = kxp1 + 1;
+
+		// segment elements
+		lxim1 = x[kx] - x[kxm1];
+		lyim1 = x[ky] - x[kym1];
+
+		lx = x[kxp1] - x[kx];
+		ly = x[kyp1] - x[ky];
+
+		// check periodic boundary conditions
+		if (pbc[0]) {
+			lxim1 -= L[0]*round(lxim1/L[0]);
+			lx -= L[0]*round(lx/L[0]);
+		}
+		if (pbc[1]) {
+			lyim1 -= L[1]*round(lyim1/L[1]);
+			ly -= L[1]*round(ly/L[1]);
+		}
+
+		// segment length
+		ltmp = sqrt(lx*lx + ly*ly);
+
+		// unit vector elements
+		ulx = lx/ltmp;
+		uly = ly/ltmp;
+
+		// unit vector matrix elements
+		ulxy[gi] = ulx*uly;
+		uld[gi] = 2.0*(uly*uly) - 1.0;
+
+		// save length
+		l[gi] = ltmp;
+
+		// save normals
+		nx[gi] = uly/ltmp;
+		ny[gi] = -ulx/ltmp;
+
+		// compute angles
+		si = lx*lyim1 - ly*lxim1;
+		ci = lx*lxim1 + ly*lyim1;
+		th = atan2(si,ci);
+		dth[ci] = th - t0[gi];
+	}
+
+	// loop over vertices
+	rho0 = sqrt(a0[0]);
+	for (gi=0; gi<NVTOT; gi++){
+		// indexing
+		kx = NDIM*gi;
+		ky = kx + 1;
+
+		kxp1 = NDIM*ip1[gi];
+		kyp1 = kxp1 + 1;
+
+		kxp2 = NDIM*ip1[ip1[gi]];
+		kyp2 = kxp2 + 1;
+
+		// first derivatives
+	    dtiim1x = nx[im1[gi]];
+	    dtiim1y = ny[im1[gi]];
+	    
+	    dtiip1x = nx[gi];
+	    dtiip1y = ny[gi];
+	    
+	    dtiix = -(dtiim1x + dtiip1x);
+	    dtiiy = -(dtiim1y + dtiip1y);
+
+	    dtip1ix = dtiip1x;
+	    dtip1iy = dtiip1y;
+
+	    dtip1ip2x = nx[ip1[gi]];
+	    dtip1ip2y = ny[ip1[gi]];
+
+	    dtip1ip1x = -(dtip1ix + dtip1ip2x);
+	    dtip1ip1y = -(dtip1iy + dtip1ip2y);
+
+	    // angle strains
+	    dtim1 = dth[im1[gi]];
+	    dti = dth[gi];
+	    dtip1 = dth[ip1[gi]];
+
+		// -- Stiffness Matrix
+    
+	    // main diagonal block
+	    Hb(kx,kx) = Kb * (pow(dtiim1x,2.0) + pow(dtiix,2.0) + pow(dtiip1x,2.0));
+	    Hb(ky,ky) = Kb * (pow(dtiim1y,2.0) + pow(dtiiy,2.0) + pow(dtiip1y,2.0));
+	    Hb(kx,ky) = Kb * ((dtiim1x*dtiim1y) + (dtiix*dtiiy) + (dtiip1x*dtiip1y));
+	    Hb(ky,kx) = Hb(kx,ky);
+	    
+	    // 1off diagonal (enforce symmetry)
+	    Hb(kx,kxp1) = Kb * (dtiix*dtiip1x + dtip1ix*dtip1ip1x);
+	    Hb(ky,kyp1) = Kb * (dtiiy*dtiip1y + dtip1iy*dtip1ip1y);
+	    Hb(kx,kyp1) = Kb * (dtiix*dtiip1y + dtip1ix*dtip1ip1y);
+	    Hb(ky,kxp1) = Kb * (dtiiy*dtiip1x + dtip1iy*dtip1ip1x);
+	    
+	    Hb(kxp1,kx) = Hb(kx,kxp1);
+	    Hb(kyp1,ky) = Hb(ky,kyp1);
+	    Hb(kyp1,kx) = Hb(kx,kyp1);
+	    Hb(kxp1,ky) = Hb(ky,kxp1);
+	    
+	    // 2off diagonal (enforce symmetry)
+	    Hb(kx,kxp2) = Kb * dtip1ix * dtip1ip2x;
+	    Hb(ky,kyp2) = Kb * dtip1iy * dtip1ip2y;
+	    Hb(kx,kyp2) = Kb * dtip1ix * dtip1ip2y;
+	    Hb(ky,kxp2) = Kb * dtip1iy * dtip1ip2x;
+	    
+	    Hb(kxp2,kx) = Hb(kx,kxp2);
+	    Hb(kyp2,ky) = Hb(ky,kyp2);
+	    Hb(kyp2,kx) = Hb(kx,kyp2);
+	    Hb(kxp2,ky) = Hb(ky,kxp2);
+	    
+	    
+	    // -- Stress Matrix
+	        
+	    // main diagonal block
+	    Sb(kx,kx)       = (2.0*Kb*(dtip1 - dti)*ulxy[gi]/pow(l[gi],2.0)) + (2.0*Kb*(dti - dtim1)*ulxy[im1[gi]]/(pow(l[im1[gi]],2.0)));
+	    Sb(ky,ky)       = -Sb(kx,kx);
+	    Sb(kx,ky)       = Kb*(dtip1 - dti)*uld[gi]/pow(l[gi],2.0) + Kb*(dti - dtim1)*uld[im1[gi]]/pow(l[im1[gi]],2.0);
+	    Sb(ky,kx)       = Sb(kx,ky);
+	    
+	    // 1off diagonal
+	    Sb(kx,kxp1)     = 2.0*Kb*(dti - dtip1)*ulxy[gi]/pow(l[gi],2.0);
+	    Sb(ky,kyp1)     = -Sb(kx,kxp1);
+	    Sb(kx,kyp1)     = Kb*(dti - dtip1)*uld[gi]/pow(l[gi],2.0);
+	    Sb(ky,kxp1)     = Sb(kx,kyp1);
+	    
+	    // enforce symmetry in lower triangle
+	    Sb(kxp1,kx)     = Sb(kx,kxp1);
+	    Sb(kyp1,ky)     = Sb(ky,kyp1);
+	    Sb(kyp1,kx)     = Sb(kx,kyp1);
+	    Sb(kxp1,ky)     = Sb(ky,kxp1);
+	}
+
+	// clear vectors from memory
+	ulxy.clear();
+	uld.clear();
+	l.clear();
+	nx.clear();
+	ny.clear();
+	dth.clear();
+}
 
 // construct hessian for interaction term
 void dpm::dpmRepulsiveHarmonicSprings2D(Eigen::MatrixXd &Hvv, Eigen::MatrixXd &Svv) {
@@ -2659,6 +2943,22 @@ void dpm::dpmRepulsiveHarmonicSprings2D(Eigen::MatrixXd &Hvv, Eigen::MatrixXd &S
 	C O N S O L E  &  F I L E
 
 *******************************/
+
+void dpm::printNeighborList() {
+	int i,j;
+
+	cout << "NBX = " << NBX << endl;
+	cout << "L_x = " << L[0] << ",  L_y = " << L[1] << endl;
+	cout << "sb_x = " << sb[0] << ",  sb_y = " << sb[1] << endl;
+	cout << "lb_x = " << lb[0] << ",  lb_y = " << lb[1] << endl;
+	for (i=0; i<NBX; i++){
+		cout << "nn[" << i << "]:  ";
+		for (j=0; j<NNN; j++){
+			cout << nn.at(i).at(j) << "  ";
+		}
+		cout << endl;
+	}
+}
 
 void dpm::printContactMatrix() {
 	int ci, cj;

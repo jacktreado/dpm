@@ -1,36 +1,37 @@
-%% Draw dpm config files
+%% Draw tumor interface simulations
 
 clear;
 close all;
 clc;
 
+% use to never run movie first
+initClear = 1;
+
 % file name string
 fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
-dpmData = readMesoPin2D(fstr);
+tumorConfigData = readTumor2D(fstr);
 
 % get number of frames
-NFRAMES = dpmData.NFRAMES;
+NFRAMES = tumorConfigData.NFRAMES;
 
 % sim info
-NCELLS = dpmData.NCELLS;
-nv = dpmData.nv(1,:);
-L = dpmData.L(1,:);
+NCELLS = tumorConfigData.NCELLS;
+tN = tumorConfigData.tN;
+nv = tumorConfigData.nv(1,:);
+L = tumorConfigData.L(1,:);
 Lx = L(1);
 Ly = L(2);
-x = dpmData.x;
-y = dpmData.y;
-r = dpmData.r;
-px = dpmData.px;
-py = dpmData.py;
-zc = dpmData.zc;
-zv = dpmData.zv;
-zg = dpmData.zg;
-a0 = dpmData.a0;
-l0 = dpmData.l0;
-t0 = dpmData.t0;
-kb = dpmData.kb;
+x = tumorConfigData.x;
+y = tumorConfigData.y;
+r = tumorConfigData.r;
+zc = tumorConfigData.zc;
+zv = tumorConfigData.zv;
+a0 = tumorConfigData.a0;
+l0 = tumorConfigData.l0;
+t0 = tumorConfigData.t0;
+psi = tumorConfigData.psi;
 
 % get preferred shape
 calA0 = zeros(NFRAMES,NCELLS);
@@ -44,45 +45,37 @@ for ff = 1:NFRAMES
 end
 
 % particle shape data
-p = dpmData.p;
-a = dpmData.a;
+p = tumorConfigData.p;
+a = tumorConfigData.a;
 calA = p.^2./(4.0*pi*a);
-
-% stress data
-S = dpmData.S;
-P = 0.5*(S(:,1) + S(:,2));
-
-% pulling h
-h = dpmData.h;
 
 %% Draw cells
 
 % show vertices or not
 showverts = 0;
 
-% color by shape or size
-colorShape = 0;
-
-if colorShape == 1
-    % color by real shape
-    NCLR = 100;
-    calABins = linspace(0.999*min(calA(:)),1.001*max(calA(:)),NCLR+1);
-    cellCLR = jet(NCLR);
-elseif colorShape == 2
-    % color by preferred shape
-    NCLR = 100;
-    calA0Bins = linspace(0.999*min(calA0(:)),1.001*max(calA0(:)),NCLR+1);
-    cellCLR = jet(NCLR);
-else
-    [nvUQ, ~, IC] = unique(nv);
-    NUQ = length(nvUQ);
-    cellCLROpts = summer(NUQ);
-    cellCLR = zeros(NCELLS,3);
-    for cc = 1:NCELLS
-        cellCLR(cc,:) = cellCLROpts(IC(cc),:);
-    end
+% make a movie
+makeAMovie = 0;
+if initClear == 1
+    makeAMovie = 0;
+    initClear = 0;
 end
 
+% color by (0=red, 1=shape, 2=cos(psi))
+colorOpt = 0;
+
+% color by real shape
+if colorOpt == 1
+    NCLR = 100;
+    calABins = linspace(1,1.1*max(calA(:)),NCLR+1);
+    cellCLR = jet(NCLR);
+elseif colorOpt == 2
+    NCLR = 100;
+    cpsiBins = linspace(-1,1,NCLR+1);
+    cellCLR = winter(NCLR);
+else
+    cellCLR = repmat([1 0 0],NCELLS,1);
+end
 
 % get frames to plot
 if showverts == 0
@@ -91,15 +84,14 @@ if showverts == 0
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
-    FSTART = 10;
+    FSTART = 4;
     FSTEP = 1;
     FEND = FSTART;
 end
 
 % make a movie
-makeAMovie = 0;
 if makeAMovie == 1
-    moviestr = 'tumorInterface.mp4';
+    moviestr = 'monolayer_l10.01_gam0.1.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -121,7 +113,17 @@ for ff = FSTART:FSTEP:FEND
         xtmp = xf{nn};
         ytmp = yf{nn};
         rtmp = rf{nn};
-        clr = cellCLR(nn,:);
+        if colorOpt == 1
+            calAtmp = calA(ff,nn);
+            calAInd = calAtmp < calABins(2:end) & calAtmp > calABins(1:end-1);
+            clr = cellCLR(calAInd,:);
+        elseif colorOpt == 2
+            cpsitmp = cos(psi(ff,nn));
+            cpsiind = cpsitmp < cpsiBins(2:end) & cpsitmp > cpsiBins(1:end-1);
+            clr = cellCLR(cpsiind,:);
+        else
+            clr = cellCLR(nn,:);
+        end
         if showverts == 1
             for vv = 1:nv(nn)
                 rv = rtmp(vv);
@@ -137,25 +139,25 @@ for ff = FSTART:FSTEP:FEND
             rads = sqrt(rx.^2 + ry.^2);
             xtmp = xtmp + 0.8*rtmp.*(rx./rads);
             ytmp = ytmp + 0.8*rtmp.*(ry./rads);
-            vpos = [xtmp, ytmp];
-            finfo = [1:nv(nn) 1];
-            patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k');
+            for xx = 0
+                for yy = 0
+                    vpos = [xtmp + xx*Lx, ytmp + yy*Ly];
+                    finfo = [1:nv(nn) 1];
+                    patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k');
+                end
+            end
         end
     end
-    
+
+
     % plot box
+%     plot([0 Lx Lx 0 0],[0 0 Ly Ly 0],'k-','linewidth',2);
     axis equal;
     ax = gca;
     ax.XTick = [];
     ax.YTick = [];
     ax.XLim = [-0.25 1.25]*Lx;
     ax.YLim = [-0.25 1.25]*Ly;
-    
-    % plot pin locs
-    for cc = 1:NCELLS
-        plot(px(ff,cc),py(ff,cc),'ko','markersize',10,'markerfacecolor','k');
-    end
-    
     
     % if making a movie, save frame
     if makeAMovie == 1

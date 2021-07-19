@@ -16,12 +16,13 @@ using namespace std;
 
 int main(){
 	// local variables
-	int NCELLS = 16, nsmall = 28, seed = 1;
-	double phi0 = 0.3, calA0 = 1.4, smallfrac = 0.5, sizefrac = 1.4, Ftol = 1e-12, dt0 = 1e-2;
-	double ka = 1.0, kl = 1.0, kb = 0.01, kc = 1.0, thA = 12.0, thK = 3.0, boxLengthScale = 2.5;
+	int NCELLS = 32, nsmall = 32, seed = 1;
+	double phi0 = 0.35, calA0 = 1.17, smallfrac = 0.5, sizefrac = 1.4, disp = 0.1, Ftol = 1e-8, dt0 = 2e-2;
+	double ka = 1.0, kl = 1.0, kb = 0.0, kc = 1.0, thA = 0.0, thK = 0.0, boxLengthScale = 3.0;
+	double phi0Target = 1.1, dphi0 = 0.01;
 
 	// name of output file
-	string posf = "pos.test";
+	string posf = "pos_dp_calA1.17.test";
 
 	// instantiate object
 	dpm configobj2D(NCELLS, NDIM, seed);
@@ -36,8 +37,8 @@ int main(){
 	configobj2D.setkc(kc);
 
 	// initialize particles are bidisperse
-	// configobj2D.bidisperse2D(calA0, nsmall, smallfrac, sizefrac);
-	configobj2D.gaussian2D(0.0, calA0, nsmall);
+	configobj2D.bidisperse2D(calA0, nsmall, smallfrac, sizefrac);
+	// configobj2D.gaussian2D(disp, calA0, nsmall);
 
 	// set preferred angle to sinusoidal
 	configobj2D.sinusoidalPreferredAngle(thA, thK);
@@ -49,7 +50,6 @@ int main(){
 	configobj2D.initializeNeighborLinkedList2D(boxLengthScale);
 
 	// compress to target packing fraction
-	double phi0Target = 1.0, dphi0 = 0.005;
 	configobj2D.vertexCompress2Target2D(&dpm::repulsiveForceUpdate,Ftol,dt0,phi0Target,dphi0);
 
 	// say goodbye

@@ -29,7 +29,7 @@ int main(){
 	bool plotCompression = 0;
 	int NCELLS = 12, nsmall = 16, seed = 1;
 	double phi0 = 0.6, calA0 = 1.1, smallfrac = 0.5, sizefrac = 1.4, Ftol = 1e-12, Ptol = 1e-8, dt0 = 1e-2;
-	double ka = 1.0, kl = 1.0, kb = 0, kc = 1.0, thA = 12.0, thK = 3.0, boxLengthScale = 2.5;
+	double ka = 1.0, kl = 1.0, kb = 0.01, kc = 1.0, thA = 12.0, thK = 3.0, boxLengthScale = 2.5;
 
 	// name of output file
 	string posf = "pos.test";
@@ -58,7 +58,7 @@ int main(){
 	configobj2D.bidisperse2D(calA0, nsmall, smallfrac, sizefrac);
 
 	// set preferred angle to sinusoidal
-	// configobj2D.sinusoidalPreferredAngle(thA, thK);
+	configobj2D.sinusoidalPreferredAngle(thA, thK);
 
 	// initialize particle positions
 	configobj2D.initializePositions2D(phi0, Ftol);

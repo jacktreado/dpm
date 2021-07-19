@@ -20,12 +20,12 @@ using namespace std;
 
 int main(){
 	// local variables
-	int NCELLS = 12, nsmall = 24, seed = 1;
-	double phi0 = 0.2, calA0 = 1.2, smallfrac = 0.5, sizefrac = 1.4, Ftol = 1e-12, Ptol = 1e-8, dt0 = 1e-2;
-	double ka = 1.0, kl = 1.0, kb = 0.0, kc = 1.0, thA = 12.0, thK = 3.0, boxLengthScale = 2.5, l1 = 0.0, l2 = 0.0;
+	int NCELLS = 32, nsmall = 32, seed = 1;
+	double phi0 = 0.4, calA0 = 1.3, smallfrac = 0.5, sizefrac = 1.4, disp = 0.1, Ftol = 1e-10, Ptol = 1e-6, dt0 = 2e-2;
+	double ka = 1.0, kl = 0.1, kb = 0.0001, kc = 1.0, thA = 12.0, thK = 5.0, boxLengthScale = 2.5, l1 = 0.0, l2 = 0.0;
 
 	// options for attraction
-	bool useAttraction = 1;
+	bool useAttraction = 0;
 
 	// pointer to dpm member function (should pt to null)
 	dpmMemFn forceUpdate = nullptr;
@@ -58,7 +58,7 @@ int main(){
 
 	// initialize particles are bidisperse
 	// configobj2D.bidisperse2D(calA0, nsmall, smallfrac, sizefrac);
-	configobj2D.gaussian2D(0.0, calA0, nsmall);
+	configobj2D.gaussian2D(disp, calA0, nsmall);
 
 	// set preferred angle to sinusoidal
 	configobj2D.sinusoidalPreferredAngle(thA, thK);
@@ -70,7 +70,7 @@ int main(){
 	configobj2D.initializeNeighborLinkedList2D(boxLengthScale);
 
 	// compress to target packing fraction
-	double phi0Target = 1.0, dphi0 = 0.005;
+	double dphi0 = 0.01;
 	bool plotCompression = true;
 	configobj2D.vertexJamming2D(forceUpdate,Ftol,Ptol,dt0,dphi0,plotCompression);
 

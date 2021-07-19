@@ -16,6 +16,7 @@
 
 */
 
+
 #include <iostream>
 #include <iomanip>
 #include <string>
@@ -121,6 +122,7 @@ protected:
 
 public:
 	// Constructors and Destructors
+	dpm(int ndim);
 	dpm(int n, int ndim, int seed);
 	dpm(int n, int seed) : dpm(n, 2, seed) {}
 	~dpm();
@@ -199,6 +201,7 @@ public:
 	void gaussian2D(double dispersion, double calA0, int n1);
 	void sinusoidalPreferredAngle(double thA, double thK);
 	void initializeVertexShapeParameters(double calA0, int nref);
+	void initializeVertexShapeParameters(int ci, double calA0, double lenscale);
 	void initializeVertexIndexing2D();
 	void initializePositions2D(double phi0, double Ftol);
 	void initializeNeighborLinkedList2D(double boxLengthScale);
@@ -232,9 +235,11 @@ public:
 	void dpmHessian2D(Eigen::MatrixXd &H, Eigen::MatrixXd &S);
 	void dpmAreaHessian2D(Eigen::MatrixXd &Ha, Eigen::MatrixXd &Sa);
 	void dpmPerimeterHessian2D(Eigen::MatrixXd &Hl, Eigen::MatrixXd &Sl);
+	void dpmBendingHessian2D(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb);
 	void dpmRepulsiveHarmonicSprings2D(Eigen::MatrixXd &Hvv, Eigen::MatrixXd &Svv);
 
 	// print vertex information to file
+	void printNeighborList();
 	void printContactMatrix();
 	void printConfiguration2D();
 	void printHessianEigenvalues2D(std::ofstream &hessout, Eigen::MatrixXd &M);

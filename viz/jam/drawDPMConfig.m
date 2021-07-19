@@ -5,7 +5,7 @@ close all;
 clc;
 
 % file name string
-fstr = '~/Jamming/CellSim/dpm/pos.test';
+fstr = '~/Jamming/CellSim/dpm/pos_dpb.test';
 
 % read in data
 dpmData = readDPMConfig(fstr);
@@ -42,24 +42,26 @@ showverts = 0;
 % get cell colors
 [nvUQ, ~, IC] = unique(nv);
 NUQ = length(nvUQ);
-cellCLR = summer(NUQ);
+% bg_green = [65/255 169/255 94/255];
+cellCLR = summer(2*NUQ);
+% cellCLR = repmat(bg_green,NCELLS,1);
 
 % get frames to plot
 if showverts == 0
     FSTART = 1;
     FSTEP = 1;
-    FEND = NFRAMES;
+    FEND = 70;
 %     FEND = FSTART;
 else
-    FSTART = 1;
+    FSTART = NFRAMES;
     FSTEP = 1;
     FEND = FSTART;
 end
 
 % make a movie
-makeAMovie = 0;
+makeAMovie = 1;
 if makeAMovie == 1
-    moviestr = 'jamming.mp4';
+    moviestr = 'dpb_jamming.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -88,6 +90,7 @@ for ff = FSTART:FSTEP:FEND
         pactual(ff,nn) = ptmp;
         rtmp = rf{nn};
         clr = cellCLR(IC(nn),:);
+%         clr = cellCLR(nn,:);
         if showverts == 1
             for vv = 1:nv(nn)
                 rv = rtmp(vv);
@@ -132,7 +135,7 @@ for ff = FSTART:FSTEP:FEND
     
     % if making a movie, save frame
     if makeAMovie == 1
-        currframe = getframe(gcf);
+        currframe = getframe(ax);
         writeVideo(vobj,currframe);
     end
 end
