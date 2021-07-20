@@ -2150,7 +2150,7 @@ void dpm::vertexCompress2Target2D(dpmMemFn forceCall, double Ftol, double dt0, d
 void dpm::vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double dt0, double dphi0, bool plotCompression) {
 	// local variables
 	int k = 0, nr;
-	bool jammed = 0, overcompressed = 0, undercompressed = 0;
+	bool jammed = 0, overcompressed = 0, undercompressed = 0, stalled = 0;
 	double pcheck, phi0, rH, r0, rL, rho0, scaleFactor = 1.0;
 
 	// initialize binary root search parameters
@@ -2163,6 +2163,8 @@ void dpm::vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double d
 
 	// save initial state
 	vector<double> xsave(vertDOF, 0.0);
+	vector<double> vsave(vertDOF, 0.0);
+	vector<double> Fsave(vertDOF, 0.0);
 	vector<double> rsave(vertDOF, 0.0);
 	vector<double> l0save(vertDOF, 0.0);
 	vector<double> t0save(vertDOF, 0.0);
@@ -2192,6 +2194,7 @@ void dpm::vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double d
 		undercompressed = ((pcheck < 2.0 * Ptol && rH < 0) || (pcheck < Ptol && rH > 0));
 		overcompressed = (pcheck > 2.0 * Ptol);
 		jammed = (pcheck < 2.0 * Ptol && pcheck > Ptol && rH > 0 && rL > 0);
+		stalled = (rH > 0 && rL > 0 && abs(rH - rL) < 1e-8);
 
 		// output to console
 		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
@@ -2216,7 +2219,8 @@ void dpm::vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double d
 		cout << "	* # of rattlers = " << nr << endl << endl;
 		cout << "	* undercompressed = " << undercompressed << endl;
 		cout << "	* overcompressed = " << overcompressed << endl;
-		cout << "	* jammed = " << jammed << endl << endl;
+		cout << "	* jammed = " << jammed << endl;
+		cout << "	* stalled = " << stalled << endl << endl;
 		if (plotCompression)
 			printConfiguration2D();
 		cout << endl << endl;
@@ -2237,6 +2241,8 @@ void dpm::vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double d
 				r0 = rH;
 				xsave = x;
 				rsave = r;
+				vsave = v;
+				Fsave = F;
 				l0save = l0;
 				t0save = t0;
 				a0save = a0;
@@ -2258,6 +2264,8 @@ void dpm::vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double d
 					// load state
 					x = xsave;
 					r = rsave;
+					v = vsave;
+					F = Fsave;
 					l0 = l0save;
 					t0 = t0save;
 					a0 = a0save;
@@ -2268,6 +2276,9 @@ void dpm::vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double d
 					// print to console
 					cout << "	-- -- undercompressed for the first time, scaleFactor = " << scaleFactor << endl;
 					cout << "	-- -- BEGINNING ROOT SEARCH IN ENTHALPY MIN PROTOCOL..." << endl;
+					cout << "	-- -- rH = " << rH << endl;
+					cout << " 	-- -- rL = " << rL << endl;
+					cout << "	-- -- |rH - rL| = " << abs(rH - rL) << endl;
 				}
 				// if still overcompressed, decrement again
 				else if (overcompressed) {
@@ -2278,6 +2289,8 @@ void dpm::vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double d
 					r0 = rH;
 					xsave = x;
 					rsave = r;
+					vsave = v;
+					Fsave = F;
 					l0save = l0;
 					t0save = t0;
 					a0save = a0;
@@ -2287,17 +2300,47 @@ void dpm::vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double d
 
 					// print to console
 					cout << "	-- -- overcompressed, still no unjamming, scaleFactor = " << scaleFactor << endl;
+					cout << "	-- -- rH = " << rH << endl;
+					cout << " 	-- -- rL = " << rL << endl;
+					cout << "	-- -- |rH - rL| = " << abs(rH - rL) << endl;
 				}
 			}
 			else {
+				if (stalled) {
+					cout << "Simulation STALLED ... resetting to initial overcompression ... " << endl;
+					cout << "\t * rH = " << rH << endl;
+					cout << "\t * rL = " << rL << endl;
+					cout << "\t * |rH - rL| = " << abs(rH - rL) << endl;
+
+					// reset 
+					rH = -1;
+					rL = -1;
+
+					// load state
+					x = xsave;
+					r = rsave;
+					v = vsave;
+					F = Fsave;
+					l0 = l0save;
+					t0 = t0save;
+					a0 = a0save;
+
+					// compute phi0
+					phi0 = vertexPreferredPackingFraction2D();
+
+					// reset by decompression
+					scaleFactor = sqrt((phi0 - 0.25 * dphi0) / phi0);
+				}
 				// if found undercompressed state, go to state between undercompressed and last overcompressed states (from saved state)
-				if (undercompressed) {
+				else if (undercompressed) {
 					// current = new lower bound length scale r
 					rL = rho0;
 
 					// load state
 					x = xsave;
 					r = rsave;
+					v = vsave;
+					F = Fsave;
 					l0 = l0save;
 					t0 = t0save;
 					a0 = a0save;
@@ -2307,6 +2350,9 @@ void dpm::vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double d
 
 					// print to console
 					cout << "	-- -- undercompressed, scaleFactor = " << scaleFactor << endl;
+					cout << "	-- -- rH = " << rH << endl;
+					cout << " 	-- -- rL = " << rL << endl;
+					cout << "	-- -- |rH - rL| = " << abs(rH - rL) << endl;
 				}
 				else if (overcompressed) {
 					// current = upper bound length scale r
@@ -2315,6 +2361,8 @@ void dpm::vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double d
 					// load state
 					x = xsave;
 					r = rsave;
+					v = vsave;
+					F = Fsave;
 					l0 = l0save;
 					t0 = t0save;
 					a0 = a0save;
@@ -2324,6 +2372,9 @@ void dpm::vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double d
 
 					// print to console
 					cout << "	-- -- overcompressed, scaleFactor = " << scaleFactor << endl;
+					cout << "	-- -- rH = " << rH << endl;
+					cout << " 	-- -- rL = " << rL << endl;
+					cout << "	-- -- |rH - rL| = " << abs(rH - rL) << endl;
 				}
 				else if (jammed) {
 					cout << "	** At k = " << k << ", target pressure found!" << endl;
@@ -2651,9 +2702,7 @@ void dpm::dpmPerimeterHessian2D(Eigen::MatrixXd &Hl, Eigen::MatrixXd &Sl) {
 	}
 }
 
-// TO-DO: need to make hessian function for bending term (th - th0)^2
-// CHECK non-dimensionalization
-// DEBUG negative eigenvalue in bending Hessian
+// construct hessian for angular bending energy
 void dpm::dpmBendingHessian2D(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb){
 	// local variables
 	int gi, kxm1, kym1, kx, ky, kxp1, kyp1, kxp2, kyp2;
@@ -2724,7 +2773,7 @@ void dpm::dpmBendingHessian2D(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb){
 		si = lx*lyim1 - ly*lxim1;
 		ci = lx*lxim1 + ly*lyim1;
 		th = atan2(si,ci);
-		dth[ci] = th - t0[gi];
+		dth[gi] = th - t0[gi];
 	}
 
 	// loop over vertices

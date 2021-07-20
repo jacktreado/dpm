@@ -297,7 +297,7 @@ void meso2D::initializeMesophyllBondNetwork(){
 void meso2D::mesoShapeForces(){
 	// local variables
 	int ci, gi, vi, nvtmp;
-	double fa, fli, flim1, fb, cx, cy, xi, yi;
+	double fa, fli, flim1, fbi, fbim1, cx, cy, xi, yi;
 	double rho0, l0im1, l0i, a0tmp, atmp;
 	double dx, dy, da, dli, dlim1, dtim1, dti, dtip1;
 	double lim2x, lim2y, lim1x, lim1y, lix, liy, lip1x, lip1y, li, lim1;
@@ -426,9 +426,10 @@ void meso2D::mesoShapeForces(){
 		U += 0.5 * kl *(dli * dli);
 
 		// -- Bending force
-		fb = kbi[gi] * rho0;
+		fbi = kbi[gi] * rho0;
+		fbim1 = kbi[im1[gi]] * rho0;
 
-		if (fb > 0){
+		if (fbi > 0 || fbim1 > 0){
 			// get ip2 for third angle
 			rip2x = x[NDIM*ip1[ip1[gi]]] - cx;
 			rip2y = x[NDIM*ip1[ip1[gi]] + 1] - cy;
@@ -468,11 +469,11 @@ void meso2D::mesoShapeForces(){
 			ddti = (dti - dtip1)/(li*li);
 
 			// add to force
-			F[NDIM*gi] 		+= fb*(ddtim1*nim1x + ddti*nix);
-			F[NDIM*gi + 1] 	+= fb*(ddtim1*nim1y + ddti*niy);
+			F[NDIM*gi] 		+= fbim1*ddtim1*nim1x + fbi*ddti*nix;
+			F[NDIM*gi + 1] 	+= fbim1*ddtim1*nim1y + fbi*ddti*niy;
 
 			// update potential energy
-			U += 0.5 * kb * (dti * dti);
+			U += 0.5 * kbi[gi] * (dti * dti);
 		}
 		
 		
@@ -1432,6 +1433,217 @@ void meso2D::ageMesophyllShapeParameters(){
 		kbi[gi] += cKb;
 	}
 }
+
+
+
+
+
+
+
+
+/******************************
+
+	M E S O P H Y L L
+
+	H E S S I A N
+
+	C O M P U T A T I O N
+
+*******************************/
+
+
+// hessian for meso cells with vertex-dependent bending energy
+void meso2D::mesoBendingHessian(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb){
+	// local variables
+	int gi, kxm1, kym1, kx, ky, kxp1, kyp1, kxp2, kyp2;
+	double lxim1, lyim1, lx, ly, ulx, uly, ltmp, si, ci, th;
+	double dtiim1x, dtiim1y, dtiix, dtiiy, dtiip1x, dtiip1y;
+	double dtip1ix, dtip1iy, dtip1ip2x, dtip1ip2y, dtip1ip1x, dtip1ip1y;
+	double dtim1, dti, dtip1;
+
+	// non-dimensionalization
+	double rho0, Kb;
+	rho0 = sqrt(a0.at(0));
+
+	// compute segment unit vectors matrix elements, segment lengths, normals & angle strain
+	vector<double> ulxy(NVTOT,0.0);
+	vector<double> uld(NVTOT,0.0);
+	vector<double> l(NVTOT,0.0);
+	vector<double> nx(NVTOT,0.0);
+	vector<double> ny(NVTOT,0.0);
+	vector<double> dth(NVTOT,0.0);
+	for (gi=0; gi<NVTOT; gi++){
+		// indexing
+		kxm1 = NDIM*im1[gi];
+		kym1 = kxm1 + 1;
+
+		kx = NDIM*gi;
+		ky = kx + 1;
+
+		kxp1 = NDIM*ip1[gi];
+		kyp1 = kxp1 + 1;
+
+		// segment elements
+		lxim1 = x[kx] - x[kxm1];
+		lyim1 = x[ky] - x[kym1];
+
+		lx = x[kxp1] - x[kx];
+		ly = x[kyp1] - x[ky];
+
+		// check periodic boundary conditions
+		if (pbc[0]) {
+			lxim1 -= L[0]*round(lxim1/L[0]);
+			lx -= L[0]*round(lx/L[0]);
+		}
+		if (pbc[1]) {
+			lyim1 -= L[1]*round(lyim1/L[1]);
+			ly -= L[1]*round(ly/L[1]);
+		}
+
+		// segment length
+		ltmp = sqrt(lx*lx + ly*ly);
+
+		// unit vector elements
+		ulx = lx/ltmp;
+		uly = ly/ltmp;
+
+		// unit vector matrix elements
+		ulxy[gi] = ulx*uly;
+		uld[gi] = 2.0*(uly*uly) - 1.0;
+
+		// save length
+		l[gi] = ltmp;
+
+		// save normals
+		nx[gi] = uly/ltmp;
+		ny[gi] = -ulx/ltmp;
+
+		// compute angles
+		si = lx*lyim1 - ly*lxim1;
+		ci = lx*lxim1 + ly*lyim1;
+		th = atan2(si,ci);
+		dth[gi] = th - t0[gi];
+	}
+
+	// loop over vertices
+	rho0 = sqrt(a0[0]);
+	for (gi=0; gi<NVTOT; gi++){
+		// bending energy (can be local)
+		Kb = kbi[gi] * rho0 * rho0;
+
+		// indexing
+		kx = NDIM*gi;
+		ky = kx + 1;
+
+		kxp1 = NDIM*ip1[gi];
+		kyp1 = kxp1 + 1;
+
+		kxp2 = NDIM*ip1[ip1[gi]];
+		kyp2 = kxp2 + 1;
+
+		// first derivatives
+	    dtiim1x = nx[im1[gi]];
+	    dtiim1y = ny[im1[gi]];
+	    
+	    dtiip1x = nx[gi];
+	    dtiip1y = ny[gi];
+	    
+	    dtiix = -(dtiim1x + dtiip1x);
+	    dtiiy = -(dtiim1y + dtiip1y);
+
+	    dtip1ix = dtiip1x;
+	    dtip1iy = dtiip1y;
+
+	    dtip1ip2x = nx[ip1[gi]];
+	    dtip1ip2y = ny[ip1[gi]];
+
+	    dtip1ip1x = -(dtip1ix + dtip1ip2x);
+	    dtip1ip1y = -(dtip1iy + dtip1ip2y);
+
+	    // angle strains
+	    dtim1 = dth[im1[gi]];
+	    dti = dth[gi];
+	    dtip1 = dth[ip1[gi]];
+
+		// -- Stiffness Matrix
+    
+	    // main diagonal block
+	    Hb(kx,kx) = Kb * (pow(dtiim1x,2.0) + pow(dtiix,2.0) + pow(dtiip1x,2.0));
+	    Hb(ky,ky) = Kb * (pow(dtiim1y,2.0) + pow(dtiiy,2.0) + pow(dtiip1y,2.0));
+	    Hb(kx,ky) = Kb * ((dtiim1x*dtiim1y) + (dtiix*dtiiy) + (dtiip1x*dtiip1y));
+	    Hb(ky,kx) = Hb(kx,ky);
+	    
+	    // 1off diagonal (enforce symmetry)
+	    Hb(kx,kxp1) = Kb * (dtiix*dtiip1x + dtip1ix*dtip1ip1x);
+	    Hb(ky,kyp1) = Kb * (dtiiy*dtiip1y + dtip1iy*dtip1ip1y);
+	    Hb(kx,kyp1) = Kb * (dtiix*dtiip1y + dtip1ix*dtip1ip1y);
+	    Hb(ky,kxp1) = Kb * (dtiiy*dtiip1x + dtip1iy*dtip1ip1x);
+	    
+	    Hb(kxp1,kx) = Hb(kx,kxp1);
+	    Hb(kyp1,ky) = Hb(ky,kyp1);
+	    Hb(kyp1,kx) = Hb(kx,kyp1);
+	    Hb(kxp1,ky) = Hb(ky,kxp1);
+	    
+	    // 2off diagonal (enforce symmetry)
+	    Hb(kx,kxp2) = Kb * dtip1ix * dtip1ip2x;
+	    Hb(ky,kyp2) = Kb * dtip1iy * dtip1ip2y;
+	    Hb(kx,kyp2) = Kb * dtip1ix * dtip1ip2y;
+	    Hb(ky,kxp2) = Kb * dtip1iy * dtip1ip2x;
+	    
+	    Hb(kxp2,kx) = Hb(kx,kxp2);
+	    Hb(kyp2,ky) = Hb(ky,kyp2);
+	    Hb(kyp2,kx) = Hb(kx,kyp2);
+	    Hb(kxp2,ky) = Hb(ky,kxp2);
+	    
+	    
+	    // -- Stress Matrix
+	        
+	    // main diagonal block
+	    Sb(kx,kx)       = (2.0*Kb*(dtip1 - dti)*ulxy[gi]/pow(l[gi],2.0)) + (2.0*Kb*(dti - dtim1)*ulxy[im1[gi]]/(pow(l[im1[gi]],2.0)));
+	    Sb(ky,ky)       = -Sb(kx,kx);
+	    Sb(kx,ky)       = Kb*(dtip1 - dti)*uld[gi]/pow(l[gi],2.0) + Kb*(dti - dtim1)*uld[im1[gi]]/pow(l[im1[gi]],2.0);
+	    Sb(ky,kx)       = Sb(kx,ky);
+	    
+	    // 1off diagonal
+	    Sb(kx,kxp1)     = 2.0*Kb*(dti - dtip1)*ulxy[gi]/pow(l[gi],2.0);
+	    Sb(ky,kyp1)     = -Sb(kx,kxp1);
+	    Sb(kx,kyp1)     = Kb*(dti - dtip1)*uld[gi]/pow(l[gi],2.0);
+	    Sb(ky,kxp1)     = Sb(kx,kyp1);
+	    
+	    // enforce symmetry in lower triangle
+	    Sb(kxp1,kx)     = Sb(kx,kxp1);
+	    Sb(kyp1,ky)     = Sb(ky,kyp1);
+	    Sb(kyp1,kx)     = Sb(kx,kyp1);
+	    Sb(kxp1,ky)     = Sb(ky,kxp1);
+	}
+
+	// clear vectors from memory
+	ulxy.clear();
+	uld.clear();
+	l.clear();
+	nx.clear();
+	ny.clear();
+	dth.clear();
+}
+
+
+// hessian for meso cells with fixed contact springs
+void meso2D::mesoSpringNetworkHessian(Eigen::MatrixXd &Hs, Eigen::MatrixXd &Ss){
+	// local variables
+	int gi, kxm1, kym1, kx, ky, kxp1, kyp1, kxp2, kyp2;
+	double lxim1, lyim1, lx, ly, ulx, uly, ltmp, si, ci, th;
+	double dtiim1x, dtiim1y, dtiix, dtiiy, dtiip1x, dtiip1y;
+	double dtip1ix, dtip1iy, dtip1ip2x, dtip1ip2y, dtip1ip1x, dtip1ip1y;
+	double dtim1, dti, dtip1;
+
+	// non-dimensionalization
+	double rho0, Kb;
+	rho0 = sqrt(a0.at(0));
+
+	// loop over pairs of connected vertices, compute Hessian
+	
+}
+
 
 
 

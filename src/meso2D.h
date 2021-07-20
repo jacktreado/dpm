@@ -106,6 +106,9 @@ public:
 	void updateMesophyllBondNetwork();
 	void ageMesophyllShapeParameters();
 
+	// hessian computation
+	void mesoBendingHessian(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb);
+
 	// printing functions
 	void printMesoNetwork2D();
 	void printMesoPin2D(std::vector<double> &xpin, double h);
