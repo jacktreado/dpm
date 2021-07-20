@@ -1,9 +1,7 @@
-# The Deformable Particle Model
+# Deformable Particle Model in C++
 By Jack Treado, Yale University
 
-Welcome to the Deformable Particle Model (DPM)!
-
-This repository broadly allows for the simulation of deformable particles. Currently we only support 2D particles, but 3D is on the way!
+This repository broadly allows for the simulation of deformable particles using an OOP, C++ simulation framework. Currently we only support 2D particles, but 3D is on the way!
 
 
 
