@@ -1640,8 +1640,7 @@ void meso2D::mesoSpringNetworkHessian(Eigen::MatrixXd &Hs, Eigen::MatrixXd &Ss){
 	double rho0, Kb;
 	rho0 = sqrt(a0.at(0));
 
-	// loop over pairs of connected vertices, compute Hessian
-	
+	// loop over pairs of connected vertices, compute Hessian	
 }
 
 

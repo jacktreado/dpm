@@ -108,6 +108,7 @@ public:
 
 	// hessian computation
 	void mesoBendingHessian(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb);
+	void mesoSpringNetworkHessian(Eigen::MatrixXd &Hs, Eigen::MatrixXd &Ss);
 
 	// printing functions
 	void printMesoNetwork2D();
