@@ -13,8 +13,8 @@ const double dphi0= 0.01;	   		// packing fraction increment during initial grow
 const double boxLengthScale = 2.0; 	// neighbor list box size in units of initial l0
 const double phi0 = 0.6;		   	// initial packing fraction
 const double dt0 = 5e-2;		   	// initial magnitude of time step in units of MD time
-const double Ftol = 1e-6;			// force tolerance during energy min
-const double Ptol = 1e-6;		   	// target pressure in initial compression
+const double Ftol = 1e-8;			// force tolerance during energy min
+const double Ptol = 1e-5;		   	// target pressure in initial compression
 
 
 // mechanical constants
