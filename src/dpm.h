@@ -225,10 +225,13 @@ public:
 	// simple integrators
 	void vertexFIRE2D(dpmMemFn forceCall, double Ftol, double dt0);
 	void vertexNVE2D(std::ofstream &enout, dpmMemFn forceCall, double T, double dt0, int NT, int NPRINTSKIP);
+	void vertexLangevinNVT2D(std::ofstream &enout, dpmMemFn forceCall, double T0, double gam, double dt0, int NT, int NPRINTSKIP);
+	void vertexLangevinNVT2D(dpmMemFn forceCall, double T0, double gam, double dt0, int NT, int NPRINTSKIP);
 
 	// protocols
 	void vertexCompress2Target2D(dpmMemFn forceCall, double Ftol, double dt0, double phi0Target, double dphi0);
 	void vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double dt0, double dphi0, bool plotCompression);
+	void vertexAnneal2Jam2D(dpmMemFn forceCall, double Ftol, double Ptol, double dt0, double dphi0, double T0, double trun, bool plotCompression);
 
 	// hessian methods
 	// note: dynamical matrix contribution is always M = H - S

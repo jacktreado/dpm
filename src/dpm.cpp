@@ -1141,7 +1141,7 @@ int dpm::removeRattlers() {
 void dpm::drawVelocities2D(double T) {
 	// local variables
 	int gi;
-	double r1, r2, grv1, grv2, tscale = sqrt(T), vcomx = 0.0, vcomy = 0.0;
+	double r1, r2, grv1, grv2, gnorm, tscale = sqrt(T), vcomx = 0.0, vcomy = 0.0;
 
 	// loop over velocities, draw from maxwell-boltzmann distribution
 	for (gi = 0; gi < NVTOT; gi++) {
@@ -1151,9 +1151,12 @@ void dpm::drawVelocities2D(double T) {
 		grv1 = sqrt(-2.0 * log(r1)) * cos(2.0 * PI * r2);
 		grv2 = sqrt(-2.0 * log(r1)) * sin(2.0 * PI * r2);
 
+		// gaussian velocities norm
+		gnorm = sqrt(grv1*grv1 + grv2*grv2);
+
 		// assign to velocities
-		v[NDIM * gi] = tscale * grv1;
-		v[NDIM * gi + 1] = tscale * grv2;
+		v[NDIM * gi] = tscale * (grv1/gnorm);
+		v[NDIM * gi + 1] = tscale * (grv2/gnorm);
 
 		// add to center of mass
 		vcomx += v[NDIM * gi];
@@ -2087,6 +2090,215 @@ void dpm::vertexNVE2D(ofstream &enout, dpmMemFn forceCall, double T, double dt0,
 	}
 }
 
+// Langevin dynamics for printing
+void dpm::vertexLangevinNVT2D(ofstream &enout, dpmMemFn forceCall, double T0, double gam, double dt0, int NT, int NPRINTSKIP){
+	// local variables
+	int t, i;
+	double T, K, simclock, dmp1, dmp2;
+	double r1, r2, grv1, grv2;
+
+	// set time step magnitude
+	setdt(dt0);
+
+	// set damping coefficients
+	dmp1 = exp(-gam*dt);
+	dmp2 = sqrt(1.0 - exp(-2.0*gam*dt))*sqrt(T0);
+
+	// initialize time keeper
+	simclock = 0.0;
+
+	// initialize velocities
+	drawVelocities2D(T0);
+
+	// loop over time, print energy
+	for (t=0; t<NT; t++){
+		// Langevin velocity update #1
+		for (i=0; i<vertDOF; i++)
+			v[i] += 0.5*dt*F[i];
+
+		// Langevin position update #1
+		for (i=0; i<vertDOF; i++){
+			// update position
+			x[i] += 0.5*dt*v[i];
+
+			// recenter in box
+			if (x[i] > L[i % NDIM] && pbc[i % NDIM])
+				x[i] -= L[i % NDIM];
+			else if (x[i] < 0 && pbc[i % NDIM])
+				x[i] += L[i % NDIM];
+		}
+
+		// Langevin random velocity update
+		// use Box-Muller to generate gaussian random variables
+		for (i=0; i<NVTOT; i++){
+			r1 = drand48();
+			r2 = drand48();
+			grv1 = sqrt(-2.0 * log(r1)) * cos(2.0 * PI * r2);
+			grv2 = sqrt(-2.0 * log(r1)) * sin(2.0 * PI * r2);
+
+			// add to both dimensions
+			v[NDIM*i] = dmp1*v[NDIM*i] + dmp2*grv1;
+			v[NDIM*i + 1] = dmp1*v[NDIM*i + 1] + dmp2*grv2;
+		}
+
+		// Langevin position update #2 (based on random kick)
+		for (i=0; i<vertDOF; i++){
+			// update position
+			x[i] += 0.5*dt*v[i];
+
+			// recenter in box
+			if (x[i] > L[i % NDIM] && pbc[i % NDIM])
+				x[i] -= L[i % NDIM];
+			else if (x[i] < 0 && pbc[i % NDIM])
+				x[i] += L[i % NDIM];
+		}
+
+		// FORCE UPDATE
+		CALL_MEMBER_FN(*this, forceCall)();
+
+		// VV VELOCITY UPDATE #2
+		for (i=0; i<vertDOF; i++)
+			v[i] += 0.5*F[i]*dt;
+
+		// update sim clock
+		simclock += dt;
+
+		// print to console and file
+		if (t % NPRINTSKIP == 0){
+			// compute kinetic energy
+			K = vertexKineticEnergy();
+
+			// kinetic temperature
+			T = K/NVTOT;
+
+			// print to console
+			cout << endl << endl;
+			cout << "===============================" << endl;
+			cout << "	D P M  						" << endl;
+			cout << " 			 					" << endl;
+			cout << "	L A N G E V I N 			" << endl;
+			cout << "===============================" << endl;
+			cout << endl;
+			cout << "	** t / NT	= " << t << " / " << NT << endl;
+			cout << "	** U 		= " << setprecision(12) << U << endl;
+			cout << "	** K 		= " << setprecision(12) << K << endl;
+			cout << "	** E 		= " << setprecision(12) << U + K << endl;
+			cout << "	** T  		= " << setprecision(12) << T << endl;
+
+			// print to energy file
+			cout << "** printing energy" << endl;
+			enout << setw(w) << left << t;
+			enout << setw(wnum) << left << simclock;
+			enout << setw(wnum) << setprecision(12) << U;
+			enout << setw(wnum) << setprecision(12) << K;
+			enout << setw(wnum) << setprecision(12) << T;
+			enout << endl;
+
+			// print to configuration only if position file is open
+			if (posout.is_open())
+				printConfiguration2D();
+		}
+	}
+}
+
+// Langevin dynamics with no printing
+void dpm::vertexLangevinNVT2D(dpmMemFn forceCall, double T0, double gam, double dt0, int NT, int NPRINTSKIP){
+	// local variables
+	int t, i;
+	double T, K, simclock, dmp1, dmp2;
+	double r1, r2, grv1, grv2;
+
+	// set time step magnitude
+	setdt(dt0);
+
+	// set damping coefficients
+	dmp1 = exp(-gam*dt);
+	dmp2 = sqrt(1.0 - exp(-2.0*gam*dt))*sqrt(T0);
+
+	// initialize time keeper
+	simclock = 0.0;
+
+	// initialize velocities
+	drawVelocities2D(T0);
+
+	// loop over time, print energy
+	for (t=0; t<NT; t++){
+		// Langevin velocity update #1
+		for (i=0; i<vertDOF; i++)
+			v[i] += 0.5*dt*F[i];
+
+		// Langevin position update #1
+		for (i=0; i<vertDOF; i++){
+			// update position
+			x[i] += 0.5*dt*v[i];
+
+			// recenter in box
+			if (x[i] > L[i % NDIM] && pbc[i % NDIM])
+				x[i] -= L[i % NDIM];
+			else if (x[i] < 0 && pbc[i % NDIM])
+				x[i] += L[i % NDIM];
+		}
+
+		// Langevin random velocity update
+		// use Box-Muller to generate gaussian random variables
+		for (i=0; i<NVTOT; i++){
+			r1 = drand48();
+			r2 = drand48();
+			grv1 = sqrt(-2.0 * log(r1)) * cos(2.0 * PI * r2);
+			grv2 = sqrt(-2.0 * log(r1)) * sin(2.0 * PI * r2);
+
+			// add to both dimensions
+			v[NDIM*i] = dmp1*v[NDIM*i] + dmp2*grv1;
+			v[NDIM*i + 1] = dmp1*v[NDIM*i + 1] + dmp2*grv2;
+		}
+
+		// Langevin position update #2 (based on random kick)
+		for (i=0; i<vertDOF; i++){
+			// update position
+			x[i] += 0.5*dt*v[i];
+
+			// recenter in box
+			if (x[i] > L[i % NDIM] && pbc[i % NDIM])
+				x[i] -= L[i % NDIM];
+			else if (x[i] < 0 && pbc[i % NDIM])
+				x[i] += L[i % NDIM];
+		}
+
+		// FORCE UPDATE
+		CALL_MEMBER_FN(*this, forceCall)();
+
+		// VV VELOCITY UPDATE #2
+		for (i=0; i<vertDOF; i++)
+			v[i] += 0.5*F[i]*dt;
+
+		// update sim clock
+		simclock += dt;
+
+		// print to console and file
+		if (t % NPRINTSKIP == 0){
+			// compute kinetic energy
+			K = vertexKineticEnergy();
+
+			// kinetic temperature
+			T = K/NVTOT;
+
+			// print to console
+			cout << endl << endl;
+			cout << "===============================" << endl;
+			cout << "	D P M  						" << endl;
+			cout << " 			 					" << endl;
+			cout << "	L A N G E V I N 			" << endl;
+			cout << "===============================" << endl;
+			cout << endl;
+			cout << "	** t / NT	= " << t << " / " << NT << endl;
+			cout << "	** U 		= " << setprecision(12) << U << endl;
+			cout << "	** K 		= " << setprecision(12) << K << endl;
+			cout << "	** E 		= " << setprecision(12) << U + K << endl;
+			cout << "	** T  		= " << setprecision(12) << T << endl;
+		}
+	}
+}
+
 
 /******************************
 
@@ -2381,8 +2593,269 @@ void dpm::vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double d
 					cout << " WRITING ENTHALPY-MINIMIZED CONFIG TO FILE" << endl;
 					cout << " ENDING COMPRESSION SIMULATION" << endl;
 					scaleFactor = 1.0;
-					if (!plotCompression)
-						printConfiguration2D();
+					break;
+				}
+			}
+		}
+
+		// scale particle sizes
+		scaleParticleSizes2D(scaleFactor);
+
+		// update packing fraction
+		phi0 = vertexPreferredPackingFraction2D();
+
+		// update iterate
+		k++;
+	}
+}
+
+void dpm::vertexAnneal2Jam2D(dpmMemFn forceCall, double Ftol, double Ptol, double dt0, double dphi0, double T0, double trun, bool plotCompression){
+	// local variables
+	int k = 0, nr, NT = 1, NPRINTSKIP = 1;
+	bool jammed = 0, overcompressed = 0, undercompressed = 0, stalled = 0;
+	double pcheck, phi0, rH, r0, rL, rho0, scaleFactor = 1.0;
+	double gam = 1.0;
+
+	// initialize binary root search parameters
+	r0 = sqrt(a0.at(0));
+	rH = -1;
+	rL = -1;
+
+	// initialize preferred packing fraction
+	phi0 = vertexPreferredPackingFraction2D();
+
+	// save initial state
+	vector<double> xsave(vertDOF, 0.0);
+	vector<double> vsave(vertDOF, 0.0);
+	vector<double> Fsave(vertDOF, 0.0);
+	vector<double> rsave(vertDOF, 0.0);
+	vector<double> l0save(vertDOF, 0.0);
+	vector<double> t0save(vertDOF, 0.0);
+	vector<double> a0save(vertDOF, 0.0);
+
+	xsave = x;
+	rsave = r;
+	l0save = l0;
+	t0save = t0;
+	a0save = a0;
+
+	// loop until jamming is found
+	while (!jammed && k < itmax) {
+		// set length scale by 1st particle preferred area
+		rho0 = sqrt(a0.at(0));
+
+		// run Langevin dynamics only if not root searching
+		if (rH < 0){
+			// get dt
+			setdt(dt0);
+
+			// run NVT for trun time at temperature T
+			NT = (int) floor(trun/dt);
+			NPRINTSKIP = (int) floor((0.05*trun)/dt);
+			vertexLangevinNVT2D(forceCall, T0, gam, dt0, NT, NPRINTSKIP);
+		}
+		
+
+		// relax configuration (pass member function force update)
+		vertexFIRE2D(forceCall, Ftol, dt0);
+
+		// update pressure
+		pcheck = 0.5 * (stress[0] + stress[1]);
+
+		// remove rattlers
+		nr = removeRattlers();
+
+		// boolean checks for jamming
+		undercompressed = ((pcheck < 2.0 * Ptol && rH < 0) || (pcheck < Ptol && rH > 0));
+		overcompressed = (pcheck > 2.0 * Ptol);
+		jammed = (pcheck < 2.0 * Ptol && pcheck > Ptol && rH > 0 && rL > 0);
+		stalled = (rH > 0 && rL > 0 && abs(rH - rL) < 1e-8);
+
+		// output to console
+		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
+		cout << "===============================================" << endl << endl;
+		cout << " 	Q U A S I S T A T I C  						" << endl;
+		cout << " 	  	I S O T R O P I C 						" << endl;
+		cout << "			C O M P R E S S I O N 				" << endl << endl;
+		cout << "===============================================" << endl;
+		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
+		cout << endl;
+		cout << "	* k 			= " << k << endl;
+		cout << "	* phi0 			= " << phi0 << endl;
+		cout << "	* phi 			= " << vertexPackingFraction2D() << endl;
+		cout << "	* scaleFactor 	= " << scaleFactor << endl;
+		cout << "	* r0 			= " << r0 << endl;
+		cout << "	* rH 			= " << rH << endl;
+		cout << "	* rL 			= " << rL << endl;
+		cout << "	* pcheck 		= " << pcheck << endl;
+		cout << "	* U 		 	= " << U << endl;
+		cout << "	* Nvv  			= " << vvContacts() << endl;
+		cout << "	* Ncc 			= " << ccContacts() << endl;
+		cout << "	* # of rattlers = " << nr << endl << endl;
+		cout << "	* undercompressed = " << undercompressed << endl;
+		cout << "	* overcompressed = " << overcompressed << endl;
+		cout << "	* jammed = " << jammed << endl;
+		cout << "	* stalled = " << stalled << endl << endl;
+		if (plotCompression)
+			printConfiguration2D();
+		cout << endl << endl;
+
+		// update particle scaleFactor based on target check
+		if (rH < 0) {
+			// if still undercompressed, then grow until overcompressed found
+			if (undercompressed) {
+				r0 = rho0;
+				scaleFactor = sqrt((phi0 + dphi0) / phi0);
+			}
+			// if first overcompressed, decompress by dphi/2 until unjamming
+			else if (overcompressed) {
+				// current = upper bound length scale r
+				rH = rho0;
+
+				// save first overcompressed state
+				r0 = rH;
+				xsave = x;
+				rsave = r;
+				vsave = v;
+				Fsave = F;
+				l0save = l0;
+				t0save = t0;
+				a0save = a0;
+
+				// shrink particle sizes
+				scaleFactor = sqrt((phi0 - 0.5 * dphi0) / phi0);
+
+				// print to console
+				cout << "	-- -- overcompressed for the first time, scaleFactor = " << scaleFactor << endl;
+			}
+		}
+		else {
+			if (rL < 0) {
+				// if first undercompressed, save last overcompressed state, begin root search
+				if (undercompressed) {
+					// current = new lower bound length scale r
+					rL = rho0;
+
+					// load state
+					x = xsave;
+					r = rsave;
+					v = vsave;
+					F = Fsave;
+					l0 = l0save;
+					t0 = t0save;
+					a0 = a0save;
+
+					// compute new scale factor by root search
+					scaleFactor = 0.5 * (rH + rL) / r0;
+
+					// print to console
+					cout << "	-- -- undercompressed for the first time, scaleFactor = " << scaleFactor << endl;
+					cout << "	-- -- BEGINNING ROOT SEARCH IN ENTHALPY MIN PROTOCOL..." << endl;
+					cout << "	-- -- rH = " << rH << endl;
+					cout << " 	-- -- rL = " << rL << endl;
+					cout << "	-- -- |rH - rL| = " << abs(rH - rL) << endl;
+				}
+				// if still overcompressed, decrement again
+				else if (overcompressed) {
+					// current = upper bound length scale r
+					rH = rho0;
+
+					// save overcompressed state
+					r0 = rH;
+					xsave = x;
+					rsave = r;
+					vsave = v;
+					Fsave = F;
+					l0save = l0;
+					t0save = t0;
+					a0save = a0;
+
+					// keep shrinking at same rate until unjamming
+					scaleFactor = sqrt((phi0 - 0.5 * dphi0) / phi0);
+
+					// print to console
+					cout << "	-- -- overcompressed, still no unjamming, scaleFactor = " << scaleFactor << endl;
+					cout << "	-- -- rH = " << rH << endl;
+					cout << " 	-- -- rL = " << rL << endl;
+					cout << "	-- -- |rH - rL| = " << abs(rH - rL) << endl;
+				}
+			}
+			else {
+				if (stalled) {
+					cout << "Simulation STALLED ... resetting to initial overcompression ... " << endl;
+					cout << "\t * rH = " << rH << endl;
+					cout << "\t * rL = " << rL << endl;
+					cout << "\t * |rH - rL| = " << abs(rH - rL) << endl;
+
+					// reset 
+					rH = -1;
+					rL = -1;
+
+					// load state
+					x = xsave;
+					r = rsave;
+					v = vsave;
+					F = Fsave;
+					l0 = l0save;
+					t0 = t0save;
+					a0 = a0save;
+
+					// compute phi0
+					phi0 = vertexPreferredPackingFraction2D();
+
+					// reset by decompression
+					scaleFactor = sqrt((phi0 - 0.25 * dphi0) / phi0);
+				}
+				// if found undercompressed state, go to state between undercompressed and last overcompressed states (from saved state)
+				else if (undercompressed) {
+					// current = new lower bound length scale r
+					rL = rho0;
+
+					// load state
+					x = xsave;
+					r = rsave;
+					v = vsave;
+					F = Fsave;
+					l0 = l0save;
+					t0 = t0save;
+					a0 = a0save;
+
+					// compute new scale factor by root search
+					scaleFactor = 0.5 * (rH + rL) / r0;
+
+					// print to console
+					cout << "	-- -- undercompressed, scaleFactor = " << scaleFactor << endl;
+					cout << "	-- -- rH = " << rH << endl;
+					cout << " 	-- -- rL = " << rL << endl;
+					cout << "	-- -- |rH - rL| = " << abs(rH - rL) << endl;
+				}
+				else if (overcompressed) {
+					// current = upper bound length scale r
+					rH = rho0;
+
+					// load state
+					x = xsave;
+					r = rsave;
+					v = vsave;
+					F = Fsave;
+					l0 = l0save;
+					t0 = t0save;
+					a0 = a0save;
+
+					// compute new scale factor
+					scaleFactor = 0.5 * (rH + rL) / r0;
+
+					// print to console
+					cout << "	-- -- overcompressed, scaleFactor = " << scaleFactor << endl;
+					cout << "	-- -- rH = " << rH << endl;
+					cout << " 	-- -- rL = " << rL << endl;
+					cout << "	-- -- |rH - rL| = " << abs(rH - rL) << endl;
+				}
+				else if (jammed) {
+					cout << "	** At k = " << k << ", target pressure found!" << endl;
+					cout << " WRITING ENTHALPY-MINIMIZED CONFIG TO FILE" << endl;
+					cout << " ENDING COMPRESSION SIMULATION" << endl;
+					scaleFactor = 1.0;
 					break;
 				}
 			}

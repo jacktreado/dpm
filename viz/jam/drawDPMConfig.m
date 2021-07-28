@@ -5,7 +5,7 @@ close all;
 clc;
 
 % file name string
-fstr = '~/Jamming/CellSim/dpm/pos_dpb.test';
+fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 dpmData = readDPMConfig(fstr);
@@ -37,20 +37,18 @@ phi = dpmData.phi;
 %% Draw cells
 
 % show vertices or not
-showverts = 0;
+showverts = 1;
 
 % get cell colors
 [nvUQ, ~, IC] = unique(nv);
 NUQ = length(nvUQ);
-% bg_green = [65/255 169/255 94/255];
-cellCLR = summer(2*NUQ);
-% cellCLR = repmat(bg_green,NCELLS,1);
+cellCLR = winter(NUQ);
 
 % get frames to plot
 if showverts == 0
     FSTART = 1;
     FSTEP = 1;
-    FEND = 70;
+    FEND = NFRAMES;
 %     FEND = FSTART;
 else
     FSTART = NFRAMES;
@@ -59,7 +57,7 @@ else
 end
 
 % make a movie
-makeAMovie = 1;
+makeAMovie = 0;
 if makeAMovie == 1
     moviestr = 'dpb_jamming.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
