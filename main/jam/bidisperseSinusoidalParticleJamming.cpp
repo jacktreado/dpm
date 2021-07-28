@@ -112,7 +112,7 @@ int main(int argc, char const *argv[])
 
 	// compress to target packing fraction
 	configobj2D.vertexJamming2D(&dpm::repulsiveForceUpdate,Ftol,Ptol,dt0,dphi0,plotCompression);
-	configobj2D.printConfiguration();
+	configobj2D.printConfiguration2D();
 
 	// say goodbye
 	cout << "\n** Finished bidisperseSinusoidalParticleJamming.cpp, ending. " << endl;

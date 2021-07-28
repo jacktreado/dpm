@@ -4,7 +4,10 @@
 // relax shapes + positions, compress to target pressure Ptol (jamming is limit of Ptol -> 0), print configuration
 // 
 // Compilation command:
-// g++ -O3 --std=c++11 -I src main/jam/bidisperseSinusoidalParticleJamming.cpp src/*.cpp -o sinejam.o
+// g++ -O3 --std=c++11 -I src main/jam/bidisperseAnneal2Jam.cpp src/*.cpp -o a2j.o
+// 
+// Example execution:
+// ./a2j.o 16 24 1.02 1.0 0 50 1e-3 1e-6 1e-10 1 pos.test
 // 
 // 
 // Parameter input list
@@ -40,7 +43,7 @@ const double boxLengthScale = 2.5;		// neighbor list box size in units of initia
 const double phi0 = 0.5;				// initial packing fraction
 const double smallfrac = 0.5;			// fraction of small particles
 const double sizeratio = 1.4;			// size ratio between small and large particles
-const double dt0 = 1e-2;				// initial magnitude of time step in units of MD time
+const double dt0 = 2e-2;				// initial magnitude of time step in units of MD time
 
 int main(int argc, char const *argv[])
 {
@@ -67,8 +70,8 @@ int main(int argc, char const *argv[])
 	stringstream calA0ss(calA0_str);
 	stringstream klss(kl_str);
 	stringstream kbss(kb_str);
-	stringstream thAss(thA_str);
-	stringstream thKss(thK_str);
+	stringstream trunss(trun_str);
+	stringstream T0ss(T0_str);
 	stringstream Ptolss(Ptol_str);
 	stringstream Ftolss(Ftol_str);
 	stringstream seedss(seed_str);
@@ -79,8 +82,8 @@ int main(int argc, char const *argv[])
 	calA0ss 		>> calA0;
 	klss 			>> kl;
 	kbss 			>> kb;
-	thAss 			>> trun;
-	thKss 			>> T0;
+	trunss 			>> trun;
+	T0ss 			>> T0;
 	Ptolss			>> Ptol;
 	Ftolss 			>> Ftol;
 	seedss 			>> seed;
@@ -108,7 +111,7 @@ int main(int argc, char const *argv[])
 
 	// compress to target packing fraction
 	configobj2D.vertexAnneal2Jam2D(&dpm::repulsiveForceUpdate,Ftol,Ptol,dt0,dphi0,T0,trun,plotCompression);
-	configobj2D.printConfiguration();
+	configobj2D.printConfiguration2D();
 
 	// say goodbye
 	cout << "\n** Finished bidisperseSinusoidalParticleJamming.cpp, ending. " << endl;
