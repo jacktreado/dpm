@@ -1,4 +1,4 @@
-function [a, calA, voroAreas, voroCalA] = getSurfaceVoronoi(xpos,ypos,nv,L)
+function [voroAreas, voroCalA] = getSurfaceVoronoi(xpos,ypos,nv,L)
 %% Get Voronoi diagram from Delaunay triangulation
 
 % number of particles
@@ -7,9 +7,6 @@ NCELLS = length(nv);
 % all vertices + interpolated points
 NINTERP = 15;
 NVTOT = (NINTERP+1)*sum(nv);
-
-xall = cell2mat(xpos);
-yall = cell2mat(ypos);
 
 % get vertices in global coordinates
 gx = zeros(9*NVTOT,1);
@@ -145,27 +142,10 @@ for cc = 1:NCELLS
     svoroFaceList{cc} = ftmp;
 end
 
-% get particle areas
-a = zeros(NCELLS,2);
-calA = zeros(NCELLS,1);
+% get calA for voronoi cells
 voroCalA = zeros(NCELLS,1);
 for cc = 1:NCELLS
-    % cell shape parameters
-    xtmp = xpos{cc};
-    ytmp = ypos{cc};
-    atmp = polyarea(xpos{cc},ypos{cc});
-    ip1 = [2:nv(cc) 1];
-    lx = xtmp(ip1) - xtmp;
-    ly = ytmp(ip1) - ytmp;
-    l = sqrt(lx.^2 + ly.^2);
-    ptmp = sum(l);
-    
-    a(cc,1) = atmp;
-    a(cc,2) = atmp + 0.25*pi*(l0(cc)^2)*(0.5*nv(nn)-1);
-    calAn = nv(cc)*tan(pi/nv(cc))/pi;
-    calA(cc) = (ptmp^2/(4.0*pi*atmp))/calAn;
-    
-    % get info for cell
+    % get data for cell
     ftmp = svoroFaceList{cc};
     vatmp = voroAreas(cc);
     lx = V([ftmp(2:end); ftmp(1)],1) - V(ftmp,1);
@@ -173,6 +153,7 @@ for cc = 1:NCELLS
     l = sqrt(lx.^2  + ly.^2);
     vptmp = sum(l);
     
+    % compute shape parameter
     voroCalA(cc) = vptmp^2/(4.0*pi*vatmp);
 end
 

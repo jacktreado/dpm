@@ -29,9 +29,8 @@ zc                  = cell(NEN,1);
 zv                  = cell(NEN,1);
 
 % voronoi arrays
-aList               = cell(NSIM,1);         % particle areas
-voroAreasList       = cell(NSIM,1);         % voronoi areas
-voroCalAList        = cell(NSIM,1);         % voronoi calA
+voroAreas           = cell(NEN,1);         % voronoi areas
+voroCalA            = cell(NEN,1);         % voronoi calA
 
 % loop over ensemble
 for ee = 1:NEN
@@ -94,12 +93,11 @@ for ee = 1:NEN
     fprintf('* Computing Voronoi data for sim ...\n');
     xpos = dpmConfigData.xpos;
     ypos = dpmConfigData.ypos;
-    [voroAreas, voroCalA] = getSurfaceVoronoi(xpos,ypos,nv,L(1));
+    [voroAreasTmp, voroCalATmp] = getSurfaceVoronoi(xpos,ypos,nv,L(1));
     fprintf('...Voronoi done!\n');
     
-    aList{ss} = a;
-    voroAreasList{ss} = voroAreas;
-    voroCalAList{ss} = voroCalA;
+    voroAreas{ss} = voroAreasTmp;
+    voroCalA{ss} = voroCalATmp;
 end
 
 % delete extra entries
@@ -112,9 +110,11 @@ stdCalA(fskip) = [];
 calA0(fskip) = [];
 zv(fskip) = [];
 zc(fskip) = [];
+voroAreas(fskip) = [];
+voroCalA(fskip) = [];
 
 
 % save
-save(savestr,'filename','phi','S','calA','meanCalA','stdCalA','calA0','zv','zc');
+save(savestr,'filename','phi','S','calA','meanCalA','stdCalA','calA0','zv','zc','voroAreas','voroCalA');
 
 end
