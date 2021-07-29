@@ -43,7 +43,7 @@ tumor2D::tumor2D(string &inputFileStr,int seed) : dpm(2) {
 	}
 
 	// set variables to default
-	gamtt=0.0; v0=0.0; Dr0=0.0; Ds=0.0; kecm = 0.0; ecmbreak = 0.0; pbc[0]=0; pbc[1]=0;
+	gamtt=0.0; v0=0.0; Dr0=0.0; Ds=0.0; kecm = 0.0; ecmbreak = 0.0; pbc[0]=0; pbc[1]=1;
 
 	// local variables
 	int nvtmp, ci, vi, i;
@@ -1078,6 +1078,7 @@ void tumor2D::updateECMAttachments(bool attach){
 	// update positions
 	for (ci=tN; ci<NCELLS; ci++){
 		com2D(ci,cx,cy);
+		cerr << "pin at ci = " << ci << ": " << pinattach.at(ci-tN) << endl;
 		pinpos.at(NDIM*(ci-tN)) = cx;
 		pinpos.at(NDIM*(ci-tN) + 1) = cy;
 	}
@@ -2349,6 +2350,7 @@ void tumor2D::tumorCompression(double Ftol, double Ptol, double dt0, double dphi
 
 
 // invasion protocol
+// DEBUG FORCE CALL FROM interfaceInvasion.cpp
 void tumor2D::invasion(tumor2DMemFn forceCall, double dDr, double dPsi, double Drmin, int NT, int NPRINTSKIP){
 	// check correct setup
 	setupCheck();
@@ -2358,6 +2360,7 @@ void tumor2D::invasion(tumor2DMemFn forceCall, double dDr, double dPsi, double D
 	double t = 0.0, zta, Drtmp;
 
 	// attach pins
+	cerr << "updating ecm ..." << endl;
 	updateECMAttachments(1);
 
 	// loop over time, have active brownian crawlers invade adipocytes
@@ -2374,9 +2377,11 @@ void tumor2D::invasion(tumor2DMemFn forceCall, double dDr, double dPsi, double D
 		}
 
 		// update forces
+		cerr << "updating forces ..." << endl;
 		CALL_MEMBER_FN(*this, forceCall)();
 
 		// update active brownian crawler
+		cerr << "updating crawler ..." << endl;
 		activeBrownianCrawlerUpdate();
 
 		// update positions (EULER UPDATE, OVERDAMPED)
