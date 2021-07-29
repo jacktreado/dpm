@@ -4,7 +4,7 @@
 #SBATCH -t 0-06:00:00
 #SBATCH --job-name=a2j_process
 #SBATCH -o out/a2j_process.out
-#SBATCH --mem-per-cpu=2000
+#SBATCH --mem-per-cpu=20000
 
 # load MATLAB
 module load MATLAB
