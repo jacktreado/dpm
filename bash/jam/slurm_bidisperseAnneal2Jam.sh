@@ -1,10 +1,10 @@
 #!/bin/bash
 
-#SBATCH -p day
+#SBATCH -p scavenge
 #SBATCH -t 0-01:00:00
 #SBATCH --job-name=a2j_process
 #SBATCH -o out/a2j_process.out
-#SBATCH --mem-per-cpu=30G
+#SBATCH --mem-per-cpu=10G
 
 # load MATLAB
 module load MATLAB

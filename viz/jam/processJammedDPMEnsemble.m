@@ -53,7 +53,7 @@ for ee = 1:NEN
     end
     
     % save file name for parameters
-    filename{ee} = filename;
+    filename{ee} = fname;
     
     % load in data
     dpmConfigData = readDPMConfig(fstr);
@@ -106,49 +106,52 @@ for ee = 1:NEN
     voroAreas{ee} = voroAreasTmp;
     voroCalA{ee} = voroCalATmp;
     
-    % save and append
-    inds = ~fskip(1:ee);
-    s.filename = filename(inds);
-    s.NFRAMES = NFRAMES(inds);
-    s.NFRAMES = NCELLS(inds);
-    s.nv = nv(inds);
-    s.L = L(inds,:);
-    s.phi = phi(inds);
-    s.S = S(inds);
-    s.calA = calA(inds);
-    s.meanCalA = meanCalA(inds);
-    s.stdCalA = stdCalA(inds);
-    s.calA0 = calA0(inds);
-    s.zv = zv(inds);
-    s.zc = zc(inds);
-    s.voroAreas = voroAreas(inds);
-    s.voroCalA = voroCalA(inds);
-    
-    fprintf('On ee = %d, saving save file ...\n',ee);
-    save(savestr,'-struct','s');
+%     % save and append
+%     inds = ~fskip(1:ee);
+%     s.filename = filename(inds);
+%     s.NFRAMES = NFRAMES(inds);
+%     s.NFRAMES = NCELLS(inds);
+%     s.nv = nv(inds);
+%     s.L = L(inds,:);
+%     s.phi = phi(inds);
+%     s.S = S(inds);
+%     s.calA = calA(inds);
+%     s.meanCalA = meanCalA(inds);
+%     s.stdCalA = stdCalA(inds);
+%     s.calA0 = calA0(inds);
+%     s.zv = zv(inds);
+%     s.zc = zc(inds);
+%     s.voroAreas = voroAreas(inds);
+%     s.voroCalA = voroCalA(inds);
+%     sdata = whos('s');
+%     
+%     fprintf('On ee = %d, saving save file for struct of size %0.5g MB...\n',ee,sdata.bytes/1e6);
+%     tic;
+%     save(savestr,'-struct','s');
+%     toc;
 end
 
-% % delete extra entries
-% fprintf('Delete unneeded entries ...\n');
-% filename(fskip) = [];
-% NFRAMES(fskip) = [];
-% NCELLS(fskip) = [];
-% nv(fskip) = [];
-% L(fskip,:) = [];
-% phi(fskip) = [];
-% S(fskip,:) = [];
-% calA(fskip) = [];
-% meanCalA(fskip) = [];
-% stdCalA(fskip) = [];
-% calA0(fskip) = [];
-% zv(fskip) = [];
-% zc(fskip) = [];
-% voroAreas(fskip) = [];
-% voroCalA(fskip) = [];
-% 
-% % save
-% fprintf('Saving to file ...\n');
-% save(savestr,'filename','NFRAMES','NCELLS','nv','L','phi','S','calA','meanCalA','stdCalA','calA0','zv','zc','voroAreas','voroCalA');
+% delete extra entries
+fprintf('Delete unneeded entries ...\n');
+filename(fskip) = [];
+NFRAMES(fskip) = [];
+NCELLS(fskip) = [];
+nv(fskip) = [];
+L(fskip,:) = [];
+phi(fskip) = [];
+S(fskip,:) = [];
+calA(fskip) = [];
+meanCalA(fskip) = [];
+stdCalA(fskip) = [];
+calA0(fskip) = [];
+zv(fskip) = [];
+zc(fskip) = [];
+voroAreas(fskip) = [];
+voroCalA(fskip) = [];
+
+% save
+fprintf('Saving to file ...\n');
+save(savestr,'filename','NFRAMES','NCELLS','nv','L','phi','S','calA','meanCalA','stdCalA','calA0','zv','zc','voroAreas','voroCalA');
 
 
 fprintf('Thats all! Saved data to %s, ending MATLAB portion.\n',savestr);
