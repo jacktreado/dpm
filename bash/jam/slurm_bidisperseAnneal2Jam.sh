@@ -10,7 +10,7 @@
 module load MATLAB
 
 # user's netid
-netid="$USER"
+netid=jdt45
 
 # matlab input information
 NCELLS=64

@@ -43,21 +43,56 @@ ecmbreak="${11}"
 dDr="${12}"
 dPsi="${13}"
 Drmin="${14}"
+NT="${15}"
+NPRINTSKIP="${16}"
 
 # inputs about cluster
-partition="${15}"
-time="${16}"
-startSeed="${17}"
-endSeed="${18}"
+partition="${17}"
+time="${18}"
+startSeed="${19}"
+endSeed="${20}"
 
 # name strings
 inputstr=intInit_aN"$aN"_ac"$aCalA0"_tc"$tCalA0"_aR"$areaRatio"
-basestr=intInvade_aN"$aN"_ac"$aCalA0"_tc"$tCalA0"_aR"$areaRatio"_l1"$l1"_l2"$l2"_v0"$v0"_Dr"$Dr"_dPsi"$dPsi"
+basestr=intInvade_NT"$NT"_aN"$aN"_ac"$aCalA0"_tc"$tCalA0"_aR"$areaRatio"_l1"$l1"_l2"$l2"_v0"$v0"_Dr"$Dr"
 runstr="$basestr"_startseed"$startSeed"_endseed"$endSeed"
 
 # make directory specific for this simulation
 simdatadir=$outputdir/$basestr
 mkdir -p $simdatadir
+
+# create paramf
+paramf="$simdatadir"/"$basestr".params
+echo inputstr=$inputstr >> $paramf
+echo NT=$NT >> $paramf
+echo aN=$aN >> $paramf
+echo aCalA0=$aCalA0 >> $paramf
+echo tCalA0=$tCalA0 >> $paramf
+echo areaRatio=$areaRatio >> $paramf
+echo l1=$l1 >> $paramf
+echo l2=$l2 >> $paramf
+echo v0=$v0 >> $paramf
+echo Dr=$Dr >> $paramf
+echo Ds=$Ds >> $paramf
+echo kecm=$kecm >> $paramf
+echo ecmbreak=$ecmbreak >> $paramf
+echo dDr=$dDr >> $paramf
+echo dPsi=$dPsi >> $paramf
+echo Drmin=$Drmin >> $paramf
+echo NPRINTSKIP=$NPRINTSKIP >> $paramf
+echo partition=$partition >> $paramf
+echo time=$time >> $paramf
+echo startSeed=$startSeed >> $paramf
+echo endSeed=$endSeed >> $paramf
+cat $paramf
+
+
+
+
+
+
+
+
 
 # compile into binary using packing.h
 binf=bin/"$runstr".o
@@ -124,10 +159,10 @@ for f in flist; do
     fi
 
     # create output file
-    outputf=$simdatadir/"$basestr"_seed"$seed".vdos
+    outputf=$simdatadir/"$basestr"_seed"$seed".pos
 
     # create runString
-    runString="./$binf $f $kl $kb $vdosf"
+    runString="./$binf $f $NT $NPRINTSKIP $l1 $l2 $v0 $Dr $Ds $kecm $ecmbreak $dDr $dPsi $Drmin $seed $outputf"
 
     # echo to task file
     echo "$runString" >> $taskf
@@ -163,6 +198,7 @@ echo \#SBATCH -J $job_name >> $slurmf
 echo \#SBATCH -o $runout >> $slurmf
 echo sed -n \"\$\{SLURM_ARRAY_TASK_ID\}p\" "$taskf" \| /bin/bash >> $slurmf
 cat $slurmf
+
 
 # run sbatch file
 echo -- running on slurm in partition $partition
