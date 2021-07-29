@@ -1811,6 +1811,26 @@ void tumor2D::stickyTumorInterfaceForces(){
 			// real particle index
 			gi = pi - 1;
 
+			// check boundary forces
+			xi = x[NDIM*gi];
+			ri = r[gi];
+			if (xi < ri){
+				// update forces
+				fx = kc*(1.0 - (xi/ri))/ri;
+				F[NDIM*gi] += fx;
+
+				// update wall stress
+				wpress[0] += fx/L[1];
+			}
+			else if (xi > L[0] - ri){
+				// update forces
+				fx = -kc*(1.0 - ((L[0] - xi)/ri))/ri;
+				F[NDIM*gi] += fx;
+
+				// update wall stresses
+				wpress[1] -= fx/L[1];
+			}
+
 			// cell index of gi
 			cindices(ci, vi, gi);
 
