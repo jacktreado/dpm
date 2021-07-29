@@ -108,6 +108,7 @@ for ee = 1:NEN
 end
 
 % delete extra entries
+fprintf('Delete unneeded entries ...\n');
 filename(fskip) = [];
 NFRAMES(fskip) = [];
 NCELLS(fskip) = [];
@@ -124,9 +125,12 @@ zc(fskip) = [];
 voroAreas(fskip) = [];
 voroCalA(fskip) = [];
 
-
 % save
+fprintf('Saving to file ...\n');
 save(savestr,'filename','NFRAMES','NCELLS','nv','L','phi','S','calA',...
     'meanCalA','stdCalA','calA0','zv','zc','voroAreas','voroCalA');
+
+
+fprintf('Thats all! Saved data to %s, ending MATLAB portion.\n',savestr);
 
 end
