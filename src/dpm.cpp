@@ -985,6 +985,7 @@ void dpm::initializeNeighborLinkedList2D(double boxLengthScale) {
 void dpm::sortNeighborLinkedList2D() {
 	// local variables
 	int d, gi, boxid, sbtmp;
+	double xtmp;
 
 	// reset linked list info
 	fill(list.begin(), list.end(), 0);
@@ -997,8 +998,25 @@ void dpm::sortNeighborLinkedList2D() {
 		boxid = 0;
 		sbtmp = 1;
 		for (d = 0; d < NDIM; d++) {
+			// current location
+			xtmp = x[NDIM * gi + d];
+
+			// check out-of-bounds
+			if (xtmp < 0){
+				if (pbc[d])
+					xtmp += L[d];
+				else
+					xtmp = 0.00001;
+			}
+			else if (xtmp > L[d]){
+				if (pbc[d])
+					xtmp -= L[d];
+				else
+					xtmp = 0.99999*L[d];
+			}
+
 			// add d index to 1d list
-			boxid += floor(x[NDIM * gi + d] / lb[d]) * sbtmp;
+			boxid += floor(xtmp / lb[d]) * sbtmp;
 
 			// increment dimensional factor
 			sbtmp *= sb[d];
@@ -3467,7 +3485,8 @@ void dpm::dpmRepulsiveHarmonicSprings2D(Eigen::MatrixXd &Hvv, Eigen::MatrixXd &S
 *******************************/
 
 void dpm::printNeighborList() {
-	int i,j;
+	int i,j,gi,d,boxid,sbtmp;
+	double xtmp;
 
 	cout << "NBX = " << NBX << endl;
 	cout << "L_x = " << L[0] << ",  L_y = " << L[1] << endl;
@@ -3479,6 +3498,52 @@ void dpm::printNeighborList() {
 			cout << nn.at(i).at(j) << "  ";
 		}
 		cout << endl;
+	}
+
+	sortNeighborLinkedList2D();
+
+	// loop over particles, plot location
+	cout << endl << endl;
+	cout << "PARTICLE BOX ID:" << endl;
+	for (gi=0; gi<NVTOT; gi++){
+		// 1. get cell id of current particle position
+		boxid = 0;
+		sbtmp = 1;
+		for (d = 0; d < NDIM; d++) {
+			// current location
+			xtmp = x[NDIM * gi + d];
+
+			// check out-of-bounds
+			if (xtmp < 0){
+				if (pbc[d])
+					xtmp += L[d];
+				else
+					xtmp = 0.00001;
+			}
+			else if (xtmp > L[d]){
+				if (pbc[d])
+					xtmp -= L[d];
+				else
+					xtmp = 0.99999*L[d];
+			}
+
+			// add d index to 1d list
+			boxid += floor(xtmp / lb[d]) * sbtmp;
+
+			// increment dimensional factor
+			sbtmp *= sb[d];
+		}
+		cout << "gi=" << gi << ";  boxid=" << boxid << "/" << NBX << endl;
+		if (boxid < 0 || boxid >= NBX)
+			cout << "** NOTE: boxid=" << boxid << ", BUT NBX=" << NBX << endl;
+	}
+
+
+	// loop over list
+	cout << endl << endl;
+	cout << "PARTICLE LIST ID:" << endl;
+	for (gi=0; gi<NVTOT; gi++){
+		cout << "gi=" << gi << ",  pi=" << gi+1 << ", list[pi]=" << list[gi+1] << endl;
 	}
 }
 

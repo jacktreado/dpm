@@ -66,13 +66,16 @@ for xx = -1:1
 end
 
 % make delaunay
+fprintf('** ** in voro, making DT\n');
 DT = delaunayTriangulation(gx,gy);
 
 % voronoi diagram
+fprintf('** ** in voro, getting voro from DT\n');
 [V,e] = voronoiDiagram(DT);
 
 voroAreas = zeros(NCELLS,1);
 svoroEdgeInfo = cell(NCELLS,1);
+fprintf('** ** in voro, merging associated cells to make svoro\n');
 for vv = 1:NVTOT
     vvi = e{vv};
     vinfo = V(vvi,:);
@@ -121,6 +124,7 @@ for vv = 1:NVTOT
 end
 
 % clean face list
+fprintf('** ** in voro, cleaning face list\n');
 svoroFaceList = cell(NCELLS,1);
 for cc = 1:NCELLS
     % face list
@@ -142,7 +146,15 @@ for cc = 1:NCELLS
     svoroFaceList{cc} = ftmp;
 end
 
+% clear heavy data locally
+fprintf('** ** in voro, clearing heavy data\n');
+clear('svoroEdgeInfo');
+clear('gx');
+clear('gy');
+clear('DT');
+
 % get calA for voronoi cells
+fprintf('** ** in voro, getting svoro calA values\n');
 voroCalA = zeros(NCELLS,1);
 for cc = 1:NCELLS
     % get data for cell
@@ -156,6 +168,10 @@ for cc = 1:NCELLS
     % compute shape parameter
     voroCalA(cc) = vptmp^2/(4.0*pi*vatmp);
 end
+fprintf('** ** in voro, clearing face info\n');
+clear('svoroFaceList');
+clear('V');
+clear('e');
 
 
 end

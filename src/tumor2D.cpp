@@ -1078,7 +1078,6 @@ void tumor2D::updateECMAttachments(bool attach){
 	// update positions
 	for (ci=tN; ci<NCELLS; ci++){
 		com2D(ci,cx,cy);
-		cerr << "pin at ci = " << ci << ": " << pinattach.at(ci-tN) << endl;
 		pinpos.at(NDIM*(ci-tN)) = cx;
 		pinpos.at(NDIM*(ci-tN) + 1) = cy;
 	}
@@ -1420,8 +1419,10 @@ void tumor2D::stickyTumorForces() {
 									// increase potential energy
 									U += 0.5*kc*(pow(1.0 - xij,2.0) - l1*l2);
 								}
-								else
+								else{
+									pj = list[pj];
 									continue;
+								}
 							}
 
 							// force elements
@@ -1519,8 +1520,10 @@ void tumor2D::stickyTumorForces() {
 										// increase potential energy
 										U += 0.5*kc*(pow(1.0 - xij,2.0) - l1*l2);
 									}
-									else
+									else{
+										pj = list[pj];
 										continue;
+									}
 								}
 
 								// force elements
@@ -1865,8 +1868,10 @@ void tumor2D::stickyTumorInterfaceForces(){
 									// increase potential energy
 									U += 0.5*kc*(pow(1.0 - xij,2.0) - l1*l2);
 								}
-								else
+								else{
+									pj = list[pj];
 									continue;
+								}
 							}
 
 							// force elements
@@ -1964,8 +1969,10 @@ void tumor2D::stickyTumorInterfaceForces(){
 										// increase potential energy
 										U += 0.5*kc*(pow(1.0 - xij,2.0) - l1*l2);
 									}
-									else
+									else{
+										pj = list[pj];
 										continue;
+									}
 								}
 
 								// force elements
@@ -2360,7 +2367,6 @@ void tumor2D::invasion(tumor2DMemFn forceCall, double dDr, double dPsi, double D
 	double t = 0.0, zta, Drtmp;
 
 	// attach pins
-	cerr << "updating ecm ..." << endl;
 	updateECMAttachments(1);
 
 	// loop over time, have active brownian crawlers invade adipocytes
@@ -2377,11 +2383,9 @@ void tumor2D::invasion(tumor2DMemFn forceCall, double dDr, double dPsi, double D
 		}
 
 		// update forces
-		cerr << "updating forces ..." << endl;
 		CALL_MEMBER_FN(*this, forceCall)();
 
 		// update active brownian crawler
-		cerr << "updating crawler ..." << endl;
 		activeBrownianCrawlerUpdate();
 
 		// update positions (EULER UPDATE, OVERDAMPED)

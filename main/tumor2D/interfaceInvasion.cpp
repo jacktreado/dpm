@@ -6,7 +6,7 @@
 // g++ -O3 --std=c++11 -I src main/tumor2D/interfaceInvasion.cpp src/*.cpp -o tumor.o
 // 
 // Example execution:
-// ./tumor.o input.test 1e5 1e3 0.005 0.05 0.05 0.1 0.2 0.5 0.1 0 0.01 1e-4 1 pos.test
+// ./tumor.o input.test 1e5 1e1 0.005 0.05 0.05 0.1 0.2 0.5 0.1 0 0.01 1e-4 1 pos.test
 // 
 // 
 
@@ -120,6 +120,7 @@ int main(int argc, char const *argv[])
 
 	// initialize neighbor linked list
 	tumor2Dobj.initializeNeighborLinkedList2D(boxLengthScale);
+	tumor2Dobj.printNeighborList();
 
 	// invasion
 	cout << "Running invasion protocol..." << endl;
