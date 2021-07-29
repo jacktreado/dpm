@@ -86,8 +86,8 @@ for ee = 1:NEN
     
     l0tmp = dpmConfigData.l0;
     a0tmp = dpmConfigData.a0;
-    calA0tmp = zeros(NCELLS,1);
-    for nn = 1:NCELLS
+    calA0tmp = zeros(NCELLS(ee),1);
+    for nn = 1:NCELLS(ee)
         p0tmp = sum(l0tmp{nn});
         calA0tmp(nn) = p0tmp^2/(4.0*pi*a0tmp(nn));
     end
