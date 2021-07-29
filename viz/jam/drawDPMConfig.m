@@ -4,8 +4,44 @@ clear;
 close all;
 clc;
 
-% file name string
-fstr = '~/Jamming/CellSim/dpm/pos.test';
+% universal params
+Nstr = '64';
+nstr = '24';
+calA0str = '1.20';
+kbstr = '0';
+seedstr = '17';
+
+% simtype
+simstr = 'a2j';
+
+% info to edit
+datadir = 'local/jam_data';
+
+% anneal2Jam sims
+if strcmp(simstr,'a2j')
+    % a2j params
+    trunstr = '50';
+    T0str = '1e-3';
+    
+    % a2j file pattern
+    fpattern = [simstr '_N' Nstr '_n' nstr '_calA0' calA0str '_kb' kbstr '_trun' trunstr '_T0' T0str '_seed' seedstr];
+    
+% lobed particle sims
+elseif strcmp(simstr,'lobes')
+    % a2j params
+    thAstr = '1.0';
+    thKstr = '1.0';
+    
+    % a2j file pattern
+    fpattern = [simstr '_N' Nstr '_n' nstr '_calA0' calA0str 'kb' kbstr '_thA' thAstr '_thK' thKstr '_seed' seedstr];
+else
+    error('drawDPMConfig:simNotSupported','Error: %s simtype not yet supported, ending here. Check spelling and redo.\n',simstr);
+end
+
+% file info
+vizdir = pwd;
+fname = [fpattern '.pos'];
+fstr = [vizdir '/' datadir '/' fname];
 
 % read in data
 dpmData = readDPMConfig(fstr);

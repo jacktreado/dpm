@@ -19,6 +19,10 @@ fskip       = false(NEN,1);
 
 % data to save
 filename            = cell(NEN,1);
+NFRAMES             = zeros(NEN,1);
+NCELLS              = zeros(NEN,1);        % number of cells in each sim
+nv                  = cell(NEN,1);         % # of vertices on each particle
+L                   = zeros(NEN,2);        % box lengths
 phi                 = zeros(NEN,1);
 S                   = zeros(NEN,3);
 calA                = cell(NEN,1);
@@ -55,13 +59,16 @@ for ee = 1:NEN
     dpmConfigData = readDPMConfig(fstr);
     
     % check # of frames
-    NFRAMES = dpmConfigData.NFRAMES;
-    if NFRAMES ~= 1
-        fprintf('** File %s has %d frames, skipping...\n',fname,NFRAMES);
+    NFRAMEStmp = dpmConfigData.NFRAMES;
+    if NFRAMEStmp ~= 1
+        fprintf('** File %s has %d frames, skipping...\n',fname,NFRAMEStmp);
         fskip(ee) = true;
         continue;
     end
-    NCELLS = dpmConfigData.NCELLS;
+    NFRAMES(ee) = NFRAMEStmp;
+    NCELLS(ee) = dpmConfigData.NCELLS;
+    nv{ee} = dpmConfigData.nv;
+    L(ee,:) = dpmConfigData.L;
     
     % save data
     phi(ee) = dpmConfigData.phi;
@@ -91,17 +98,21 @@ for ee = 1:NEN
     
     % voronoi
     fprintf('* Computing Voronoi data for sim ...\n');
-    xpos = dpmConfigData.xpos;
-    ypos = dpmConfigData.ypos;
-    [voroAreasTmp, voroCalATmp] = getSurfaceVoronoi(xpos,ypos,nv,L(1));
+    x = dpmConfigData.x;
+    y = dpmConfigData.y;
+    [voroAreasTmp, voroCalATmp] = getSurfaceVoronoi(x,y,nv{ee},L(ee,1));
     fprintf('...Voronoi done!\n');
     
-    voroAreas{ss} = voroAreasTmp;
-    voroCalA{ss} = voroCalATmp;
+    voroAreas{ee} = voroAreasTmp;
+    voroCalA{ee} = voroCalATmp;
 end
 
 % delete extra entries
 filename(fskip) = [];
+NFRAMES(fskip) = [];
+NCELLS(fskip) = [];
+nv(fskip) = [];
+L(fskip,:) = [];
 phi(fskip) = [];
 S(fskip,:) = [];
 calA(fskip) = [];
@@ -115,6 +126,7 @@ voroCalA(fskip) = [];
 
 
 % save
-save(savestr,'filename','phi','S','calA','meanCalA','stdCalA','calA0','zv','zc','voroAreas','voroCalA');
+save(savestr,'filename','NFRAMES','NCELLS','nv','L','phi','S','calA',...
+    'meanCalA','stdCalA','calA0','zv','zc','voroAreas','voroCalA');
 
 end
