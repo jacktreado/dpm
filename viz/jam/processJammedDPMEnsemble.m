@@ -127,8 +127,7 @@ voroCalA(fskip) = [];
 
 % save
 fprintf('Saving to file ...\n');
-save(savestr,'filename','NFRAMES','NCELLS','nv','L','phi','S','calA',...
-    'meanCalA','stdCalA','calA0','zv','zc','voroAreas','voroCalA');
+save(savestr,'filename','NFRAMES','NCELLS','nv','L','phi','S','calA','meanCalA','stdCalA','calA0','zv','zc','voroAreas','voroCalA');
 
 
 fprintf('Thats all! Saved data to %s, ending MATLAB portion.\n',savestr);
