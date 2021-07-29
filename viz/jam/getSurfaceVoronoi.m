@@ -172,6 +172,7 @@ fprintf('** ** in voro, clearing face info\n');
 clear('svoroFaceList');
 clear('V');
 clear('e');
+clear('ci');
 
 
 end
