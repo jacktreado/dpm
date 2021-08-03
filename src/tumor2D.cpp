@@ -43,7 +43,7 @@ tumor2D::tumor2D(string &inputFileStr,int seed) : dpm(2) {
 	}
 
 	// set variables to default
-	gamtt=0.0; v0=0.0; Dr0=0.0; Ds=0.0; kecm = 0.0; ecmbreak = 0.0; pbc[0]=0; pbc[1]=1;
+	gamtt=0.0; v0=0.0; Dr0=0.0; Ds=0.0; tau=0.0; kecm=0.0; ecmbreak=0.0; pbc[0]=0; pbc[1]=1;
 
 	// local variables
 	int nvtmp, ci, vi, i;
@@ -987,7 +987,7 @@ void tumor2D::divide(int ci){
 
 // -- CRAWLING CELLS
 
-// update psi based on Dr
+// update psi based on Dr only
 void tumor2D::psiDiffusion(){
 	// local variables
 	int ci;
@@ -1005,8 +1005,40 @@ void tumor2D::psiDiffusion(){
 	}
 }
 
+// update psi based on Vicsek update
+void tumor2D::psiVicsek(){
+	// local variables
+	int ci, vi;
+	double r1, r2, grv, Fx, Fy, Fth, Fnorm;
 
-void tumor2D::activeBrownianCrawlerUpdate(){
+	// update director for each cell
+	for (ci=0; ci<tN; ci++){
+		// generate random variable
+		r1 = drand48();
+		r2 = drand48();
+		grv = sqrt(-2.0*log(r1))*cos(2.0*PI*r2);
+
+		// compute instantaneous force (=velocity) angle
+		Fx = 0.0;
+		Fy = 0.0;
+		for (vi=0; vi<nv[ci]; vi++){
+			Fx += F[NDIM*ci];
+			Fy += F[NDIM*ci + 1];
+		}
+		Fth = atan2(Fy,Fx);
+		Fnorm = sqrt(Fx*Fx + Fy*Fy);
+		Fx = Fx/Fnorm;
+		Fy = Fy/Fnorm;
+
+		// update director for cell ci
+		// psi[ci] += dt*((Fth - psi[ci])/tau) + sqrt(2.0*dt*Dr[ci])*grv;
+		psi[ci] += dt*asin(cos(psi[ci])*Fy - sin(psi[ci])*Fx)/tau + sqrt(2.0*dt*Dr[ci])*grv;
+	}
+}
+
+
+// 
+void tumor2D::crawlerUpdate(){
 	// local variables
 	int gi, ci, vi;
 	double cx, cy, rix, riy, ux, uy, psitmp, dpsi, v0tmp, rnorm;
@@ -2406,7 +2438,7 @@ void tumor2D::invasion(tumor2DMemFn forceCall, double dDr, double dPsi, double D
 		CALL_MEMBER_FN(*this, forceCall)();
 
 		// update active brownian crawler
-		activeBrownianCrawlerUpdate();
+		crawlerUpdate();
 
 		// update positions (EULER UPDATE, OVERDAMPED)
 		for (i=0; i<vertDOF; i++)
@@ -2456,7 +2488,7 @@ void tumor2D::invasion(tumor2DMemFn forceCall, double dDr, double dPsi, double D
 
 
 // just get them bois crawlin'
-void tumor2D::crawling(tumor2DMemFn forceCall, int NT, int NPRINTSKIP){
+void tumor2D::crawling(tumor2DMemFn forceCall, tumor2DMemFn psiCall, int NT, int NPRINTSKIP){
 	// check correct setup
 	setupCheck();
 
@@ -2477,15 +2509,15 @@ void tumor2D::crawling(tumor2DMemFn forceCall, int NT, int NPRINTSKIP){
 		// update forces
 		CALL_MEMBER_FN(*this, forceCall)();
 
-		// update active brownian crawler
-		activeBrownianCrawlerUpdate();
+		// update crawling forces
+		crawlerUpdate();
 
 		// update positions (EULER UPDATE, OVERDAMPED)
 		for (i=0; i<vertDOF; i++)
 			x[i] += dt * F[i];
 
 		// update psi based on persistence
-		psiDiffusion();
+		CALL_MEMBER_FN(*this, psiCall)();
 
 		// update time
 		t += dt;

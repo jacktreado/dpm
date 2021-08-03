@@ -10,7 +10,7 @@
 module load MATLAB
 
 # user's netid
-netid=jdt45
+netid="$USER"
 
 # matlab input information
 NCELLS=64
@@ -24,7 +24,7 @@ T0=$2
 jamstr=a2j_N"$NCELLS"_n"$nsmall"_calA0"$calA0"_kb"$kb"_trun"$trun"_T0"$T0"
 
 # simulation directory string
-simloc=/gpfs/project/fas/ohern/"$netid"/dpm/jam
+simloc=/gpfs/loomis/pi/ohern/"$netid"/dpm/jam
 simstr=$simloc/$jamstr/"$jamstr"_seed
 
 # matlab string

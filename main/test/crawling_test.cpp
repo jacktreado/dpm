@@ -16,13 +16,14 @@ using namespace std;
 
 int main(){
 	// local variables
-	int NCELLS = 16, tNV = 20, seed = 1;
+	int NCELLS = 64, tNV = 24, seed = 1;
 	int NT = 1e6, NPRINTSKIP = 5e3;
-	double tCalA0 = 1.15, tDisp = 0.15;
+	double tCalA0 = 1.16, tDisp = 0.1;
 	double phi0 = 0.1, dt0 = 2e-2, Ftol = 1e-12, kwell = 1e-2;
-	double ka = 1.0, kl = 1.0, kb = 0.0, kc = 1.0, gamtt = -0.5, boxLengthScale = 1.5, l1 = 0, l2 = 0;
-	double v0 = 0.1, Dr0 = 0.5, Ds = 0.3;
+	double ka = 1.0, kl = 1.0, kb = 0.0, kc = 1.0, gamtt = 0.0, boxLengthScale = 2.0, l1 = 0.02, l2 = 0.05;
+	double v0 = 0.1, Dr0 = 0.1, Ds = 1.0, tau = 20.0;
 	tumor2DMemFn crawlingForceUpdate = nullptr;
+	tumor2DMemFn psiUpdate = nullptr;
 
 	// name of output file
 	string posf = "pos.test";
@@ -48,6 +49,7 @@ int main(){
 	tumor2Dobj.setv0(v0);
 	tumor2Dobj.setDr0(Dr0);
 	tumor2Dobj.setDs(Ds);
+	tumor2Dobj.settau(tau);
 	tumor2Dobj.setl1(l1);
 	tumor2Dobj.setl2(l2);
 
@@ -62,6 +64,7 @@ int main(){
 
 	// force updates for crawling
 	crawlingForceUpdate = &tumor2D::stickyTumorForceUpdate;
+	psiUpdate = &tumor2D::psiVicsek;
 
 	// relax positions using tumor FIRE
 	tumor2Dobj.tumorFIRE(crawlingForceUpdate, Ftol, dt0);
@@ -69,7 +72,7 @@ int main(){
 	// -- crawling simming
 	tumor2Dobj.setgamtt(gamtt);
 	tumor2Dobj.setdt(dt0);
-	tumor2Dobj.crawling(crawlingForceUpdate,NT,NPRINTSKIP);
+	tumor2Dobj.crawling(crawlingForceUpdate,psiUpdate,NT,NPRINTSKIP);
 
 	// say goodbye
 	cout << "\n\n** Finished invasion.cpp, ending. " << endl;

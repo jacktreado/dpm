@@ -34,7 +34,7 @@ protected:
 	std::vector<double> wpress;
 
 	// motility parameters
-	double v0, Dr0, Ds;
+	double v0, Dr0, Ds, tau;
 	std::vector<double> psi;
 	std::vector<double> Dr;
 
@@ -47,8 +47,8 @@ public:
 
 	// Constructors and Destructors
 	tumor2D(std::string &inputFileString, int seed);
-	tumor2D(int n, int seed) : dpm(n,seed) { tN=n; gamtt=0.0; v0=0.0; Dr0=0.0; Ds=0.0; kecm = 0.0; ecmbreak = 0.0; pbc[0]=0; pbc[1]=0; wpress.resize(2); }; 					// tumor-only constructor
-	tumor2D(int n, int tNval, int seed) : dpm(n,seed) { tN=tNval; gamtt=0.0; v0=0.0; Dr0=0.0; Ds=0.0; kecm = 0.0; ecmbreak = 0.0; pbc[0]=0; pbc[1]=1; wpress.resize(2); }; 	// tumor+adipocyte constructor (x fixed, y periodic)
+	tumor2D(int n, int seed) : dpm(n,seed) { tN=n; gamtt=0.0; v0=0.0; Dr0=0.0; Ds=0.0; tau=0.0; kecm=0.0; ecmbreak=0.0; pbc[0]=0; pbc[1]=0; wpress.resize(2); }; 					// tumor-only constructor
+	tumor2D(int n, int tNval, int seed) : dpm(n,seed) { tN=tNval; gamtt=0.0; v0=0.0; Dr0=0.0; Ds=0.0; tau=0.0; kecm=0.0; ecmbreak=0.0; pbc[0]=0; pbc[1]=1; wpress.resize(2); }; 	// tumor+adipocyte constructor (x fixed, y periodic)
 
 
 	// setters
@@ -56,6 +56,7 @@ public:
 	void setv0(double val) { v0 = val; };
 	void setDr0(double val) { Dr0 = val; };
 	void setDs(double val) { Ds = val; };
+	void settau(double val) { tau = val; };
 	void setkecm(double val) { kecm = val; };
 	void setecmbreak(double val) { ecmbreak = val; };
 	void setl0_init();
@@ -71,7 +72,8 @@ public:
 
 	// biology functions
 	void psiDiffusion();
-	void activeBrownianCrawlerUpdate();
+	void psiVicsek();
+	void crawlerUpdate();
 	void updateECMAttachments(bool attach);
 	void adipocyteECMAdhesionForces();
 
@@ -95,7 +97,7 @@ public:
 	void setupCheck();
 	void tumorCompression(double Ftol, double Ptol, double dt0, double dphi0);
 	void invasion(tumor2DMemFn forceCall, double dDr, double dPsi, double Drmin, int NT, int NPRINTSKIP);
-	void crawling(tumor2DMemFn forceCall, int NT, int NPRINTSKIP);
+	void crawling(tumor2DMemFn forceCall, tumor2DMemFn psiCall, int NT, int NPRINTSKIP);
 
 	// print functions
 	void printTumorInterface(double t);
