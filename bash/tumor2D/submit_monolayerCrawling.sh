@@ -28,11 +28,14 @@ gamtt=$7
 tau=$8
 partition=$9
 time="${10}"
-startSeed="${11}"
-endSeed="${12}"
+numSeeds="${11}"
+startSeed="${12}"
 
 # other variables
 NPRINTSKIP=5e3
+
+# determine total number of seeds
+let endSeed=$startSeed+$numSeeds-1
 
 # name strings
 basestr=mono_NT"$NT"_N"$tN"_n"$tNV"_tc"$tCalA0"_l1"$l1"_Dr"$Dr"_gamtt"$gamtt"_tau"$tau"
@@ -46,8 +49,8 @@ mkdir -p $simdatadir
 binf=bin/"$runstr".o
 mainf=$maindir/monolayerCrawling.cpp
 rm -f $binf
-g++ --std=c++11 -O3 -I "$srcdir" "$mainf" "$srcdir"/*.cpp -o $binf 
-echo compiling with : g++ --std=c++11 -O3 -I "$srcdir" "$mainf" "$srcdir"/*.cpp -o $binf   
+echo compiling with : g++ --std=c++11 -O3 -I "$srcdir" "$mainf" "$srcdir"/*.cpp -o $binf
+g++ --std=c++11 -O3 -I "$srcdir" "$mainf" "$srcdir"/*.cpp -o $binf    
 
 # check compilation
 if [[ ! -f $binf ]]
@@ -135,8 +138,8 @@ sbatch -t $time $slurmf
 # 8. tau
 # 9. partition
 # 10. time
-# 11. number of runs (number of array entries, i.e. arraynum)
-# 12. start seed (end seed determined by number of runs)
+# 11. number of seeds
+# 12. start seed
 
 
 
