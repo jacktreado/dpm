@@ -97,6 +97,7 @@ public:
 	void setupCheck();
 	void tumorCompression(double Ftol, double Ptol, double dt0, double dphi0);
 	void invasion(tumor2DMemFn forceCall, double dDr, double dPsi, double Drmin, int NT, int NPRINTSKIP);
+	void invasionConstP(tumor2DMemFn forceCall, double dDr, double dPsi, double Drmin, int NT, int NPRINTSKIP);
 	void crawling(tumor2DMemFn forceCall, tumor2DMemFn psiCall, int NT, int NPRINTSKIP);
 
 	// print functions

@@ -2409,7 +2409,6 @@ void tumor2D::tumorCompression(double Ftol, double Ptol, double dt0, double dphi
 
 
 // invasion protocol
-// DEBUG FORCE CALL FROM interfaceInvasion.cpp
 void tumor2D::invasion(tumor2DMemFn forceCall, double dDr, double dPsi, double Drmin, int NT, int NPRINTSKIP){
 	// check correct setup
 	setupCheck();
@@ -2464,6 +2463,91 @@ void tumor2D::invasion(tumor2DMemFn forceCall, double dDr, double dPsi, double D
 
 		// update psi based on persistence
 		psiDiffusion();
+
+		// update time
+		t += dt;
+
+		// print message console, print position to file
+		if (k % NPRINTSKIP == 0){
+			cout << endl << endl;
+			cout << "===========================================" << endl;
+			cout << "			invading tumor cells 			" << endl;
+			cout << "===========================================" << endl;
+			cout << endl;
+			cout << "	** k 			= " << k << endl;
+			cout << "	** p 			= " << 0.5*(stress[0] + stress[1]) << endl;
+			cout << "	** phi 			= " << vertexPackingFraction2D() << endl;
+
+			// print vertex positions to check placement
+			cout << "\t** PRINTING POSITIONS TO FILE... " << endl;
+			printTumorInterface(t);
+		}
+	}
+}
+
+
+// invasion at constant pressure
+// To-do:
+// -- implement box change in response to change in instantaneous pressure
+// 		** should it be base pressure, or instantaneous pressure?
+// 		** be sure to include affine deformation
+// -- add variable box length to matlab read in file
+void tumor2D::invasionConstP(tumor2DMemFn forceCall, double dDr, double dPsi, double Drmin, int NT, int NPRINTSKIP){
+	// check correct setup
+	setupCheck();
+
+	// local variables
+	int k, i, ci, cj;
+	double t = 0.0, zta, Drtmp;
+
+	// attach pins
+	updateECMAttachments(1);
+
+	// loop over time, have active brownian crawlers invade adipocytes
+	for (k=0; k<NT; k++){
+		// pbcs and reset forces
+		for (i=0; i<vertDOF; i++){
+			// recenter in box (only if y)
+			if (i % NDIM == 1){
+				if (x[i] > L[1])
+					x[i] -= L[1];
+				else if (x[i] < 0)
+					x[i] += L[1];
+			}
+		}
+
+		// update forces
+		CALL_MEMBER_FN(*this, forceCall)();
+
+		// update active brownian crawler
+		crawlerUpdate();
+
+		// update positions (EULER UPDATE, OVERDAMPED)
+		for (i=0; i<vertDOF; i++)
+			x[i] += dt * F[i];
+
+		// increase persistence + drift director if close to adipocytes
+		for (ci=0; ci<tN; ci++){
+			// get number of tumor-adipocyte contacts
+			zta = 0.0;
+			for (cj=tN; cj<NCELLS; cj++)
+				zta += cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2]++;
+
+			// change persistence
+			Drtmp = Dr0*(1 - (zta/nv[ci])*dDr);
+			if (Drtmp > Drmin)
+				Dr[ci] = Drtmp;
+			else
+				Dr[ci] = Drmin;
+
+			// change psi
+			psi[ci] -= dt * (zta/nv[ci]) * dPsi * psi[ci];
+		}
+
+		// update psi based on persistence
+		psiDiffusion();
+
+		// update box lengths based on 
 
 		// update time
 		t += dt;
