@@ -18,7 +18,7 @@ nsmall=24
 calA0=$1
 kb=0
 trun=$2
-T0=1e-2
+T0=$3
 
 # sim info string
 jamstr=a2j_N"$NCELLS"_n"$nsmall"_calA0"$calA0"_kb"$kb"_trun"$trun"_T0"$T0"
