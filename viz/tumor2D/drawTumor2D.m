@@ -4,11 +4,25 @@ clear;
 close all;
 clc;
 
+% file name string
+simtype     = 'mono';
+NTstr       = '2e6';
+Nstr        = '64';
+nstr        = '24';
+tcstr       = '1.2';
+l1str       = '0.005';
+Drstr       = '0.01';
+gamttstr    = '0';
+taustr      = '1000';
+seedstr     = '9';
+
+fpattern = [simtype '_NT' NTstr '_N' Nstr '_n' nstr '_tc' tcstr '_l1' l1str '_Dr' Drstr '_gamtt' gamttstr '_tau' taustr '_seed' seedstr];
+floc = 'local/pos';
+fstr = [floc '/' fpattern '.pos'];
+% fstr = '~/Jamming/CellSim/dpm/pos.test';
+
 % use to never run movie first
 initClear = 1;
-
-% file name string
-fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 tumorConfigData = readTumor2D(fstr);

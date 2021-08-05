@@ -5,7 +5,7 @@ close all;
 clc;
 
 % file name string
-fstr = '~/Jamming/CellSim/dpm/pos.test';
+fstr = '~/Jamming/CellSim/dpm/viz/meso2D/local/meso2D_data/meso2D_N64_n24_ca1.10_be7.0_cL0.5_cB0.01_cKb1e-6_seed5.pos';
 
 % read in data
 mesoData = readMesoNetwork2D(fstr);
@@ -74,7 +74,7 @@ elseif colorShape == 2
 else
     [nvUQ, ~, IC] = unique(nv);
     NUQ = length(nvUQ);
-    cellCLR = summer(NUQ);
+    cellCLR = winter(NUQ);
 end
 
 % draw cell cell contacts
@@ -107,10 +107,10 @@ end
 
 % get frames to plot
 if showverts == 0
-    FSTART = 1;
+    FSTART = NFRAMES;
     FSTEP = 1;
-    FEND = NFRAMES;
-%     FEND = FSTART;
+%     FEND = NFRAMES;
+    FEND = FSTART;
 else
     FSTART = 2;
     FSTEP = 1;
