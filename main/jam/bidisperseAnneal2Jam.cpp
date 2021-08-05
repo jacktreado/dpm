@@ -42,7 +42,7 @@ const double kc = 1.0;					// interaction force spring constant (should be unit)
 const double boxLengthScale = 2.5;		// neighbor list box size in units of initial l0
 const double phi0 = 0.5;				// initial packing fraction
 const double smallfrac = 0.5;			// fraction of small particles
-const double sizeratio = 1.4;			// size ratio between small and large particles
+const double sizeratio = 1.0;			// size ratio between small and large particles
 const double dt0 = 2e-2;				// initial magnitude of time step in units of MD time
 
 int main(int argc, char const *argv[])
