@@ -27,8 +27,8 @@ fpattern=mono_NT"$NT"_N"$NCELLS"_n"$n"_tc"$tc"_l1"$l1"_Dr"$Dr"_gamtt"$gamtt"_tau
 simloc=/gpfs/loomis/pi/ohern/"$netid"/dpm/tumor2D/mono
 floc="$simloc"/"$fpattern"
 saveloc=$simloc/matfiles
-mkdir -p $savedir
-savestr=$savedir/"$fpattern".mat
+mkdir -p $saveloc
+savestr=$saveloc/"$fpattern".mat
 
 # str to give to matlab
 MCODE="addpath ~/dpm/viz/tumor2D/; processCrawlingMonolayer($NCELLS,'$floc','$saveloc','$fpattern'); quit"
