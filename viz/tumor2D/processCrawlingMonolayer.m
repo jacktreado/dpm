@@ -239,7 +239,7 @@ end
 
 savestr = [saveloc '/' fpattern '.mat'];
 save(savestr,'NFRAMES','dt','L','n','simname','t','calA','psi',...
-    'cx','cy','zc','zv','NF','msd','msd0','psicorr','zccorr','zvcorr','calAcorr');
+    'cx','cy','zc','zv','NF','msd','msd0','psicorr','zccorr','zvcorr','calAcorr','tbinc');
 
 
 
