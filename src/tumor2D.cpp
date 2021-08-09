@@ -2572,6 +2572,7 @@ void tumor2D::invasionConstP(tumor2DMemFn forceCall, double dDr, double dPsi, do
 
 
 // just get them bois crawlin'
+// always print unbox coordinates for better MSD computation
 void tumor2D::crawling(tumor2DMemFn forceCall, tumor2DMemFn psiCall, int NT, int NPRINTSKIP){
 	// check correct setup
 	setupCheck();
@@ -2580,15 +2581,15 @@ void tumor2D::crawling(tumor2DMemFn forceCall, tumor2DMemFn psiCall, int NT, int
 	int k, i, ci, cj;
 	double t = 0.0;
 
-	// loop over time, have active brownian crawlers invade adipocytes
+	// loop over time, have cells crawl around
 	for (k=0; k<NT; k++){
-		// pbcs
-		for (i=0; i<vertDOF; i++){
-			if (x[i] > L[i % NDIM] && pbc[i % NDIM])
-				x[i] -= L[i % NDIM];
-			else if (x[i] < 0.0 && pbc[i % NDIM])
-				x[i] += L[i % NDIM];
-		}
+		// // pbcs
+		// for (i=0; i<vertDOF; i++){
+		// 	if (x[i] > L[i % NDIM] && pbc[i % NDIM])
+		// 		x[i] -= L[i % NDIM];
+		// 	else if (x[i] < 0.0 && pbc[i % NDIM])
+		// 		x[i] += L[i % NDIM];
+		// }
 
 		// update forces
 		CALL_MEMBER_FN(*this, forceCall)();

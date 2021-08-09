@@ -5,11 +5,11 @@ close all;
 clc;
 
 % universal params
-Nstr = '64';
-nstr = '24';
-calA0str = '1.20';
+Nstr = '62';
+nstr = '16';
+calA0str = '1.14';
 kbstr = '0';
-seedstr = '17';
+seedstr = '10';
 
 % simtype
 simstr = 'a2j';
@@ -21,7 +21,7 @@ datadir = 'local/jam_data';
 if strcmp(simstr,'a2j')
     % a2j params
     trunstr = '50';
-    T0str = '1e-3';
+    T0str = '1e-2';
     
     % a2j file pattern
     fpattern = [simstr '_N' Nstr '_n' nstr '_calA0' calA0str '_kb' kbstr '_trun' trunstr '_T0' T0str '_seed' seedstr];
@@ -41,8 +41,8 @@ end
 % file info
 vizdir = pwd;
 fname = [fpattern '.pos'];
-% fstr = [vizdir '/' datadir '/' fname];
-fstr = '../../pos.test';
+fstr = [vizdir '/' datadir '/' fname];
+% fstr = '../../pos.test';
 
 % read in data
 dpmData = readDPMConfig(fstr);
@@ -74,7 +74,7 @@ phi = dpmData.phi;
 %% Draw cells
 
 % show vertices or not
-showverts = 0;
+showverts = 1;
 
 % get cell colors
 [nvUQ, ~, IC] = unique(nv);
@@ -94,7 +94,7 @@ else
 end
 
 % make a movie
-makeAMovie = 1;
+makeAMovie = 0;
 if makeAMovie == 1
     moviestr = 'a2j.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');

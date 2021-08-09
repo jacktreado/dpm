@@ -2627,12 +2627,15 @@ void dpm::vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double d
 	}
 }
 
+
+//  add cooling protocol (determine delTemp given cooling to Tmin over # = coolsteps)
 void dpm::vertexAnneal2Jam2D(dpmMemFn forceCall, double Ftol, double Ptol, double dt0, double dphi0, double T0, double trun, bool plotCompression){
 	// local variables
-	int k = 0, nr, NT = 1, NPRINTSKIP = 1;
+	int k = 0, nr, NT = 1, NPRINTSKIP = 1, NTCOOL = 1, coolsteps = 10, coolt;
 	bool jammed = 0, overcompressed = 0, undercompressed = 0, stalled = 0;
 	double pcheck, phi0, rH, r0, rL, rho0, scaleFactor = 1.0;
 	double gam = 1.0;
+	double Tcool = T0, Tmin = 1e-8, delTemp;
 
 	// initialize binary root search parameters
 	r0 = sqrt(a0.at(0));
@@ -2670,10 +2673,20 @@ void dpm::vertexAnneal2Jam2D(dpmMemFn forceCall, double Ftol, double Ptol, doubl
 			// run NVT for trun time at temperature T
 			NT = (int) floor(trun/dt);
 			NPRINTSKIP = (int) floor((0.05*trun)/dt);
-			vertexLangevinNVT2D(forceCall, T0, gam, dt0, NT, NPRINTSKIP);
+			vertexLangevinNVT2D(forceCall, T0, gam, dt0, NT, NPRINTSKIP);			
+
+			// cool down to T = 1e-8
+			NTCOOL = NT/coolsteps;
+			delTemp = pow(10.0,(log10(Tmin) - log10(T0))/coolsteps);
+			Tcool = T0;
+			for (coolt=0; coolt<coolsteps; coolt++){
+				// equilibrate at lower temperature
+				Tcool *= delTemp;
+				cout << "** Equilibrating now at T = " << Tcool << endl;
+				vertexLangevinNVT2D(forceCall, Tcool, gam, dt0, NTCOOL, NPRINTSKIP);
+			}
 		}
 		
-
 		// relax configuration (pass member function force update)
 		vertexFIRE2D(forceCall, Ftol, dt0);
 

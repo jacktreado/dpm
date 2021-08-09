@@ -7,7 +7,7 @@
 // g++ -O3 --std=c++11 -I src main/jam/bidisperseAnneal2Jam.cpp src/*.cpp -o a2j.o
 // 
 // Example execution:
-// ./a2j.o 16 24 1.02 1.0 0 50 1e-3 1e-6 1e-10 1 pos.test
+// ./a2j.o 16 24 1.02 1.0 0 500 1e-3 1e-6 1e-10 1 pos.test
 // 
 // 
 // Parameter input list

@@ -10,11 +10,11 @@ NTstr       = '2e6';
 Nstr        = '64';
 nstr        = '24';
 tcstr       = '1.2';
-l1str       = '0.005';
-Drstr       = '0.01';
+l1str       = '0.01';
+Drstr       = '0.1';
 gamttstr    = '0';
-taustr      = '1000';
-seedstr     = '9';
+taustr      = '1';
+seedstr     = '12';
 
 fpattern = [simtype '_NT' NTstr '_N' Nstr '_n' nstr '_tc' tcstr '_l1' l1str '_Dr' Drstr '_gamtt' gamttstr '_tau' taustr '_seed' seedstr];
 floc = 'local/pos';
@@ -69,11 +69,7 @@ calA = p.^2./(4.0*pi*a);
 showverts = 0;
 
 % make a movie
-makeAMovie = 0;
-if initClear == 1
-    makeAMovie = 0;
-    initClear = 0;
-end
+makeAMovie = 1;
 
 % color by (0=red, 1=shape, 2=cos(psi))
 colorOpt = 0;
@@ -93,19 +89,30 @@ end
 
 % get frames to plot
 if showverts == 0
-    FSTART = 1;
-    FSTEP = 1;
-    FEND = NFRAMES;
-%     FEND = FSTART;
+    if initClear == 1
+        FSTART = NFRAMES;
+        FSTEP = 1;
+        FEND = FSTART;
+    else
+        FSTART = 1;
+        FSTEP = 1;
+        FEND = NFRAMES;
+    end
 else
     FSTART = 4;
     FSTEP = 1;
     FEND = FSTART;
 end
 
+% check whether or not to actually make movie
+if initClear == 1
+    makeAMovie = 0;
+    initClear = 0;
+end
+
 % make a movie
 if makeAMovie == 1
-    moviestr = 'monolayer_l10.01_gam0.1.mp4';
+    moviestr = [fpattern '.mp4'];
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -116,6 +123,8 @@ figure(fnum), clf, hold on, box on;
 for ff = FSTART:FSTEP:FEND
     % reset figure for this frame
     figure(fnum), clf, hold on, box on;
+    f = gcf;
+    f.Color = 'w';
     fprintf('printing frame ff = %d/%d\n',ff,FEND);
     
     % get geometric info
@@ -175,7 +184,7 @@ for ff = FSTART:FSTEP:FEND
     
     % if making a movie, save frame
     if makeAMovie == 1
-        currframe = getframe(gcf);
+        currframe = getframe(f);
         writeVideo(vobj,currframe);
     end
 end
