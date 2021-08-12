@@ -2,6 +2,7 @@ function processJammedDPMEnsemble(ensembleStr, savestr)
 %% Process ensemble of jammed dpm configurations
 % ** ASSUMING ONLY 1 FRAME, will skip configs that are empty or have
 % multiple frames
+% 08/11 To-do: use to process packing in individual svoro cells
 
 % get files that make up ensemble
 ensList = dir([ensembleStr '*.pos']);
@@ -29,12 +30,14 @@ calA                = cell(NEN,1);
 meanCalA            = zeros(NEN,1);
 stdCalA             = zeros(NEN,1);
 calA0               = cell(NEN,1);
+abump               = cell(NEN,1);
 zc                  = cell(NEN,1);
 zv                  = cell(NEN,1);
 
 % voronoi arrays
-voroAreas           = cell(NEN,1);         % voronoi areas
-voroCalA            = cell(NEN,1);         % voronoi calA
+voroAreas           = cell(NEN,1);          % voronoi areas
+voroCalA            = cell(NEN,1);          % voronoi calA
+voroPackU           = cell(NEN,1);          % voronoi packing energy
 
 % loop over ensemble
 for ee = 1:NEN
@@ -78,12 +81,24 @@ for ee = 1:NEN
     S(ee,2) = Stmp(2);
     S(ee,3) = Stmp(3);
     
+    % shape info
     ptmp = dpmConfigData.p;
     atmp = dpmConfigData.a;
     calA{ee} = ptmp.^2./(4.0*pi*atmp);
     meanCalA(ee) = mean(calA{ee});
     stdCalA(ee) = std(calA{ee});
     
+    % compute bumpy, exposed area
+    r = dpmConfigData.r;
+    abumptmp = zeros(NCELLS(ee),1);
+    for nn = 1:NCELLS(ee)
+        rn = r{nn}(1);
+        nvn = nv{ee}(1);
+        abumptmp(nn) = atmp(nn) + pi*(rn^2)*(0.5*nvn - 1);
+    end
+    abump{ee} = abumptmp;
+    
+    % compute calA0s
     l0tmp = dpmConfigData.l0;
     a0tmp = dpmConfigData.a0;
     calA0tmp = zeros(NCELLS(ee),1);
@@ -93,6 +108,7 @@ for ee = 1:NEN
     end
     calA0{ee} = calA0tmp;
     
+    % contact info
     zc{ee} = dpmConfigData.zc;
     zv{ee} = dpmConfigData.zv;
     
@@ -100,11 +116,26 @@ for ee = 1:NEN
     fprintf('* Computing Voronoi data for sim ...\n');
     x = dpmConfigData.x;
     y = dpmConfigData.y;
-    [voroAreasTmp, voroCalATmp] = getSurfaceVoronoi(x,y,nv{ee},L(ee,1));
-    fprintf('...Voronoi done!\n');
+    [svoroFaceList, Vorig, voroCalATmp, voroAreasTmp] = getSurfaceVoronoi(x,y,nv{ee},L(ee,1));
+    fprintf('...Voronoi done.\n');
     
+    % save geometric info
     voroAreas{ee} = voroAreasTmp;
     voroCalA{ee} = voroCalATmp;
+    
+    % compute energies of all relaxed particles in voronoi cells
+    Utmp = zeros(NCELLS(ee),1);
+%     for nn = 1:NCELLS(ee)
+%         % get info for voronoi cell around particle nn
+%         finfo = svoroFaceList{nn};
+%         V = Vorig(finfo,:);
+%         
+%         % pass to function to get energy
+%         fprintf('* Getting relaxed single particle in cell %d...',nn);
+%         Utmp(nn) = singleCellVoronoiPackingEnergy(nv{ee}(nn),x{nn},y{nn},r{nn},a0tmp(nn),l0tmp{nn}(1),V);
+%         fprintf(' done.\n');
+%     end
+    voroPackU{ee} = Utmp;
     
     % save and append
     inds = ~fskip(1:ee);
@@ -119,10 +150,12 @@ for ee = 1:NEN
     s.meanCalA = meanCalA(inds);
     s.stdCalA = stdCalA(inds);
     s.calA0 = calA0(inds);
+    s.abump = abump(inds);
     s.zv = zv(inds);
     s.zc = zc(inds);
     s.voroAreas = voroAreas(inds);
     s.voroCalA = voroCalA(inds);
+    s.voroPackU = voroPackU(inds);
     sdata = whos('s');
     
     fprintf('On ee = %d, saving save file for struct of size %0.5g MB...\n',ee,sdata.bytes/1e6);

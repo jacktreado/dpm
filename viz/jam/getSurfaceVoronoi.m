@@ -1,4 +1,4 @@
-function [voroAreas, voroCalA] = getSurfaceVoronoi(xpos,ypos,nv,L)
+function [svoroFaceList, V, voroCalA, voroAreas] = getSurfaceVoronoi(xpos,ypos,nv,L)
 %% Get Voronoi diagram from Delaunay triangulation
 
 % number of particles
@@ -156,21 +156,32 @@ clear('DT');
 % get calA for voronoi cells
 fprintf('** ** in voro, getting svoro calA values\n');
 voroCalA = zeros(NCELLS,1);
+voroAreasCheck = zeros(NCELLS,1);
 for cc = 1:NCELLS
     % get data for cell
     ftmp = svoroFaceList{cc};
-    vatmp = voroAreas(cc);
-    lx = V([ftmp(2:end); ftmp(1)],1) - V(ftmp,1);
-    ly = V([ftmp(2:end); ftmp(1)],2) - V(ftmp,2);
+    nsvv = length(ftmp);
+    Vtmp = V(ftmp,:);
+    svx = Vtmp(:,1);
+    svy = Vtmp(:,2);
+    lx = svx([2:nsvv 1]) - svx;
+    ly = svy([2:nsvv 1]) - svy;
     l = sqrt(lx.^2  + ly.^2);
     vptmp = sum(l);
+    vatmp = polyarea(svx,svy);
+    voroAreasCheck(cc) = vatmp;
     
     % compute shape parameter
     voroCalA(cc) = vptmp^2/(4.0*pi*vatmp);
 end
+
+% check 
+dvoroa = max(abs(voroAreasCheck - voroAreas));
+if dvoroa > 1e-8
+    error('large difference found between union area and final area');
+end
+
 fprintf('** ** in voro, clearing face info\n');
-clear('svoroFaceList');
-clear('V');
 clear('e');
 clear('ci');
 
