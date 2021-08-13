@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH -p scavenge
-#SBATCH -t 0-01:00:00
+#SBATCH -t 0-06:00:00
 #SBATCH --job-name=a2j_process
 #SBATCH -o out/a2j_process.out
 #SBATCH --mem-per-cpu=10G
