@@ -125,16 +125,16 @@ for ee = 1:NEN
     
     % compute energies of all relaxed particles in voronoi cells
     Utmp = zeros(NCELLS(ee),1);
-    for nn = 1:NCELLS(ee)
-        % get info for voronoi cell around particle nn
-        finfo = svoroFaceList{nn};
-        V = Vorig(finfo,:);
-        
-        % pass to function to get energy
-        fprintf('* Getting relaxed single particle in cell %d...',nn);
-        Utmp(nn) = singleCellVoronoiPackingEnergy(nv{ee}(nn),x{nn},y{nn},r{nn},a0tmp(nn),l0tmp{nn}(1),V);
-        fprintf(' done.\n');
-    end
+%     for nn = 1:NCELLS(ee)
+%         % get info for voronoi cell around particle nn
+%         finfo = svoroFaceList{nn};
+%         V = Vorig(finfo,:);
+%         
+%         % pass to function to get energy
+%         fprintf('* Getting relaxed single particle in cell %d...',nn);
+%         Utmp(nn) = singleCellVoronoiPackingEnergy(nv{ee}(nn),x{nn},y{nn},r{nn},a0tmp(nn),l0tmp{nn}(1),V);
+%         fprintf(' done.\n');
+%     end
     voroPackU{ee} = Utmp;
     
     % save and append
