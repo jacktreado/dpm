@@ -5,7 +5,8 @@ close all;
 clc;
 
 % file name string
-fstr = '~/Jamming/CellSim/dpm/viz/meso2D/local/meso2D_data/meso2D_N64_n24_ca1.10_be7.0_cL0.5_cB0.01_cKb1e-6_seed5.pos';
+fstr = '~/Jamming/CellSim/dpm/pos.test';
+% fstr = '~/Jamming/CellSim/dpm/viz/meso2D/local/meso2D_data/meso2D_N64_n24_ca1.10_be7.0_cL0.5_cB0.01_cKb1e-6_seed5.pos';
 
 % read in data
 mesoData = readMesoNetwork2D(fstr);
@@ -59,12 +60,12 @@ phi = mesoData.phi;
 showverts = 0;
 
 % color by shape or size
-colorShape = 0;
+colorShape = 2;
 
 if colorShape == 1
     % color by real shape
     NCLR = 100;
-    calA0Bins = linspace(0.999*min(calA(:)),1.001*max(calA(:)),NCLR+1);
+    calABins = linspace(0.999*min(calA(:)),1.001*max(calA(:)),NCLR+1);
     cellCLR = jet(NCLR);
 elseif colorShape == 2
     % color by preferred shape
@@ -107,10 +108,10 @@ end
 
 % get frames to plot
 if showverts == 0
-    FSTART = NFRAMES;
+    FSTART = 1;
     FSTEP = 1;
-%     FEND = NFRAMES;
-    FEND = FSTART;
+    FEND = NFRAMES;
+%     FEND = FSTART;
 else
     FSTART = 2;
     FSTEP = 1;
@@ -142,7 +143,15 @@ for ff = FSTART:FSTEP:FEND
         xtmp = xf{nn};
         ytmp = yf{nn};
         rtmp = rf{nn};
-        clr = cellCLR(IC(nn),:);
+        if colorShape == 2
+            cbin = calA0(ff,nn) > calA0Bins(1:end-1) & calA0(ff,nn) < calA0Bins(2:end);
+            clr = cellCLR(cbin,:);
+        elseif colorShape == 1
+            cbin = calA(ff,nn) > calABins(1:end-1) & calA(ff,nn) < calABins(2:end);
+            clr = cellCLR(cbin,:);
+        else
+            clr = cellCLR(IC(nn),:);
+        end
         if showverts == 1
             for vv = 1:nv(nn)
                 rv = rtmp(vv);

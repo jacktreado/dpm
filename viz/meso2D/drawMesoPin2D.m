@@ -58,7 +58,7 @@ h = dpmData.h;
 %% Draw cells
 
 % show vertices or not
-showverts = 0;
+showverts = 1;
 
 % color by shape or size
 colorShape = 0;
@@ -91,9 +91,9 @@ if showverts == 0
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
-    FSTART = 10;
+    FSTART = 1;
     FSTEP = 1;
-    FEND = FSTART;
+    FEND = NFRAMES;
 end
 
 % make a movie

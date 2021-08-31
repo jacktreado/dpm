@@ -7,19 +7,21 @@
 // 
 // Compilation command:
 // g++ -O3 --std=c++11 -I src main/meso2D/mesoTriplet2D.cpp src/*.cpp -o meso.o
-// ./meso.o 24 1.01 2.0 1.0 10.0 0 0 0 1e-12 1 pos.test
+// ./meso.o 24 1.01 1e-4 0.1 10.0 0.005 1.0 0 0 1 pos.test
 // 
 // 
 // Parameter input list
 // 1. n1: 				number of vertices on first particle
 // 2. calA0: 			preferred initial shape parameter for all particles
-// 3. betaEff: 			effective temperature, sets contact breaking
-// 4. cL: 				perimeter aging parameter
-// 5. cB: 				preferred angle aging parameter
-// 6. cKb; 				bending energy aging parameter
-// 7. Ftol: 			force tolerance, sets distance to each energy minimum
-// 8. seed: 			seed for random number generator
-// 9. positionFile: 	string of path to output file with position/configuration data
+// 3. dh 				step size
+// 4. kcspring 			pin spring constant
+// 5. betaEff: 			effective temperature, sets contact breaking
+// 6. cL: 				perimeter aging parameter
+// 7. aL: 				distribution of aging parameter to contact (0) vs void (1)
+// 8. cB: 				preferred angle aging parameter
+// 9. cKb; 				bending energy aging parameter
+// 10. seed: 			seed for random number generator
+// 11. positionFile: 	string of path to output file with position/configuration data
 // 
 // NOTE: no need to pass member function as argument, pin simulations need specific member functions
 
@@ -37,52 +39,54 @@ using namespace std;
 // global constants
 const int NCELLS 				= 3;		// always 3 cells
 const double phi0 				= 0.1;		// initial packing fraction, for viz
-const double dh 				= 0.0001;	// cell center step size
+const double hmax 				= 2.5;		// max step length
 const double dhprint 			= 0.05;		// dh before print step
 const double boxLengthScale 	= 2.5;		// neighbor list box size in units of initial l0
 const double dt0 				= 1e-2;		// initial magnitude of time step in units of MD time
+const double Ftol 				= 1e-12; 	// force tolerance
+const double kb0 				= 1e-4; 	// initial bending energy
 
 int main(int argc, char const *argv[])
 {
 	// local variables to be read in
 	int n1, seed;
-	double calA0, betaEff, cL, cB, cKb, Ftol, L, hmax, kcspring;
+	double calA0, betaEff, cL, aL, cB, cKb, L, dh, kcspring;
 
 	// read in parameters from command line input
 	string n1_str 			= argv[1];
 	string calA0_str 		= argv[2];
-	string hmax_str 		= argv[3];
+	string dh_str 			= argv[3];
 	string kcspring_str 	= argv[4];
 	string betaEff_str 		= argv[5];
 	string cL_str 			= argv[6];
-	string cB_str 			= argv[7];
-	string cKb_str 			= argv[8];
-	string Ftol_str 		= argv[9];
+	string aL_str 			= argv[7];
+	string cB_str 			= argv[8];
+	string cKb_str 			= argv[9];
 	string seed_str 		= argv[10];
 	string positionFile 	= argv[11];
 
 	// using sstreams to get parameters
 	stringstream n1ss(n1_str);
 	stringstream calA0ss(calA0_str);
-	stringstream hmaxss(hmax_str);
+	stringstream dhss(dh_str);
 	stringstream kcspringss(kcspring_str);
 	stringstream betaEffss(betaEff_str);
 	stringstream cLss(cL_str);
+	stringstream aLss(aL_str);
 	stringstream cBss(cB_str);
 	stringstream cKbss(cKb_str);
-	stringstream Ftolss(Ftol_str);
 	stringstream seedss(seed_str);
 
 	// read into data
 	n1ss 			>> n1;
 	calA0ss 		>> calA0;
-	hmaxss			>> hmax;
+	dhss			>> dh;
 	kcspringss 		>> kcspring;
 	betaEffss 		>> betaEff;
 	cLss 			>> cL;
+	aLss 			>> aL;
 	cBss 			>> cB;
 	cKbss 			>> cKb;
-	Ftolss 			>> Ftol;
 	seedss 			>> seed;
 
 	// instantiate object
@@ -95,7 +99,7 @@ int main(int argc, char const *argv[])
 	// open position config file
 	meso2Dobj.openPosObject(positionFile);
 
-	// initialize particles are bidisperse
+	// initialize particles
 	meso2Dobj.initializeMesophyllCells(0.0, calA0, phi0, Ftol, n1);
 
 	// initialize neighbor linked list
@@ -104,7 +108,12 @@ int main(int argc, char const *argv[])
 	// put initial pins in box center
 	L = meso2Dobj.getL(0);
 	vector<double> xpin0(NDIM*NCELLS,0.0);
-	fill(xpin0.begin(), xpin0.end(), 0.5*L);
+	double th = 0.0;
+	for (int i=0; i<NCELLS; i++){
+		xpin0[NDIM*i] = 0.5*L + 0.6*sqrt(meso2Dobj.geta0(0))*cos(th);
+		xpin0[NDIM*i + 1] = 0.5*L + 0.6*sqrt(meso2Dobj.geta0(0))*sin(th);
+		th += (2.0*PI)/NCELLS;
+	}
 
 	// draw pins to box center
 	meso2Dobj.mesoPinFIRE(xpin0, Ftol, dt0, kcspring);
@@ -112,8 +121,10 @@ int main(int argc, char const *argv[])
 	// set aging parameters
 	meso2Dobj.setbetaEff(betaEff);
 	meso2Dobj.setcL(cL);
+	meso2Dobj.setaL(aL);
 	meso2Dobj.setcB(cB);
 	meso2Dobj.setcKb(cKb);
+	meso2Dobj.setkbi(kb0);
 
 	// initialize adhesive network contacts
 	meso2Dobj.initializeMesophyllBondNetwork();

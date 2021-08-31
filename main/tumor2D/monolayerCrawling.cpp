@@ -4,7 +4,7 @@
 // g++ -O3 --std=c++11 -I src main/tumor2D/monolayerCrawling.cpp src/*.cpp -o mono.o
 // 
 // Example execution:
-// ./mono.o 1e5 5e3 16 24 1.16 0.01 0.1 0.01 5.0 1 pos.test
+// ./mono.o 1e5 5e3 32 24 1.02 0.01 0.1 0 5.0 1 pos.test
 // 
 // 
 
@@ -20,7 +20,7 @@
 using namespace std;
 
 // global constants
-const double tDisp = 0.1;				// polydispersity
+const double tDisp = 0.2;				// polydispersity
 
 const double ka = 1.0;					// area force spring constant (should be unit)
 const double kl = 1.0; 					// contractility spring constant
@@ -28,7 +28,7 @@ const double kb = 0.0;					// bending energy
 const double kc = 1.0;					// interaction force spring constant (should be unit)
 
 const double phi0 = 0.1;				// initial packing fraction
-const double v0 = 0.05; 				// crawling speed 
+const double v0 = 0.2; 					// crawling speed 
 const double Ds = 0.1;					// velocity spread around boundary
 const double l2 = 0.05; 				// attraction range
 

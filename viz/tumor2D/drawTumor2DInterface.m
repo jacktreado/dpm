@@ -5,8 +5,8 @@ close all;
 clc;
 
 % file name string
-% fstr = '~/Jamming/CellSim/dpm/pos.test';
-fstr = 'local/pos/intInit_aN8_ac1.05_tc1.20_aR30_seed130.pos';
+fstr = '~/Jamming/CellSim/dpm/pos.test';
+% fstr = 'local/pos/intInit_aN8_ac1.05_tc1.20_aR30_seed130.pos';
 
 % read in data
 tumorConfigData = readTumor2DInterface(fstr);

@@ -17,6 +17,9 @@
 
 #include "dpm.h"
 
+// global constants
+const double kbmax = 1e-2;
+
 class meso2D;
 typedef void (meso2D::*meso2DMemFn)(void);
 
@@ -29,14 +32,16 @@ protected:
 	// vertex-vertex contact network
 	std::vector<bool> gij;
 
-	// vv contacts per cell
-	std::vector<int> z;
+	// vv contacts per cell (both cell-level and vertex level)
+	std::vector<int> zc;
+	std::vector<int> zv;
 
 	// adhesion strength
 	double betaEff;
 
 	// aging during development
 	double cL; 		// aging of excess perimeter
+	double aL; 		// distribution of aging to either contacting (0) or void (1) sections of perimeter
 	double cB; 		// aging of preferred angles
 	double cKb; 	// aging of bending stiffness
 
@@ -46,7 +51,7 @@ protected:
 public:
 
 	// constructor and destructor
-	meso2D(int n, int seed) : dpm(n,seed) { betaEff=0.0; cL=0.0; cB=0.0; cKb=0.0; z.resize(n); };
+	meso2D(int n, int seed) : dpm(n,seed) { betaEff=0.0; cL=0.0; aL=1.0; cB=0.0; cKb=0.0; zc.resize(n); };
 
 	// File openers
 	void openHessObject(std::string& str) {
@@ -74,6 +79,7 @@ public:
 	void setkbi(double val) { fill(kbi.begin(), kbi.end(), val); };
 	void setbetaEff(double val) { betaEff = val; };
 	void setcL(double val) { cL = val; };
+	void setaL(double val) { aL = val; };
 	void setcB(double val) { cB = val; };
 	void setcKb(double val) { cKb = val; };
 

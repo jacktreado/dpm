@@ -45,6 +45,10 @@ void meso2D::initializeMesophyllCells(double dispersion, double calA0, double ph
 	// set list of bending energies to 0
 	kbi.resize(NVTOT);
 	setkbi(0.0);
+
+	// initialize vertex-vertex contact list
+	zv.resize(NVTOT);
+	fill(zv.begin(), zv.end(), 0);
 }
 
 
@@ -174,7 +178,8 @@ void meso2D::initializeMesophyllBondNetwork(){
 
 	// reset vertex-vertex bond network
 	fill(gij.begin(), gij.end(), 0);
-	fill(z.begin(), z.end(), 0);
+	fill(zc.begin(), zc.end(), 0);
+	fill(zv.begin(), zv.end(), 0);
 
 	// loop over boxes in cell linked list
 	for (bi=0; bi<NBX; bi++){
@@ -190,12 +195,16 @@ void meso2D::initializeMesophyllBondNetwork(){
 			// next particle in list
 			pj = list[pi];
 
-			// loop down neighbors of pi in same cell
+			// loop down neighbors of pi in same interaction cell
 			while (pj > 0){
 				// real index of pj
 				gj = pj - 1;
 
-				if (gj == ip1[gi] || gj == im1[gi]){
+				// get cell and vert indices
+				cindices(ci,vi,gi);
+				cindices(cj,vj,gj);
+
+				if (ci == cj){
 					pj = list[pj];
 					continue;
 				}
@@ -214,9 +223,6 @@ void meso2D::initializeMesophyllBondNetwork(){
 					if (dy < sij){
 						rij = sqrt(dx*dx + dy*dy);
 						if (rij < sij){
-							// get cell and vert indices
-							cindices(ci,vi,gi);
-							cindices(cj,vj,gj);
 
 							// add bond to network
 							if (gi > gj)
@@ -224,9 +230,12 @@ void meso2D::initializeMesophyllBondNetwork(){
 							else if (gi < gj)
 								gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 1; 
 
-							// update contacts per cell
-							z[ci]++;
-							z[cj]++;
+							// update cell and vertex contacts
+							zc[ci]++;
+							zc[cj]++;
+
+							zv[gi]++;
+							zv[gj]++;
 						}
 					}
 				}
@@ -234,24 +243,29 @@ void meso2D::initializeMesophyllBondNetwork(){
 				pj = list[pj];
 			}
 
-			// test overlaps with forward neighboring cells
+			// test overlaps with forward neighboring interaction cells
 			for (bj=0; bj<NNN; bj++){
 				// only check if boundaries permit
 				if (nn[bi][bj] == -1)
 					continue;
 
-				// get first particle in neighboring cell
+				// get first particle in neighboring interaction cell
 				pj = head[nn[bi][bj]];
 
-				// loop down neighbors of pi in same cell
+				// loop down neighbors of pi in same interaction cell
 				while (pj > 0){
 					// real index of pj
 					gj = pj - 1;
 
-					if (gj == ip1[gi] || gj == im1[gi]){
+					// get cell and vert indices
+					cindices(ci,vi,gi);
+					cindices(cj,vj,gj);
+
+					if (ci == cj){
 						pj = list[pj];
 						continue;
 					}
+
 					// contact distance
 					sij = r[gi] + r[gj];
 
@@ -266,19 +280,18 @@ void meso2D::initializeMesophyllBondNetwork(){
 						if (dy < sij){
 							rij = sqrt(dx*dx + dy*dy);
 							if (rij < sij){
-								// get cell and vert indices
-								cindices(ci,vi,gi);
-								cindices(cj,vj,gj);
-
 								// add bond
 								if (gi > gj)
 									gij[NVTOT*gj + gi - (gj+1)*(gj+2)/2] = 1;
 								else if (gi < gj)
 									gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 1; 
 
-								// update contacts per cell
-								z[ci]++;
-								z[cj]++;
+								// update cell and vertex contacts
+								zc[ci]++;
+								zc[cj]++;
+
+								zv[gi]++;
+								zv[gj]++;
 							}
 						}
 					}
@@ -542,7 +555,7 @@ void meso2D::mesoNetworkForceUpdate(){
 					cindices(cj,vj,gj);
 
 					// zij: determines strength of bond attraction
-					zij = 0.5*(z[ci] + z[cj]) + 1.0;
+					zij = 0.5*(zc[ci] + zc[cj]) + 1.0;
 
 					// force scale
 					ftmp 				= (kc/zij)*(1 - (rij/sij))*(rho0/sij);
@@ -772,16 +785,8 @@ void meso2D::mesoFIRE(meso2DMemFn forceCall, double Ftol, double dt0){
 		}
 
 		// VV POSITION UPDATE
-		for (i=0; i<vertDOF; i++){
-			// update position
+		for (i=0; i<vertDOF; i++)
 			x[i] += dt*v[i];
-
-			// recenter in box
-			if (x[i] > L[i % NDIM] && pbc[i % NDIM])
-				x[i] -= L[i % NDIM];
-			else if (x[i] < 0 && pbc[i % NDIM])
-				x[i] += L[i % NDIM];
-		}
 
 		// update forces (function passed as argument)
 		CALL_MEMBER_FN(*this, forceCall)();
@@ -970,16 +975,8 @@ void meso2D::mesoPinFIRE(vector<double> &xpin, double Ftol, double dt0, double k
 		}
 
 		// VV POSITION UPDATE
-		for (i=0; i<vertDOF; i++){
-			// update position
+		for (i=0; i<vertDOF; i++)
 			x[i] += dt*v[i];
-
-			// recenter in box
-			if (x[i] > L[i % NDIM] && pbc[i % NDIM])
-				x[i] -= L[i % NDIM];
-			else if (x[i] < 0 && pbc[i % NDIM])
-				x[i] += L[i % NDIM];
-		}
 
 		// update forces in mesophyll network 
 		mesoPinForceUpdate(xpin, kcspring);
@@ -1047,16 +1044,8 @@ void meso2D::mesoNetworkNVE(ofstream &enout, meso2DMemFn forceCall, double T, do
 			v[i] += 0.5*dt*F[i];
 
 		// VV POSITION UPDATE
-		for (i=0; i<vertDOF; i++){
-			// update position
+		for (i=0; i<vertDOF; i++)
 			x[i] += dt*v[i];
-
-			// recenter in box
-			if (x[i] > L[i % NDIM] && pbc[i % NDIM])
-				x[i] -= L[i % NDIM];
-			else if (x[i] < 0 && pbc[i % NDIM])
-				x[i] += L[i % NDIM];
-		}
 
 		// FORCE UPDATE
 		CALL_MEMBER_FN(*this, forceCall)();
@@ -1258,8 +1247,6 @@ void meso2D::mesoPinExtension(double Ftol, double dt0, double hmax, double dh, d
 		cout << "	* meant0 		= " << meant0() << endl;
 		cout << "	* meankb 		= " << meankb() << endl;
 		cout << endl << endl;
-		for (ci=0; ci<NCELLS; ci++)
-			cout << "px=" << xpin[NDIM*ci] << ",   py=" << xpin[NDIM*ci+1] << endl;
 
 		// print positions if change in packing fraction is large enough
 		if (abs(lastPrinth - h) > dhprint){
@@ -1337,8 +1324,11 @@ void meso2D::updateMesophyllBondNetwork(){
 				// reconnect bond if vertices come into contact
 				if (rij <= sij && !isConnected){
 					gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 1;
-					z[ci]++;
-					z[cj]++;
+					zc[ci]++;
+					zc[cj]++;
+
+					zv[gi]++;
+					zv[gj]++;
 				}
 				else if (rij > sij && isConnected){
 					// change in energy from bond breaking
@@ -1353,9 +1343,14 @@ void meso2D::updateMesophyllBondNetwork(){
 						if (ci > cj)
 							cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2]--;
 						else
-							cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]--; 
-						z[ci]--;
-						z[cj]--;
+							cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]--;
+
+						// update contact lists 
+						zc[ci]--;
+						zc[cj]--;
+
+						zv[gi]--;
+						zv[gj]--;
 					}
 					else{
 						// else, remove conditionally
@@ -1372,8 +1367,12 @@ void meso2D::updateMesophyllBondNetwork(){
 								cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2]--;
 							else
 								cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]--; 
-							z[ci]--;
-							z[cj]--;
+						// update contact lists 
+						zc[ci]--;
+						zc[cj]--;
+
+						zv[gi]--;
+						zv[gj]--;
 						}
 					}
 				}
@@ -1413,8 +1412,11 @@ void meso2D::ageMesophyllShapeParameters(){
 		// segment length
 		li = sqrt(lix*lix + liy*liy);
 
-		// update l0
-		l0[gi] += cL*(li - l0[gi]);
+		// update l0 (either void or contact)
+		if (zv[gi] > 0 && zv[ip1[gi]] > 0)
+			l0[gi] += (1.0-aL)*cL*(li - l0[gi]);
+		else
+			l0[gi] += aL*cL*(li - l0[gi]);
 
 		// -- age angles
 
@@ -1430,7 +1432,8 @@ void meso2D::ageMesophyllShapeParameters(){
 
 
 		// age bending mechanical constant
-		kbi[gi] += cKb;
+		if (kbi[gi] < kbmax - cKb)
+			kbi[gi] += cKb*t0[gi];
 	}
 }
 
@@ -1670,7 +1673,7 @@ void meso2D::mesoSpringNetworkHessian(Eigen::MatrixXd &Hs, Eigen::MatrixXd &Ss){
 void meso2D::printMesoNetwork2D(){
 	// local variables
 	bool gtmp;
-	int ci, cj, vi, gi, gj, ctmp, zc, zv, zg;
+	int ci, cj, vi, gi, gj, ctmp, zctmp, zvtmp, zg;
 	double xi, yi, dx, dy, Lx, Ly;
 
 	// check if pos object is open
@@ -1707,8 +1710,8 @@ void meso2D::printMesoNetwork2D(){
 	for (ci=0; ci<NCELLS; ci++){
 
 		// get cell contact + meso network data
-		zc = 0;
-		zv = 0;
+		zctmp = 0;
+		zvtmp = 0;
 		zg = 0;
 		for (cj=0; cj<NCELLS; cj++){
 			// cell-cell contacts
@@ -1720,9 +1723,9 @@ void meso2D::printMesoNetwork2D(){
 					ctmp = cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2]; 
 
 				// add to contact information
-				zv += ctmp;
+				zvtmp += ctmp;
 				if (ctmp > 0)
-					zc++;
+					zctmp++;
 			}
 
 			// meso network
@@ -1744,8 +1747,8 @@ void meso2D::printMesoNetwork2D(){
 		// cell information
 		posout << setw(w) << left << "CINFO";
 		posout << setw(w) << left << nv.at(ci);
-		posout << setw(w) << left << zc;
-		posout << setw(w) << left << zv;
+		posout << setw(w) << left << zctmp;
+		posout << setw(w) << left << zvtmp;
 		posout << setw(w) << left << zg;
 		posout << setw(wnum) << left << a0.at(ci);
 		posout << setw(wnum) << left << area(ci);
@@ -1756,10 +1759,6 @@ void meso2D::printMesoNetwork2D(){
 		gi = gindex(ci,0);
 		xi = x.at(NDIM*gi);
 		yi = x.at(NDIM*gi + 1);
-
-		// place back in box center
-		xi = fmod(xi,Lx);
-		yi = fmod(yi,Ly);
 
 		posout << setw(w) << left << "VINFO";
 		posout << setw(w) << left << ci;
@@ -1814,7 +1813,7 @@ void meso2D::printMesoNetwork2D(){
 void meso2D::printMesoPin2D(vector<double>& xpin, double h){
 	// local variables
 	bool gtmp;
-	int ci, cj, vi, gi, gj, ctmp, zc, zv, zg;
+	int ci, cj, vi, gi, gj, ctmp, zctmp, zvtmp, zg;
 	double xi, yi, dx, dy, Lx, Ly;
 
 	// check if pos object is open
@@ -1851,8 +1850,8 @@ void meso2D::printMesoPin2D(vector<double>& xpin, double h){
 	for (ci=0; ci<NCELLS; ci++){
 
 		// get cell contact + meso network data
-		zc = 0;
-		zv = 0;
+		zctmp = 0;
+		zvtmp = 0;
 		zg = 0;
 		for (cj=0; cj<NCELLS; cj++){
 			// cell-cell contacts
@@ -1864,9 +1863,9 @@ void meso2D::printMesoPin2D(vector<double>& xpin, double h){
 					ctmp = cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2]; 
 
 				// add to contact information
-				zv += ctmp;
+				zvtmp += ctmp;
 				if (ctmp > 0)
-					zc++;
+					zctmp++;
 			}
 
 			// meso network
@@ -1890,8 +1889,8 @@ void meso2D::printMesoPin2D(vector<double>& xpin, double h){
 		posout << setw(wnum) << left << xpin[NDIM*ci];
 		posout << setw(wnum) << left << xpin[NDIM*ci + 1];
 		posout << setw(w) << left << nv.at(ci);
-		posout << setw(w) << left << zc;
-		posout << setw(w) << left << zv;
+		posout << setw(w) << left << zctmp;
+		posout << setw(w) << left << zvtmp;
 		posout << setw(w) << left << zg;
 		posout << setw(wnum) << left << a0.at(ci);
 		posout << setw(wnum) << left << area(ci);
@@ -1903,10 +1902,6 @@ void meso2D::printMesoPin2D(vector<double>& xpin, double h){
 		gi = gindex(ci,0);
 		xi = x.at(NDIM*gi);
 		yi = x.at(NDIM*gi + 1);
-
-		// place back in box center
-		xi = fmod(xi,Lx);
-		yi = fmod(yi,Ly);
 
 		posout << setw(w) << left << "VINFO";
 		posout << setw(w) << left << ci;

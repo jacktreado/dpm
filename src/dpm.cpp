@@ -506,7 +506,7 @@ void dpm::initializeVertexShapeParameters(int ci, double calA0, double lenscale)
 	gi = szList.at(ci);
 	for (vi = 0; vi < nvtmp; vi++) {
 		l0.at(gi + vi) = 2.0 * sqrt(PI * calA0tmp * a0.at(ci)) / nvtmp;
-		t0.at(gi + vi) = 0.0;
+		t0.at(gi + vi) = (2.0 * PI) / nv.at(ci);
 		r.at(gi + vi) = 0.5 * l0.at(gi + vi);
 	}
 }
@@ -606,7 +606,7 @@ void dpm::sinusoidalPreferredAngle(double thA, double thK) {
 	for (ci = 0; ci < NCELLS; ci++) {
 		thR = (2.0 * PI) / nv.at(ci);
 		for (vi = 0; vi < nv.at(ci); vi++) {
-			t0.at(gi) = thA * thR * sin(thR * thK * vi);
+			t0.at(gi) = thA * thR * cos(thR * thK * vi);
 			gi++;
 		}
 	}
@@ -1004,13 +1004,13 @@ void dpm::sortNeighborLinkedList2D() {
 			// check out-of-bounds
 			if (xtmp < 0){
 				if (pbc[d])
-					xtmp += L[d];
+					xtmp -= L[d]*floor(xtmp/L[d]);
 				else
 					xtmp = 0.00001;
 			}
 			else if (xtmp > L[d]){
 				if (pbc[d])
-					xtmp -= L[d];
+					xtmp -= L[d]*floor(xtmp/L[d]);
 				else
 					xtmp = 0.99999*L[d];
 			}
@@ -1977,16 +1977,8 @@ void dpm::vertexFIRE2D(dpmMemFn forceCall, double Ftol, double dt0) {
 		}
 
 		// VV POSITION UPDATE
-		for (i = 0; i < vertDOF; i++) {
-			// update position
+		for (i = 0; i < vertDOF; i++)
 			x[i] += dt * v[i];
-
-			// recenter in box
-			if (x[i] > L[i % NDIM] && pbc[i % NDIM])
-				x[i] -= L[i % NDIM];
-			else if (x[i] < 0 && pbc[i % NDIM])
-				x[i] += L[i % NDIM];
-		}
 
 		// update forces (function passed as argument)
 		CALL_MEMBER_FN(*this, forceCall)();
@@ -2054,16 +2046,8 @@ void dpm::vertexNVE2D(ofstream &enout, dpmMemFn forceCall, double T, double dt0,
 			v[i] += 0.5*dt*F[i];
 
 		// VV POSITION UPDATE
-		for (i=0; i<vertDOF; i++){
-			// update position
+		for (i=0; i<vertDOF; i++)
 			x[i] += dt*v[i];
-
-			// recenter in box
-			if (x[i] > L[i % NDIM] && pbc[i % NDIM])
-				x[i] -= L[i % NDIM];
-			else if (x[i] < 0 && pbc[i % NDIM])
-				x[i] += L[i % NDIM];
-		}
 
 		// FORCE UPDATE
 		CALL_MEMBER_FN(*this, forceCall)();
@@ -2135,16 +2119,8 @@ void dpm::vertexLangevinNVT2D(ofstream &enout, dpmMemFn forceCall, double T0, do
 			v[i] += 0.5*dt*F[i];
 
 		// Langevin position update #1
-		for (i=0; i<vertDOF; i++){
-			// update position
+		for (i=0; i<vertDOF; i++)
 			x[i] += 0.5*dt*v[i];
-
-			// recenter in box
-			if (x[i] > L[i % NDIM] && pbc[i % NDIM])
-				x[i] -= L[i % NDIM];
-			else if (x[i] < 0 && pbc[i % NDIM])
-				x[i] += L[i % NDIM];
-		}
 
 		// Langevin random velocity update
 		// use Box-Muller to generate gaussian random variables
@@ -2160,16 +2136,8 @@ void dpm::vertexLangevinNVT2D(ofstream &enout, dpmMemFn forceCall, double T0, do
 		}
 
 		// Langevin position update #2 (based on random kick)
-		for (i=0; i<vertDOF; i++){
-			// update position
+		for (i=0; i<vertDOF; i++)
 			x[i] += 0.5*dt*v[i];
-
-			// recenter in box
-			if (x[i] > L[i % NDIM] && pbc[i % NDIM])
-				x[i] -= L[i % NDIM];
-			else if (x[i] < 0 && pbc[i % NDIM])
-				x[i] += L[i % NDIM];
-		}
 
 		// FORCE UPDATE
 		CALL_MEMBER_FN(*this, forceCall)();
@@ -2246,16 +2214,8 @@ void dpm::vertexLangevinNVT2D(dpmMemFn forceCall, double T0, double gam, double 
 			v[i] += 0.5*dt*F[i];
 
 		// Langevin position update #1
-		for (i=0; i<vertDOF; i++){
-			// update position
+		for (i=0; i<vertDOF; i++)
 			x[i] += 0.5*dt*v[i];
-
-			// recenter in box
-			if (x[i] > L[i % NDIM] && pbc[i % NDIM])
-				x[i] -= L[i % NDIM];
-			else if (x[i] < 0 && pbc[i % NDIM])
-				x[i] += L[i % NDIM];
-		}
 
 		// Langevin random velocity update
 		// use Box-Muller to generate gaussian random variables
@@ -2271,16 +2231,8 @@ void dpm::vertexLangevinNVT2D(dpmMemFn forceCall, double T0, double gam, double 
 		}
 
 		// Langevin position update #2 (based on random kick)
-		for (i=0; i<vertDOF; i++){
-			// update position
+		for (i=0; i<vertDOF; i++)
 			x[i] += 0.5*dt*v[i];
-
-			// recenter in box
-			if (x[i] > L[i % NDIM] && pbc[i % NDIM])
-				x[i] -= L[i % NDIM];
-			else if (x[i] < 0 && pbc[i % NDIM])
-				x[i] += L[i % NDIM];
-		}
 
 		// FORCE UPDATE
 		CALL_MEMBER_FN(*this, forceCall)();
@@ -3646,10 +3598,6 @@ void dpm::printConfiguration2D() {
 		gi = gindex(ci, 0);
 		xi = x.at(NDIM * gi);
 		yi = x.at(NDIM * gi + 1);
-
-		// place back in box center
-		xi = fmod(xi, Lx);
-		yi = fmod(yi, Ly);
 
 		posout << setw(w) << left << "VINFO";
 		posout << setw(w) << left << ci;

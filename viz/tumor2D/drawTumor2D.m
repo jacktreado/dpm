@@ -19,7 +19,7 @@ seedstr     = '12';
 fpattern = [simtype '_NT' NTstr '_N' Nstr '_n' nstr '_tc' tcstr '_l1' l1str '_Dr' Drstr '_gamtt' gamttstr '_tau' taustr '_seed' seedstr];
 floc = 'local/pos';
 fstr = [floc '/' fpattern '.pos'];
-% fstr = '~/Jamming/CellSim/dpm/pos.test';
+fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % use to never run movie first
 initClear = 1;
@@ -69,7 +69,7 @@ calA = p.^2./(4.0*pi*a);
 showverts = 0;
 
 % make a movie
-makeAMovie = 1;
+makeAMovie = 0;
 
 % color by (0=red, 1=shape, 2=cos(psi))
 colorOpt = 0;
@@ -84,7 +84,9 @@ elseif colorOpt == 2
     cpsiBins = linspace(-1,1,NCLR+1);
     cellCLR = winter(NCLR);
 else
-    cellCLR = repmat([1 0 0],NCELLS,1);
+    [nvUQ, ~, IC] = unique(nv);
+    NUQ = length(nvUQ);
+    cellCLR = jet(4*NUQ);
 end
 
 % get frames to plot
@@ -145,7 +147,7 @@ for ff = FSTART:FSTEP:FEND
             cpsiind = cpsitmp < cpsiBins(2:end) & cpsitmp > cpsiBins(1:end-1);
             clr = cellCLR(cpsiind,:);
         else
-            clr = cellCLR(nn,:);
+            clr = cellCLR(IC(nn),:);
         end
         if showverts == 1
             for vv = 1:nv(nn)
