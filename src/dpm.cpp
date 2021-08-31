@@ -2624,7 +2624,7 @@ void dpm::vertexAnneal2Jam2D(dpmMemFn forceCall, double Ftol, double Ptol, doubl
 
 			// run NVT for trun time at temperature T
 			NT = (int) floor(trun/dt);
-			NPRINTSKIP = (int) floor((0.05*trun)/dt);
+			NPRINTSKIP = (int) floor((0.5*trun)/dt);
 			vertexLangevinNVT2D(forceCall, T0, gam, dt0, NT, NPRINTSKIP);			
 
 			// cool down to T = 1e-8

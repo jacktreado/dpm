@@ -111,6 +111,7 @@ public:
 	// protocol helpers
 	void updateMesophyllBondNetwork();
 	void ageMesophyllShapeParameters();
+	void t0ToCurrent();
 
 	// hessian computation
 	void mesoBendingHessian(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb);

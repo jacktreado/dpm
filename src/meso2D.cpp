@@ -1439,6 +1439,45 @@ void meso2D::ageMesophyllShapeParameters(){
 
 
 
+// set t0 to current angles
+void meso2D::t0ToCurrent(){
+	// local variables
+	int gi;
+	double lix, liy, lim1x, lim1y, li, ti, sini, cosi;
+
+	for (gi=0; gi<NVTOT; gi++){	
+		// segment from i to ip1
+		lix = x[NDIM*ip1[gi]] - x[NDIM*gi];
+		if (pbc[0])
+			lix -= L[0]*round(lix/L[0]);
+
+		liy = x[NDIM*ip1[gi] + 1] - x[NDIM*gi + 1];
+		if (pbc[1])
+			liy -= L[1]*round(liy/L[1]);
+
+		// segment from im1 to i
+		lim1x = x[NDIM*gi] - x[NDIM*im1[gi]];
+		if (pbc[0])
+			lim1x -= L[0]*round(lim1x/L[0]);
+
+		lim1y = x[NDIM*gi + 1] - x[NDIM*im1[gi] + 1];
+		if (pbc[1])
+			lim1y -= L[1]*round(lim1y/L[1]);
+
+		// angle trig functions
+		sini = lix*lim1y - liy*lim1x;
+		cosi = lix*lim1x + liy*lim1y;
+
+		// angle
+		ti = atan2(sini,cosi);
+
+		// update t0
+		t0[gi] = ti;
+	}
+}
+
+
+
 
 
 
