@@ -5,8 +5,8 @@ close all;
 clc;
 
 % file name string
-fstr = '~/Jamming/CellSim/dpm/pos.test';
-% fstr = '~/Jamming/CellSim/dpm/viz/meso2D/local/meso2D_data/meso2D_N64_n24_ca1.10_be7.0_cL0.5_cB0.01_cKb1e-6_seed5.pos';
+% fstr = '~/Jamming/CellSim/dpm/pos.test';
+fstr = '~/Jamming/CellSim/dpm/viz/meso2D/local/meso2D_data/meso2D_N64_n24_ca1.06_be5_cL0.01_aL1_cB0_cKb0_seed6.pos';
 
 % read in data
 mesoData = readMesoNetwork2D(fstr);
@@ -60,7 +60,7 @@ phi = mesoData.phi;
 showverts = 0;
 
 % color by shape or size
-colorShape = 2;
+colorShape = 1;
 
 if colorShape == 1
     % color by real shape
@@ -113,9 +113,9 @@ if showverts == 0
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
-    FSTART = 2;
+    FSTART = NFRAMES;
     FSTEP = 1;
-    FEND = FSTART;
+    FEND = NFRAMES;
 end
 
 % make a movie

@@ -1433,7 +1433,7 @@ void meso2D::ageMesophyllShapeParameters(){
 
 		// age bending mechanical constant
 		if (kbi[gi] < kbmax - cKb)
-			kbi[gi] += cKb*t0[gi];
+			kbi[gi] += cKb;
 	}
 }
 
