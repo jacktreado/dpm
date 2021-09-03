@@ -1,0 +1,102 @@
+#!/bin/bash
+
+# directories with code
+maindir=~/flowers/phasesep
+
+# directory for all output for cell simulations
+outputdir=/gpfs/loomis/project/fas/ohern/jdt45/dpm
+
+# directory for simulations specific to sphereGel
+simtypedir=$outputdir/meso2D
+
+# directory to save matfiles
+savedir=$simtypedir/matfiles
+
+# make directories, unless they already exist
+mkdir -p $outputdir
+mkdir -p $simtypedir
+mkdir -p $savedir
+mkdir -p bin
+mkdir -p tasks
+mkdir -p slurm
+mkdir -p out
+
+# inputs
+NCELLS=$1
+n1=$2
+calA0=$3
+betaEff=$4
+cL=$5
+aL=$6
+cB=$7
+cKb=$8
+partition=$9
+time="${10}"
+numRuns="${11}"
+startSeed="${12}"
+
+let endSeed=$startSeed+$numRuns-1
+
+# name strings
+basestr=meso2D_N"$NCELLS"_n"$n1"_ca"$calA0"_be"$betaEff"_cL"$cL"_aL"$aL"_cB"$cB"_cKb"$cKb"
+runstr="$basestr"_PROCESS_startseed"$startSeed"_endseed"$endSeed"
+searchstr="$basestr"_seed
+
+# access directory specific for this simulation
+simdatadir=$simtypedir/$basestr
+if [[ ! -d $simdatadir ]]
+then
+    echo -- sim directory "$simdatadir" does not exist, ending.
+    exit 1
+fi
+
+# get mafile string to save data
+savestr="$savedir"/"$basestr"_processed.mat
+
+# create matlab command
+MCODE="addpath ~/dpm/viz/meso2D; processMesoNetwork2D('$simdatadir','$searchstr','$savestr'); quit"
+
+# setup slurm files
+slurmf=slurm/"$runstr".slurm
+job_name="$runstr"
+runout=out/"$runstr".out
+rm -f $slurmf
+
+# echo about time
+echo -- running time = $time for $partition
+
+echo -- PRINTING SLURM FILE...
+echo \#\!/bin/bash >> $slurmf
+echo \#SBATCH --cpus-per-task=1 >> $slurmf
+echo \#SBATCH -n 1 >> $slurmf
+echo \#SBATCH -p $partition >> $slurmf
+echo \#SBATCH -J $job_name >> $slurmf
+echo \#SBATCH -o $runout >> $slurmf
+echo \#SBATCH --mem-per-cpu=50G >> $slurmf
+echo module load MATLAB >> $slurmf
+echo matlab -nodisplay -r \""$MCODE"\" >> $slurmf
+cat $slurmf
+
+# run sbatch file
+echo -- running on slurm in partition $partition
+sbatch -t $time $slurmf
+
+
+
+# ====================
+#       INPUTS
+# ====================
+# 1. NCELLS
+# 2. n
+# 4. calA0
+# 5. betaEff
+# 6. cL (perimeter aging)
+# 7. aL (either age contact (0) or void (1) perimeter)
+# 8. cB (bending angle aging)
+# 9. cKb (bending energy stiffening)
+# 10. partition
+# 11. time
+# 12. number of runs (number of array entries, i.e. arraynum)
+# 13. start seed (end seed determined by number of runs)
+
+

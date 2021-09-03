@@ -4,9 +4,26 @@ clear;
 close all;
 clc;
 
-% file name string
-% fstr = '~/Jamming/CellSim/dpm/pos.test';
-fstr = '~/Jamming/CellSim/dpm/viz/meso2D/local/meso2D_data/meso2D_N64_n24_ca1.06_be5_cL0.01_aL1_cB0_cKb0_seed6.pos';
+% create file name
+
+% parameters
+Nstr = '32';
+nstr = '24';
+castr = '1.06';
+bestr = '10.0';
+cLstr = '0.05';
+aLstr = '1.0';
+cBstr = '0.1';
+cKbstr = '1e-8';
+
+% seed
+seed = 2;
+seedstr = num2str(seed);
+
+% file name str
+floc = '~/Jamming/CellSim/dpm/viz/meso2D/local/meso2D_data';
+fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_cKb' cKbstr '_seed' seedstr];
+fstr = [floc '/' fpattern '.pos'];
 
 % read in data
 mesoData = readMesoNetwork2D(fstr);
@@ -31,6 +48,7 @@ l0 = mesoData.l0;
 t0 = mesoData.t0;
 kb = mesoData.kb;
 
+
 % get preferred shape
 calA0 = zeros(NFRAMES,NCELLS);
 for ff = 1:NFRAMES
@@ -53,14 +71,78 @@ P = 0.5*(S(:,1) + S(:,2));
 
 % packing fraction
 phi = mesoData.phi;
+phi0 = sum(a0,2)/(Lx*Ly);
+
+
+% print if multiple frames
+if NFRAMES > 5
+    Sxx = S(:,1);
+    Syy = S(:,2);
+    Sxy = S(:,3);
+    
+    figure(10), clf, hold on, box on;
+    
+    plot(1-phi0(Sxx<0),abs(Sxx(Sxx<0)),'ks','markersize',10,'MarkerFaceColor','b');
+    plot(1-phi0(Sxx>0),Sxx(Sxx>0),'ro','markersize',10);
+    
+    plot(1-phi0(Syy<0),abs(Syy(Syy<0)),'ks','markersize',10,'MarkerFaceColor','r');
+    plot(1-phi0(Syy>0),Syy(Syy>0),'bo','markersize',10);
+    
+    xlabel('$1-\phi$','Interpreter','latex');
+    ylabel('$\Sigma_{xx}$, $\Sigma_{yy}$','Interpreter','latex');
+    ax = gca;
+    ax.FontSize = 22;
+    
+    figure(11), clf, hold on, box on;
+    
+    plot(1-phi0(Sxy<0),abs(Sxy(Sxy<0)),'ks','markersize',10,'MarkerFaceColor','k');
+    plot(1-phi0(Sxy>0),Sxy(Sxy>0),'ko','markersize',10);
+    
+    xlabel('$1-\phi$','Interpreter','latex');
+    ylabel('$\Sigma_{xy}$','Interpreter','latex');
+    ax = gca;
+    ax.FontSize = 22;
+    
+    figure(12), clf, hold on, box on;
+    plot(1-phi0,calA,'-','color',[0.5 0.5 0.5],'linewidth',1.2);
+    errorbar(1-phi0,mean(calA,2),std(calA,0,2),'k--','linewidth',2);
+    
+    xlabel('$1-\phi$','Interpreter','latex');
+    ylabel('$\mathcal{A}$','Interpreter','latex');
+    ax = gca;
+    ax.FontSize = 22;
+    
+    
+    
+    % compute shear anisotropy
+    P = 0.5*(Sxx + Syy);
+    sN = (Syy - Sxx)./P;
+    sXY = -Sxy./P;
+    tau = sqrt(sN.^2 + sXY.^2);
+    figure(13), clf, hold on, box on;
+    plot(1-phi0,tau,'k-','linewidth',2);
+    plot(1-phi0,abs(sN),'b--','linewidth',2);
+    plot(1-phi0,abs(sXY),'r--','linewidth',2);
+    xlabel('$1-\phi$','Interpreter','latex');
+    ylabel('$\hat{\tau}$','Interpreter','latex');
+    ax = gca;
+    ax.FontSize = 22;
+end
 
 %% Draw cells
+
+% information for ellipses
+th = 0.0:0.01:(2.0*pi);
+NTHE = length(th);
+ex = cos(th);
+ey = sin(th);
+
 
 % show vertices or not
 showverts = 0;
 
 % color by shape or size
-colorShape = 1;
+colorShape = 2;
 
 if colorShape == 1
     % color by real shape
@@ -183,8 +265,26 @@ for ff = FSTART:FSTEP:FEND
                 end
             end
         end
+        
+        % get shape tensor
+        cx = mean(xtmp);
+        cy = mean(ytmp);
+        rx = xtmp - cx;
+        ry = ytmp - cy;
+        rn = sqrt(rx.^2 + ry.^2);
+        urx = rx./rn;
+        ury = ry./rn;
+        Gxx = sum(rx.*urx)/nv(nn);
+        Gyy = sum(ry.*ury)/nv(nn);
+        Gxy = sum(rx.*ury)/nv(nn);
+        [V,D] = eig([Gxx, Gxy; Gxy, Gyy]);
+        lambda = diag(D);
+        cx = mod(cx,Lx);
+        cy = mod(cy,Ly);
+        quiver(cx,cy,lambda(1)*V(1,1),lambda(1)*V(2,1),'-w','linewidth',2);
+        quiver(cx,cy,lambda(2)*V(1,2),lambda(2)*V(2,2),'-w','linewidth',2);
     end
-    
+        
     % plot box
     plot([0 Lx Lx 0 0], [0 0 Ly Ly 0], 'k-', 'linewidth', 1.5);
     axis equal;
@@ -205,46 +305,4 @@ end
 % close video object
 if makeAMovie == 1
     close(vobj);
-end
-
-
-% print if multiple frames
-if NFRAMES > 5
-    Sxx = S(:,1);
-    Syy = S(:,2);
-    Sxy = S(:,3);
-    
-    figure(10), clf, hold on, box on;
-    
-    plot(1-phi(Sxx<0),abs(Sxx(Sxx<0)),'ks','markersize',10,'MarkerFaceColor','r');
-    plot(1-phi(Sxx>0),Sxx(Sxx>0),'ro','markersize',10);
-    
-    plot(1-phi(Syy<0),abs(Syy(Syy<0)),'ks','markersize',10,'MarkerFaceColor','b');
-    plot(1-phi(Syy>0),Syy(Syy>0),'bo','markersize',10);
-    
-    xlabel('$\phi$','Interpreter','latex');
-    ylabel('$\Sigma_{xx}$, $\Sigma_{yy}$','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;
-%     ax.YScale = 'log';
-    
-    figure(11), clf, hold on, box on;
-    
-    plot(1-phi(Sxy<0),abs(Sxy(Sxy<0)),'ks','markersize',10,'MarkerFaceColor','k');
-    plot(1-phi(Sxy>0),Sxy(Sxy>0),'ko','markersize',10);
-    
-    xlabel('$\phi$','Interpreter','latex');
-    ylabel('$\Sigma_{xy}$','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;
-%     ax.YScale = 'log';
-    
-    figure(12), clf, hold on, box on;
-    plot(1-phi,calA,'-','color',[0.5 0.5 0.5],'linewidth',1.2);
-    errorbar(1-phi,mean(calA,2),std(calA,0,2),'k--','linewidth',2);
-    
-    xlabel('$1-\phi$','Interpreter','latex');
-    ylabel('$\mathcal{A}$','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;    
 end
