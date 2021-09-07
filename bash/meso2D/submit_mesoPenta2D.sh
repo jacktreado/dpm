@@ -15,7 +15,6 @@ outputdir=$dpmdir/mesoPenta2D
 # make directories, unless they already exist
 mkdir -p $outputdir
 mkdir -p bin
-mkdir -p tasks
 mkdir -p slurm
 mkdir -p out
 
@@ -34,40 +33,14 @@ cKb="${10}"
 # inputs about cluster
 partition="${11}"
 time="${12}"
-startSeed="${13}"
-endSeed="${14}"
 
 # other params
 dh=1e-3
+seed=1
 
 # name strings
 basestr=penta_n"$n1"_ca"$calA0"_kb0"$kb0"_be"$betaEff"_cd"$ctcdel"_ch"$ctch"_cL"$cL"_aL"$aL"_cB"$cB"_cKb"$cKb"
-runstr="$basestr"_startseed"$startSeed"_endseed"$endSeed"
-
-# make directory specific for this simulation
-simdatadir=$outputdir/$basestr
-mkdir -p $simdatadir
-
-# create paramf
-paramf="$simdatadir"/"$basestr".params
-echo n1=$n1 >> $paramf
-echo calA0=$calA0 >> $paramf
-echo dh=$dh >> $paramf
-echo kb0=$kb0 >> $paramf
-echo betaEff=$betaEff >> $paramf
-echo ctcdel=$ctcdel >> $paramf
-echo ctch=$ctch >> $paramf
-echo cL=$cL >> $paramf
-echo aL=$aL >> $paramf
-echo cB=$cB >> $paramf
-echo cKb=$cKb >> $paramf
-echo partition=$partition >> $paramf
-echo time=$time >> $paramf
-echo startSeed=$startSeed >> $paramf
-echo endSeed=$endSeed >> $paramf
-cat $paramf
-
-
+runstr="$basestr"_run
 
 # compile into binary using packing.h
 binf=bin/"$runstr".o
@@ -85,27 +58,12 @@ then
     exit 1
 fi
 
-# create task file
-taskf=tasks/"$runstr".task
-rm -f $taskf
+# create output file
+positionFile=$outputdir/"$basestr".pos
 
-# loop over files
-let fcount=0
+# create runString
+runString="./$binf $n1 $calA0 $dh $kb0 $betaEff $ctcdel $ctch $cL $aL $cB $cKb $seed $positionFile"
 
-# LOOP OVER SEEDS
-for seed in `seq $startSeed $endSeed`; do
-    # print to console
-    echo Adding seed = $seed / $endSeed to task file $taskf
-
-    # create output file
-    positionFile=$simdatadir/"$basestr"_seed"$seed".pos
-
-    # create runString
-    runString="./$binf $n1 $calA0 $dh $kb0 $betaEff $ctcdel $ctch $cL $aL $cB $cKb $seed $positionFile"
-
-    # echo to task file
-    echo "$runString" >> $taskf
-done
 
 # test if task file was created
 if [[ ! -f "$taskf" ]]
@@ -114,14 +72,10 @@ then
     exit 1
 fi
 
-# get number of jobs to submit to each array
-let arraynum=$fcount
-echo -- total number of array runs = $arraynum
-
 # setup slurm files
 slurmf=slurm/"$runstr".slurm
 job_name="$runstr"
-runout=out/"$runstr"-%a.out
+runout=out/"$runstr".out
 rm -f $slurmf
 
 # echo about time
@@ -129,14 +83,12 @@ echo -- running time = $time for $partition
 
 echo -- PRINTING SLURM FILE...
 echo \#\!/bin/bash >> $slurmf
-echo \#SBATCH --cpus-per-task=1 >> $slurmf
-echo \#SBATCH --array=1-$arraynum >> $slurmf
 echo \#SBATCH -n 1 >> $slurmf
 echo \#SBATCH -p $partition >> $slurmf
 echo \#SBATCH -J $job_name >> $slurmf
 echo \#SBATCH -o $runout >> $slurmf
 echo \#SBATCH -t $time >> $slurmf
-echo sed -n \"\$\{SLURM_ARRAY_TASK_ID\}p\" "$taskf" \| /bin/bash >> $slurmf
+echo $runString >> $slurmf
 cat $slurmf
 
 # run sbatch file
@@ -147,7 +99,6 @@ sbatch $slurmf
 # ====================
 #       INPUTS
 # ====================
-# # inputs about simulation
 # n1
 # calA0
 # kb0
@@ -160,8 +111,6 @@ sbatch $slurmf
 # cKb
 # partition
 # time
-# startSeed
-# endSeed
 
 
 
