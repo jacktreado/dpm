@@ -58,7 +58,7 @@ h = dpmData.h;
 %% Draw cells
 
 % show vertices or not
-showverts = 1;
+showverts = 0;
 
 % color by shape or size
 colorShape = 0;

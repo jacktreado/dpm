@@ -36,8 +36,10 @@ protected:
 	std::vector<int> zc;
 	std::vector<int> zv;
 
-	// adhesion strength
-	double betaEff;
+	// adhesion parameters
+	double betaEff;			// probability to break contact
+	double ctcdel;			// influence of contact dependent adhesion
+	double ctch;			// breaking strength
 
 	// aging during development
 	double cL; 		// aging of excess perimeter
@@ -51,7 +53,7 @@ protected:
 public:
 
 	// constructor and destructor
-	meso2D(int n, int seed) : dpm(n,seed) { betaEff=0.0; cL=0.0; aL=1.0; cB=0.0; cKb=0.0; zc.resize(n); };
+	meso2D(int n, int seed) : dpm(n,seed) { betaEff=0.0; ctcdel=1.0; ctch=0.5; cL=0.0; aL=1.0; cB=0.0; cKb=0.0; zc.resize(n); };
 
 	// File openers
 	void openHessObject(std::string& str) {
@@ -78,6 +80,8 @@ public:
 	// setters
 	void setkbi(double val) { fill(kbi.begin(), kbi.end(), val); };
 	void setbetaEff(double val) { betaEff = val; };
+	void setctcdel(double val) { ctcdel = val; };
+	void setctch(double val) { ctch = val; };
 	void setcL(double val) { cL = val; };
 	void setaL(double val) { aL = val; };
 	void setcB(double val) { cB = val; };
@@ -106,7 +110,7 @@ public:
 
 	// protocols
 	void mesoNetworkExtension(meso2DMemFn forceCall, double Ftol, double dt0, double delShrink, double dphiPrint, double phiMin);
-	void mesoPinExtension(double Ftol, double dt0, double hmax, double dh, double dhprint, double kcspring);
+	void mesoPinExtension(double Ftol, double dt0, double hmax, double dh, double dhprint, double kcspring, int cellskip);
 
 	// protocol helpers
 	void updateMesophyllBondNetwork();

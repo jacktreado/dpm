@@ -555,7 +555,7 @@ void meso2D::mesoNetworkForceUpdate(){
 					cindices(cj,vj,gj);
 
 					// zij: determines strength of bond attraction
-					zij = 0.5*(zc[ci] + zc[cj]) + 1.0;
+					zij = 0.5*(zc[ci] + zc[cj])*ctcdel + 1.0;
 
 					// force scale
 					ftmp 				= (kc/zij)*(1 - (rij/sij))*(rho0/sij);
@@ -1178,8 +1178,8 @@ void meso2D::mesoNetworkExtension(meso2DMemFn forceCall, double Ftol, double dt0
 	}
 }
 
-// drag cell pins away from center
-void meso2D::mesoPinExtension(double Ftol, double dt0, double hmax, double dh, double dhprint, double kcspring){
+// drag cell pins away from center (only cells with indices > cellskip)
+void meso2D::mesoPinExtension(double Ftol, double dt0, double hmax, double dh, double dhprint, double kcspring, int cellskip){
 	// local variables
 	int k=0, ci;
 	double cx, cy, dcx, dcy, rho0, h=0.0, lastPrinth=0.0;
@@ -1259,8 +1259,10 @@ void meso2D::mesoPinExtension(double Ftol, double dt0, double hmax, double dh, d
 
 		// move pins
 		for (ci=0; ci<NCELLS; ci++){
-			xpin[NDIM*ci] += dh*rho0*cos(th[ci]);
-			xpin[NDIM*ci + 1] += dh*rho0*sin(th[ci]);
+			if (ci > cellskip){
+				xpin[NDIM*ci] += dh*rho0*cos(th[ci]);
+				xpin[NDIM*ci + 1] += dh*rho0*sin(th[ci]);
+			}
 		}
 
 		// update new h
@@ -1295,7 +1297,7 @@ void meso2D::updateMesophyllBondNetwork(){
 	// local variables
 	bool isConnected;
 	int ci, cj, vi, vj, gi, gj;
-	double dx, dy, sij, rij, dU, poff, h=0.5, h2=h*h, rdraw;
+	double dx, dy, sij, rij, dU, poff, h=1.0, h2=h*h, rdraw;
 
 	// loop over pairs of vertices, check whether to connect or detach
 	for (gi=0; gi<NVTOT; gi++){
@@ -1367,12 +1369,13 @@ void meso2D::updateMesophyllBondNetwork(){
 								cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2]--;
 							else
 								cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]--; 
-						// update contact lists 
-						zc[ci]--;
-						zc[cj]--;
 
-						zv[gi]--;
-						zv[gj]--;
+							// update contact lists 
+							zc[ci]--;
+							zc[cj]--;
+
+							zv[gi]--;
+							zv[gj]--;
 						}
 					}
 				}

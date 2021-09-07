@@ -1,4 +1,4 @@
-// FILE to create mini-network with 3 mesophyll cells in 2D
+// FILE to create mini-network with 6 (5 pullers, 1 center) mesophyll cells in 2D
 // 
 // * Cells are pulled to center to start
 // * Contacts are formed
@@ -6,22 +6,24 @@
 // * network is created until hmax is reached
 // 
 // Compilation command:
-// g++ -O3 --std=c++11 -I src main/meso2D/mesoTriplet2D.cpp src/*.cpp -o meso.o
-// ./meso.o 24 1.01 1e-3 0.1 10.0 0.1 0.5 0 0 1 pos.test
+// g++ -O3 --std=c++11 -I src main/meso2D/mesoPenta2D.cpp src/*.cpp -o meso.o
+// ./meso.o 24 1.06 1e-3 1e-4 10.0 0.1 0.5 0 0 1 pos.test
 // 
 // 
 // Parameter input list
 // 1. n1: 				number of vertices on first particle
 // 2. calA0: 			preferred initial shape parameter for all particles
 // 3. dh 				step size
-// 4. kcspring 			pin spring constant
+// 4. kb0 				initial bending energy
 // 5. betaEff: 			effective temperature, sets contact breaking
-// 6. cL: 				perimeter aging parameter
-// 7. aL: 				distribution of aging parameter to contact (0) vs void (1)
-// 8. cB: 				preferred angle aging parameter
-// 9. cKb; 				bending energy aging parameter
-// 10. seed: 			seed for random number generator
-// 11. positionFile: 	string of path to output file with position/configuration data
+// 6. ctcdel: 			amount of contact-dependent adhesion (0=none, 1=all)
+// 7. ctch: 			dimensionless bond breaking energy (default=0.5)
+// 8. cL: 				perimeter aging parameter
+// 9. aL: 				distribution of aging parameter to contact (0) vs void (1)
+// 10. cB: 				preferred angle aging parameter
+// 11. cKb; 			bending energy aging parameter
+// 12. seed: 			seed for random number generator
+// 13. positionFile: 	string of path to output file with position/configuration data
 // 
 // NOTE: no need to pass member function as argument, pin simulations need specific member functions
 
@@ -37,40 +39,44 @@
 using namespace std;
 
 // global constants
-const int NCELLS 				= 3;		// always 3 cells
+const int NCELLS 				= 6;		// always 6 cells (5 boundary, 1 center)
 const double phi0 				= 0.1;		// initial packing fraction, for viz
 const double hmax 				= 2.5;		// max step length
 const double dhprint 			= 0.05;		// dh before print step
 const double boxLengthScale 	= 2.5;		// neighbor list box size in units of initial l0
 const double dt0 				= 1e-2;		// initial magnitude of time step in units of MD time
 const double Ftol 				= 1e-12; 	// force tolerance
-const double kb0 				= 1e-2; 	// initial bending energy
+const double kcspring 			= 1.0; 		// spring connecting to centers
 
 int main(int argc, char const *argv[])
 {
 	// local variables to be read in
 	int n1, seed;
-	double calA0, betaEff, cL, aL, cB, cKb, L, dh, kcspring;
+	double calA0, betaEff, cL, aL, cB, cKb, L, dh, kb0, ctcdel, ctch, rtmp;
 
 	// read in parameters from command line input
 	string n1_str 			= argv[1];
 	string calA0_str 		= argv[2];
 	string dh_str 			= argv[3];
-	string kcspring_str 	= argv[4];
+	string kb0_str 			= argv[4];
 	string betaEff_str 		= argv[5];
-	string cL_str 			= argv[6];
-	string aL_str 			= argv[7];
-	string cB_str 			= argv[8];
-	string cKb_str 			= argv[9];
-	string seed_str 		= argv[10];
-	string positionFile 	= argv[11];
+	string ctcdel_str 		= argv[6];
+	string ctch_str 		= argv[7];
+	string cL_str 			= argv[8];
+	string aL_str 			= argv[9];
+	string cB_str 			= argv[10];
+	string cKb_str 			= argv[11];
+	string seed_str 		= argv[12];
+	string positionFile 	= argv[13];
 
 	// using sstreams to get parameters
 	stringstream n1ss(n1_str);
 	stringstream calA0ss(calA0_str);
 	stringstream dhss(dh_str);
-	stringstream kcspringss(kcspring_str);
+	stringstream kb0ss(kb0_str);
 	stringstream betaEffss(betaEff_str);
+	stringstream ctcdelss(ctcdel_str);
+	stringstream ctchss(ctch_str);
 	stringstream cLss(cL_str);
 	stringstream aLss(aL_str);
 	stringstream cBss(cB_str);
@@ -81,13 +87,21 @@ int main(int argc, char const *argv[])
 	n1ss 			>> n1;
 	calA0ss 		>> calA0;
 	dhss			>> dh;
-	kcspringss 		>> kcspring;
+	kb0ss 			>> kb0;
 	betaEffss 		>> betaEff;
+	ctcdelss  		>> ctcdel;
+	ctchss  		>> ctch;
 	cLss 			>> cL;
 	aLss 			>> aL;
 	cBss 			>> cB;
 	cKbss 			>> cKb;
 	seedss 			>> seed;
+
+	// check inputs
+	if (ctcdel < 0.0 || ctcdel > 1.0){
+		cout << "** ERROR: ctcdel = " << ctcdel << ", but it needs to be between 0 and 1. Ending here. " << endl;
+		return 1;
+	}
 
 	// instantiate object
 	meso2D meso2Dobj(NCELLS, seed);
@@ -109,17 +123,22 @@ int main(int argc, char const *argv[])
 	L = meso2Dobj.getL(0);
 	vector<double> xpin0(NDIM*NCELLS,0.0);
 	double th = 0.0;
-	for (int i=0; i<NCELLS; i++){
-		xpin0[NDIM*i] = 0.5*L + 0.6*sqrt(meso2Dobj.geta0(0))*cos(th);
-		xpin0[NDIM*i + 1] = 0.5*L + 0.6*sqrt(meso2Dobj.geta0(0))*sin(th);
-		th += (2.0*PI)/NCELLS;
+	xpin0[0] = 0.5*L;
+	xpin0[1] = 0.5*L;
+	for (int i=1; i<NCELLS; i++){
+		rtmp = sqrt(meso2Dobj.geta0(0)/PI) + meso2Dobj.getl0(0);
+		xpin0[NDIM*i] = 0.5*L + 1.5*rtmp*cos(th);
+		xpin0[NDIM*i + 1] = 0.5*L + 1.5*rtmp*sin(th);
+		th += (2.0*PI)/(NCELLS-1);
 	}
 
 	// draw pins to box center
-	meso2Dobj.mesoPinFIRE(xpin0, Ftol, dt0, kcspring);
+	meso2Dobj.mesoPinFIRE(xpin0, Ftol, dt0, 0.1*kcspring);
 
 	// set aging parameters
 	meso2Dobj.setbetaEff(betaEff);
+	meso2Dobj.setctcdel(ctcdel);
+	meso2Dobj.setctch(ctch);
 	meso2Dobj.setcL(cL);
 	meso2Dobj.setaL(aL);
 	meso2Dobj.setcB(cB);
@@ -130,11 +149,10 @@ int main(int argc, char const *argv[])
 	meso2Dobj.initializeMesophyllBondNetwork();
 
 	// run stretching simulation to create network
-	meso2Dobj.mesoPinExtension(Ftol, dt0, hmax, dh, dhprint, kcspring, -1);
-
+	meso2Dobj.mesoPinExtension(Ftol, dt0, hmax, dh, dhprint, kcspring, 0);
 
 	// say goodbye
-	cout << "\n** Finished mesoTriplet2D.cpp, ending. " << endl;
+	cout << "\n** Finished mesoPenta2D.cpp, ending. " << endl;
 
 	return 0;
 }

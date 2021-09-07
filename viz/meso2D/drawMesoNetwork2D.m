@@ -7,17 +7,17 @@ clc;
 % create file name
 
 % parameters
-Nstr = '32';
+Nstr = '64';
 nstr = '24';
 castr = '1.06';
-bestr = '10.0';
-cLstr = '0.05';
-aLstr = '1.0';
-cBstr = '0.1';
-cKbstr = '1e-8';
+bestr = '10';
+cLstr = '0.1';
+aLstr = '1';
+cBstr = '0';
+cKbstr = '0';
 
 % seed
-seed = 2;
+seed = 10;
 seedstr = num2str(seed);
 
 % file name str
@@ -201,9 +201,9 @@ else
 end
 
 % make a movie
-makeAMovie = 0;
+makeAMovie = 1;
 if makeAMovie == 1
-    moviestr = 'mesoNetwork.mp4';
+    moviestr = [fpattern '.mp4'];
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -266,23 +266,23 @@ for ff = FSTART:FSTEP:FEND
             end
         end
         
-        % get shape tensor
-        cx = mean(xtmp);
-        cy = mean(ytmp);
-        rx = xtmp - cx;
-        ry = ytmp - cy;
-        rn = sqrt(rx.^2 + ry.^2);
-        urx = rx./rn;
-        ury = ry./rn;
-        Gxx = sum(rx.*urx)/nv(nn);
-        Gyy = sum(ry.*ury)/nv(nn);
-        Gxy = sum(rx.*ury)/nv(nn);
-        [V,D] = eig([Gxx, Gxy; Gxy, Gyy]);
-        lambda = diag(D);
-        cx = mod(cx,Lx);
-        cy = mod(cy,Ly);
-        quiver(cx,cy,lambda(1)*V(1,1),lambda(1)*V(2,1),'-w','linewidth',2);
-        quiver(cx,cy,lambda(2)*V(1,2),lambda(2)*V(2,2),'-w','linewidth',2);
+%         % get shape tensor
+%         cx = mean(xtmp);
+%         cy = mean(ytmp);
+%         rx = xtmp - cx;
+%         ry = ytmp - cy;
+%         rn = sqrt(rx.^2 + ry.^2);
+%         urx = rx./rn;
+%         ury = ry./rn;
+%         Gxx = sum(rx.*urx)/nv(nn);
+%         Gyy = sum(ry.*ury)/nv(nn);
+%         Gxy = sum(rx.*ury)/nv(nn);
+%         [V,D] = eig([Gxx, Gxy; Gxy, Gyy]);
+%         lambda = diag(D);
+%         cx = mod(cx,Lx);
+%         cy = mod(cy,Ly);
+%         quiver(cx,cy,lambda(1)*V(1,1),lambda(1)*V(2,1),'-w','linewidth',2);
+%         quiver(cx,cy,lambda(2)*V(1,2),lambda(2)*V(2,2),'-w','linewidth',2);
     end
         
     % plot box

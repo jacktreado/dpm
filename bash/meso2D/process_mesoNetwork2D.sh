@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# directories with code
-maindir=~/flowers/phasesep
-
 # directory for all output for cell simulations
 outputdir=/gpfs/loomis/project/fas/ohern/jdt45/dpm
 
