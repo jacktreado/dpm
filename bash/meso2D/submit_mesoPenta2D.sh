@@ -65,13 +65,6 @@ positionFile=$outputdir/"$basestr".pos
 runString="./$binf $n1 $calA0 $dh $kb0 $betaEff $ctcdel $ctch $cL $aL $cB $cKb $seed $positionFile"
 
 
-# test if task file was created
-if [[ ! -f "$taskf" ]]
-then
-    echo task file not created, ending before job submission
-    exit 1
-fi
-
 # setup slurm files
 slurmf=slurm/"$runstr".slurm
 job_name="$runstr"
