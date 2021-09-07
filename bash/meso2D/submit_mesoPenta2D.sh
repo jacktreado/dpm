@@ -34,6 +34,9 @@ cKb="${10}"
 partition="${11}"
 time="${12}"
 
+# redo compilation
+redocomp="${13}"
+
 # other params
 dh=1e-3
 seed=1
@@ -43,13 +46,17 @@ basestr=penta_n"$n1"_ca"$calA0"_kb0"$kb0"_be"$betaEff"_cd"$ctcdel"_ch"$ctch"_cL"
 runstr="$basestr"_run
 
 # compile into binary using packing.h
-binf=bin/"$runstr".o
+binf=bin/mesoPenta2D.o
 mainf=$maindir/mesoPenta2D.cpp
 
 # run compiler
-rm -f $binf
-g++ --std=c++11 -O3 -I "$srcdir" "$mainf" "$srcdir"/*.cpp -o $binf 
-echo compiling with : g++ --std=c++11 -O3 -I "$srcdir" "$mainf" "$srcdir"/*.cpp -o $binf   
+if [[ $redocomp == 1 || ! -f $binf ]]
+then
+    echo compiling with : g++ --std=c++11 -O3 -I "$srcdir" "$mainf" "$srcdir"/*.cpp -o $binf
+    g++ --std=c++11 -O3 -I "$srcdir" "$mainf" "$srcdir"/*.cpp -o $binf 
+else
+    echo $binf already exists, running on slurm
+fi
 
 # check compilation
 if [[ ! -f $binf ]]
@@ -63,7 +70,6 @@ positionFile=$outputdir/"$basestr".pos
 
 # create runString
 runString="./$binf $n1 $calA0 $dh $kb0 $betaEff $ctcdel $ctch $cL $aL $cB $cKb $seed $positionFile"
-
 
 # setup slurm files
 slurmf=slurm/"$runstr".slurm
