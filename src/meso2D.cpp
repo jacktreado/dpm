@@ -1297,7 +1297,7 @@ void meso2D::updateMesophyllBondNetwork(){
 	// local variables
 	bool isConnected;
 	int ci, cj, vi, vj, gi, gj;
-	double dx, dy, sij, rij, dU, poff, h=1.0, h2=h*h, rdraw;
+	double dx, dy, sij, rij, dU, poff, h=ctch, h2=h*h, rdraw;
 
 	// loop over pairs of vertices, check whether to connect or detach
 	for (gi=0; gi<NVTOT; gi++){
