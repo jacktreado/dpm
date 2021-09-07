@@ -22,21 +22,20 @@ mkdir -p out
 # inputs about simulation
 n1=$1
 calA0=$2
-dh=$3
-kb0=$4
-betaEff=$5
-ctcdel=$6
-ctch=$7
-cL=$8
-aL="${9}"
-cB="${10}"
-cKb="${11}"
+kb0=$3
+betaEff=$4
+ctcdel=$5
+ctch=$6
+cL=$7
+aL=$8
+cB=$9
+cKb="${10}"
 
 # inputs about cluster
-partition="${12}"
-time="${13}"
-startSeed="${14}"
-endSeed="${15}"
+partition="${11}"
+time="${12}"
+startSeed="${13}"
+endSeed="${14}"
 
 # other params
 dh=1e-3
@@ -151,7 +150,6 @@ sbatch $slurmf
 # # inputs about simulation
 # n1
 # calA0
-# dh
 # kb0
 # betaEff
 # ctcdel
