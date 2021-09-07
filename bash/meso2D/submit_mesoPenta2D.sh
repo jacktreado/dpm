@@ -7,9 +7,6 @@ maindir=$gitdir/main/meso2D
 
 # directories for dpm + tumor simulations
 dpmdir=/gpfs/loomis/project/fas/ohern/"$USER"/dpm
-tumordir=$dpmdir/meso2D
-
-# parent directory for simulation output
 outputdir=$dpmdir/mesoPenta2D
 
 # make directories, unless they already exist
