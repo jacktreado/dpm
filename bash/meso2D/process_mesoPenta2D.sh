@@ -12,7 +12,7 @@ runout=out/"$basestr".out
 
 # input info
 floc=/gpfs/loomis/project/fas/ohern/"$USER"/dpm/mesoPenta2D
-fpattern=mesoPenta2D
+fpattern=penta
 savestr="$floc"/"$basestr".mat
 
 # matlab code
