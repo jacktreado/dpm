@@ -20,7 +20,7 @@ MCODE="addpath ~/dpm/viz/meso2D; processMesoPenta2D('$floc','$fpattern','$savest
 
 # echo about time
 echo -- running time = $time for $partition
-
+rm -f $slurmf
 echo -- PRINTING SLURM FILE...
 echo \#\!/bin/bash >> $slurmf
 echo \#SBATCH --cpus-per-task=1 >> $slurmf

@@ -53,8 +53,8 @@ for ss = 1:NSIMS
     zc = pentaData.zc;
     a0 = pentaData.a0;
     l0 = pentaData.l0;
-    p = mesoData.p;
-    a = mesoData.a;
+    p = pentaData.p;
+    a = pentaData.a;
     
     % get connection
     zcList{ss} = zc;
