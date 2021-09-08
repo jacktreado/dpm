@@ -48,6 +48,7 @@ for ss = 1:NSIMS
     params(ss,:) = paramtmp';
     
 	% parse data from file
+    NFRAMES = pentaData.NFRAMES;
 	x = pentaData.x;
     y = pentaData.y;
     zc = pentaData.zc;
