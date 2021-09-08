@@ -11,7 +11,7 @@ job_name="$basestr"
 runout=out/"$basestr".out
 
 # input info
-floc=/gpfs/loomis/project/fas/ohern/jdt/dpm/mesoPenta2D
+floc=/gpfs/loomis/project/fas/ohern/"$USER"/dpm/mesoPenta2D
 fpattern=mesoPenta2D
 savestr="$floc"/"$basestr".mat
 
