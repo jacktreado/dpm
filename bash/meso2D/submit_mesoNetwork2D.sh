@@ -158,16 +158,16 @@ sbatch -t $time $slurmf
 # ====================
 # 1. NCELLS
 # 2. n
-# 4. calA0
+# 3. calA0
+# 4. kb0
 # 5. betaEff
-# 6. kb0
-# 7. cL (perimeter aging)
-# 8. aL (either age contact (0) or void (1) perimeter)
-# 9. cB (bending angle aging)
-# 10. partition
-# 11. time
-# 12. number of runs (number of array entries, i.e. arraynum)
-# 13. start seed (end seed determined by number of runs)
+# 6. cL (perimeter aging)
+# 7. aL (either age contact (0) or void (1) perimeter)
+# 8. cB (bending angle aging)
+# 9. partition
+# 10. time
+# 11. number of runs (number of array entries, i.e. arraynum)
+# 12. start seed (end seed determined by number of runs)
 
 
 
