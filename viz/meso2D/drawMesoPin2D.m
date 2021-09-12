@@ -15,7 +15,7 @@ NFRAMES = dpmData.NFRAMES;
 
 % sim info
 NCELLS = dpmData.NCELLS;
-nv = dpmData.nv(1,:);
+nv = dpmData.nv;
 L = dpmData.L(1,:);
 Lx = L(1);
 Ly = L(2);
@@ -58,7 +58,7 @@ h = dpmData.h;
 %% Draw cells
 
 % show vertices or not
-showverts = 0;
+showverts = 1;
 
 % color by shape or size
 colorShape = 0;
@@ -94,6 +94,7 @@ else
     FSTART = 1;
     FSTEP = 1;
     FEND = NFRAMES;
+%     FEND = FSTART;
 end
 
 % make a movie
@@ -117,17 +118,24 @@ for ff = FSTART:FSTEP:FEND
     yf = y(ff,:);
     rf = r(ff,:);
     zctmp = zc(ff,:);
+    nvtmp = nv(ff,:);
+    gi = 1;
     for nn = 1:NCELLS
         xtmp = xf{nn};
         ytmp = yf{nn};
         rtmp = rf{nn};
         clr = cellCLR(nn,:);
         if showverts == 1
-            for vv = 1:nv(nn)
+            for vv = 1:nvtmp(nn)
                 rv = rtmp(vv);
                 xplot = xtmp(vv) - rv;
                 yplot = ytmp(vv) - rv;
-                rectangle('Position',[xplot, yplot, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',0.2);
+                if gi==8 || gi==9
+                    rectangle('Position',[xplot, yplot, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','k','LineWidth',0.2);
+                else
+                    rectangle('Position',[xplot, yplot, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',0.2);
+                end
+                gi = gi + 1;
             end
         else
             cx = mean(xtmp);
@@ -138,7 +146,7 @@ for ff = FSTART:FSTEP:FEND
             xtmp = xtmp + 0.8*rtmp.*(rx./rads);
             ytmp = ytmp + 0.8*rtmp.*(ry./rads);
             vpos = [xtmp, ytmp];
-            finfo = [1:nv(nn) 1];
+            finfo = [1:nvtmp(nn) 1];
             patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k');
         end
     end

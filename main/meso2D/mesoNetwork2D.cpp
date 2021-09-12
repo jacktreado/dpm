@@ -7,7 +7,7 @@
 //
 // Compilation command:
 // g++ -O3 --std=c++11 -I src main/meso2D/mesoNetwork2D.cpp src/*.cpp -o meso.o
-// ./meso.o 16 24 0.1 1.06 10.0 0.01 1 1e-2 1e-6 1 pos.test
+// ./meso.o 16 24 0.1 1.06 1e-4 10.0 0.01 1 0.01 1 pos.test
 //
 //
 // Parameter input list
@@ -15,11 +15,11 @@
 // 2. n1: 				number of vertices on first particle
 // 3. dispersion: 		polydispersity
 // 4. calA0: 			preferred initial shape parameter for all particles
-// 5. betaEff: 			inverse bond breaking temperature
-// 6. cL: 				perimeter aging parameter
-// 7. aL: 				distribution of aging to either contacts (0) or void (1)
-// 8. cB: 				preferred angle aging parameter
-// 9. cKb; 				bending energy aging parameter
+// 5. kb0: 				initial amount of bending energy
+// 6. betaEff: 			inverse bond breaking temperature
+// 7. cL: 				perimeter aging parameter
+// 8. aL: 				distribution of aging to either contacts (0) or void (1)
+// 9. cB: 				preferred angle aging parameter
 // 10. seed: 			seed for random number generator
 // 11. positionFile: 	string of path to output file with position/configuration data
 
@@ -45,24 +45,30 @@ const double Ptol = 1e-6;		   	// target pressure in initial compression
 const double Ftol = 1e-10; 			// force tolerance
 const double phiMin = 0.4;			// minimum packing fraction in decompression algorithm
 const double T0 = 1e-3; 			// temperature for jamming preparation protocol
-const double trun = 50.0; 			// amount of time to run
+const double trun = 10.0; 			// amount of time to run annealing
+
+// set parameters
+const double ctcdel = 1.0;
+const double ctch = 1.0;
+const double cKb = 1e-6;
+
 
 int main(int argc, char const *argv[])
 {
 	// local variables to be read in
 	int NCELLS, n1, seed;
-	double dispersion, calA0, phiMin, betaEff, cL, aL, cB, cKb;
+	double dispersion, calA0, kb0, phiMin, betaEff, cL, aL, cB;
 
 	// read in parameters from command line input
 	string NCELLS_str 		= argv[1];
 	string n1_str 			= argv[2];
 	string disp_str 		= argv[3];
 	string calA0_str 		= argv[4];
-	string betaEff_str 		= argv[5];
-	string cL_str 			= argv[6];
-	string aL_str 			= argv[7];
-	string cB_str 			= argv[8];
-	string cKb_str 			= argv[9];
+	string kb0_str 			= argv[5];
+	string betaEff_str 		= argv[6];
+	string cL_str 			= argv[7];
+	string aL_str 			= argv[8];
+	string cB_str 			= argv[9];
 	string seed_str 		= argv[10];
 	string positionFile 	= argv[11];
 
@@ -71,11 +77,11 @@ int main(int argc, char const *argv[])
 	stringstream n1ss(n1_str);
 	stringstream dispss(disp_str);
 	stringstream calA0ss(calA0_str);
+	stringstream kb0ss(kb0_str);
 	stringstream betaEffss(betaEff_str);
 	stringstream cLss(cL_str);
 	stringstream aLss(aL_str);
 	stringstream cBss(cB_str);
-	stringstream cKbss(cKb_str);
 	stringstream seedss(seed_str);
 
 	// read into data
@@ -83,11 +89,11 @@ int main(int argc, char const *argv[])
 	n1ss >> n1;
 	dispss >> dispersion;
 	calA0ss >> calA0;
+	kb0ss >> kb0;
 	betaEffss >> betaEff;
 	cLss >> cL;
 	aLss >> aL;
 	cBss >> cB;
-	cKbss >> cKb;
 	seedss >> seed;
 
 	// instantiate object
@@ -113,10 +119,13 @@ int main(int argc, char const *argv[])
 
 	// set aging parameters
 	meso2Dobj.setbetaEff(betaEff);
+	meso2Dobj.setctcdel(ctcdel);
+	meso2Dobj.setctch(ctch);
 	meso2Dobj.setcL(cL);
 	meso2Dobj.setaL(aL);
 	meso2Dobj.setcB(cB);
 	meso2Dobj.setcKb(cKb);
+	meso2Dobj.setkbi(kb0);
 
 	// relax configuration using network + bending
 	meso2Dobj.initializeMesophyllBondNetwork();

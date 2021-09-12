@@ -2548,6 +2548,7 @@ void tumor2D::invasionConstP(tumor2DMemFn forceCall, double dDr, double dPsi, do
 		psiDiffusion();
 
 		// update box lengths based on 
+		L[0] += dt*wpress[0];
 
 		// update time
 		t += dt;

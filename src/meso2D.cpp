@@ -628,8 +628,8 @@ void meso2D::mesoPinForceUpdate(vector<double>& xpin, double kcspring){
 		// add to forces 
 		gi = szList[ci];
 		for (vi=0; vi<nvtmp; vi++){
-			F[NDIM*gi] += fx;
-			F[NDIM*gi + 1] += fy;
+			F[NDIM*gi] += fx/nvtmp;
+			F[NDIM*gi + 1] += fy/nvtmp;
 			gi++;
 		}
 	}
@@ -1130,6 +1130,10 @@ void meso2D::mesoNetworkExtension(meso2DMemFn forceCall, double Ftol, double dt0
 		// age particle shapes
 		ageMesophyllShapeParameters();
 
+		// add vertices
+		if (NVTOT < NVMAX)
+			addMesophyllCellMaterial();
+
 		// output to console
 		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
 		cout << "===============================================" << endl << endl;
@@ -1220,6 +1224,10 @@ void meso2D::mesoPinExtension(double Ftol, double dt0, double hmax, double dh, d
 		// age particle shapes
 		ageMesophyllShapeParameters();
 
+		// add vertices
+		if (NVTOT < NVMAX)
+			addMesophyllCellMaterial();
+
 		// output to console
 		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
 		cout << "===============================================" << endl << endl;
@@ -1233,6 +1241,7 @@ void meso2D::mesoPinExtension(double Ftol, double dt0, double hmax, double dh, d
 		cout << "===============================================" << endl;
 		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
 		cout << endl;
+		cout << "	* NVTOT / NVMAX		= " << NVTOT << "/" << NVMAX << endl << endl;
 		cout << "	* k 			= " << k << endl;
 		cout << "	* h 			= " << h << endl;
 		cout << "	* lastPrinth 	= " << lastPrinth << endl;
@@ -1256,6 +1265,7 @@ void meso2D::mesoPinExtension(double Ftol, double dt0, double hmax, double dh, d
 			// update last print h
 			lastPrinth = h;
 		}
+		// printMesoPin2D(xpin, h);
 
 		// move pins
 		for (ci=0; ci<NCELLS; ci++){
@@ -1304,7 +1314,7 @@ void meso2D::updateMesophyllBondNetwork(){
 		cindices(ci,vi,gi);
 		for (gj=gi+1; gj<NVTOT; gj++){
 			cindices(cj,vj,gj);
-			if (ci != cj){
+			if (ci != cj && zc[ci] > 3 && zc[cj] > 3){
 				// contact distance
 				sij = r[gi] + r[gj];
 
@@ -1323,16 +1333,17 @@ void meso2D::updateMesophyllBondNetwork(){
 				// get current contact status
 				isConnected = gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2];
 
-				// reconnect bond if vertices come into contact
-				if (rij <= sij && !isConnected){
-					gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 1;
-					zc[ci]++;
-					zc[cj]++;
+				// // reconnect bond if vertices come into contact
+				// if (rij <= sij && !isConnected){
+				// 	gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 1;
+				// 	zc[ci]++;
+				// 	zc[cj]++;
 
-					zv[gi]++;
-					zv[gj]++;
-				}
-				else if (rij > sij && isConnected){
+				// 	zv[gi]++;
+				// 	zv[gj]++;
+				// }
+				// NOTE: above is reconnection, neglect for now
+				if (rij > sij && isConnected){
 					// change in energy from bond breaking
 					dU = 1.0 - (pow(1 - (rij/sij),2.0)/h2);
 
@@ -1441,6 +1452,274 @@ void meso2D::ageMesophyllShapeParameters(){
 }
 
 
+// age shape parameters by "adding" material between contacts
+void meso2D::addMesophyllCellMaterial(){
+	// local variables
+	bool gtmp = 0;
+	int d, gi, gj, gip1, zgi, zgip1, ctc_im_jn, ctc_ip1m_kp, cin, vin, cip1p, vip1p;
+	double roll, dx, dy, dr, di, dmin, lix, liy;
+
+	// vector to pushback vertices where extra material is added
+	vector<int> growthVerts;
+
+	// loop over vertices, decide which to grow
+	for (gi=0; gi<NVTOT; gi++){
+		// look at contacts between i and ip1
+		gip1 = ip1[gi];
+		zgi = mesoBondedCTCS(gi);
+		zgip1 = mesoBondedCTCS(gip1);
+		if (zgi > 0 && zgip1 > 0){
+			// check min contact to gi
+			dmin = 1e6;
+			for (gj=0; gj<NVTOT; gj++){
+				if (gj < gi)
+					gtmp = gij[NVTOT*gj + gi - (gj+1)*(gj+2)/2];
+				else if (gj > gi)
+					gtmp = gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2];
+				if (gtmp && gi != gj){
+					// distance between j and i in x
+					dx = x[NDIM*gj] - x[NDIM*gi];
+					if (pbc[0])
+						dx -= L[0]*round(dx/L[0]);
+
+					// distance between j and i in y
+					dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
+					if (pbc[1])
+						dy -= L[1]*round(dy/L[1]);
+
+					// full distance
+					di = dx*dx + dy*dy;
+					if (di < dmin){
+						dmin = di;
+						ctc_im_jn = gj;
+					}
+				}
+			}
+
+			// check min contact to gip1
+			dmin = 1e6;
+			for (gj=0; gj<NVTOT; gj++){
+				if (gj < gip1)
+					gtmp = gij[NVTOT*gj + gip1 - (gj+1)*(gj+2)/2];
+				else if (gj > gip1)
+					gtmp = gij[NVTOT*gip1 + gj - (gip1+1)*(gip1+2)/2]; 
+				if (gtmp && gip1 != gj){
+					// distance between j and i in x
+					dx = x[NDIM*gj] - x[NDIM*gip1];
+					if (pbc[0])
+						dx -= L[0]*round(dx/L[0]);
+
+					// distance between j and i in y
+					dy = x[NDIM*gj + 1] - x[NDIM*gip1 + 1];
+					if (pbc[1])
+						dy -= L[1]*round(dy/L[1]);
+
+					// full distance
+					di = dx*dx + dy*dy;
+					if (di < dmin){
+						dmin = di;
+						ctc_ip1m_kp = gj;
+					}
+				}
+			}
+
+			// get distance between i and ip1
+			dx = x[NDIM*gip1] - x[NDIM*gi];
+			dy = x[NDIM*gip1 + 1] - x[NDIM*gi + 1];
+			if (pbc[0])
+				dx -= L[0]*round(dx/L[0]);
+			if (pbc[1])
+				dy -= L[1]*round(dy/L[1]);
+			dr = sqrt(dx*dx + dy*dy);
+
+			// if contacts are on different cells, add vertex between contacts if space available
+			cindices(cin,vin,ctc_im_jn);
+			cindices(cip1p,vip1p,ctc_ip1m_kp);
+			if (cin != cip1p){
+				growthVerts.push_back(gi);
+				cout << "adding vertex between gi=" << gi << " and gip1=" << gip1 << endl;
+			}
+		}
+		else if (zgi == 0){
+			// birth vertex randomly (with probability cL)
+			roll = drand48();
+			if (roll < cL/NVTOT)
+				growthVerts.push_back(gi);
+		}
+	}
+
+	// Loop over growth locations, run growth protocol
+	for (gi=0; gi<growthVerts.size(); gi++)
+		addVertex(growthVerts.at(gi));
+}
+
+
+// compute a given number of bonded contacts on a single vertex
+int meso2D::mesoBondedCTCS(int gi){
+	// local variables
+	bool gtmp;
+	int gj, zg;
+
+	// loop over pairs of vertices
+	zg = 0;
+	for (gj=0; gj<NVTOT; gj++){
+		gtmp = 0;
+		if (gi > gj)
+			gtmp = gij[NVTOT*gj + gi - (gj+1)*(gj+2)/2];
+		else if (gj > gi)
+			gtmp = gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2];
+
+		// add to contacts
+		if (gtmp)
+			zg++;
+	}
+
+	// return number of contacts
+	return zg;
+}
+
+
+// add vertex and update all relevant variables
+void meso2D::addVertex(int gi){
+	// local variables
+	int NVVCTS;
+	int d, ci, vi, vj, vip1, vim1, cj, gj, gip1 = ip1[gi];
+	int gk, gjp, gkp;
+	double dx, dy, dr;
+
+	// temporary gij for merging
+	NVVCTS = 0.5*NVTOT*(NVTOT-1);
+	vector<bool> gijtmp(NVVCTS,0);
+	gijtmp = gij;
+
+	// find cell list items
+	cindices(ci,vi,gi);
+
+	// get new vertex location
+	dx = x[NDIM*gip1] - x[NDIM*gi];
+	dy = x[NDIM*gip1 + 1] - x[NDIM*gi + 1];
+	if (pbc[0])
+		dx -= L[0]*round(dx/L[0]);
+	if (pbc[1])
+		dy -= L[1]*round(dy/L[1]);
+	dr = sqrt(dx*dx + dy*dy);
+
+	// add memory
+
+	// -- dpm shape parameters
+	l0.push_back(0.0);
+	t0.push_back(0.0);
+	r.push_back(0.0);
+	im1.push_back(0);
+	ip1.push_back(0);
+
+	// -- dynamical variables
+	for (d=0; d<NDIM; d++){
+		x.push_back(0.0);
+		v.push_back(0.0);
+		F.push_back(0.0);
+	}
+
+	// linked list parameters
+	list.push_back(0);
+
+	// -- parameters specific to mesophyll
+	kbi.push_back(0.0);	
+
+	// add to counters
+	NVTOT++;
+	nv.at(ci)++;
+
+	// recompute szList, neighbor lists
+	for (cj=1; cj<NCELLS; cj++)
+		szList.at(cj) = szList.at(cj-1) + nv.at(cj-1);
+
+	// print old info to console
+	cout << "old:" << endl;
+	cout << "vertex " << gi << "; (" << x[NDIM*gi] << ", " << x[NDIM*gi + 1] << ")" << endl;
+	cout << "vertex " << gip1 << "; (" << x[NDIM*gip1] << ", " << x[NDIM*gip1 + 1] << ")" << endl;
+	cout << "vertex " << ip1[gip1] << "; (" << x[NDIM*ip1[gip1]] << ", " << x[NDIM*ip1[gip1] + 1] << ")" << endl;
+	cout << endl;
+
+	// re-sort vertex-based parameters backwards
+	for (gj=NVTOT-1; gj>=gi+1; gj--){
+		l0[gj+1] = l0[gj];
+		t0[gj+1] = t0[gj];
+		r[gj+1] = r[gj];
+		for (d=0; d<NDIM; d++){
+			x[NDIM*(gj+1)+d] = x[NDIM*gj+d];
+			v[NDIM*(gj+1)+d] = v[NDIM*gj+d];
+			F[NDIM*(gj+1)+d] = F[NDIM*gj+d];
+		}
+		kbi[gj+1] = kbi[gj];
+	}
+
+	// resort ip1 and im1 based on new number of vertices
+	for (cj=0; cj<NCELLS; cj++) {
+		// vertex indexing
+		for (vj=0; vj<nv.at(cj); vj++) {
+			// wrap local indices
+			vim1 = (vj - 1 + nv.at(cj)) % nv.at(cj);
+			vip1 = (vj + 1) % nv.at(cj);
+
+			// get global wrapped indices
+			gj = gindex(cj, vj);
+			im1.at(gj) = gindex(cj, vim1);
+			ip1.at(gj) = gindex(cj, vip1);
+		}
+	}
+
+	// resize
+	// NEED TO MAP OLD CONTACTS TO NEW CONTACTS
+	NVVCTS = 0.5*NVTOT*(NVTOT-1);
+	gij.clear();
+	gij.resize(NVVCTS);
+	for (gj=0; gj<NVTOT-1; gj++){
+		if (gj < gi+1)
+			gjp = gj;
+		else if (gj > gi+1)
+			gjp = gj+1;
+		else
+			continue;
+
+		for (gk=(gj+1); gk<NVTOT-1; gk++){
+			if (gk < gi+1)
+				gkp = gk;
+			else if (gk > gi+1)
+				gkp = gk+1;
+			else
+				continue;
+
+			gij.at(NVTOT*gjp + gkp - (gjp+1)*(gjp+2)/2) = gijtmp.at((NVTOT-1)*gj + gk - (gj+1)*(gj+2)/2);
+		}
+	}
+
+	// add information
+	x[NDIM*(gi+1)] = x[NDIM*gi] + 0.5*dx;
+	x[NDIM*(gi+1) + 1] = x[NDIM*gi + 1] + 0.5*dy;
+	v[NDIM*(gi+1)] = 0.0;
+	v[NDIM*(gi+1) + 1] = 0.0;
+	F[NDIM*(gi+1)] = 0.0;
+	F[NDIM*(gi+1) + 1] = 0.0;
+	l0[gi+1] = 0.5*dr;
+	l0[gi] = 0.5*dr;
+	t0[gi+1] = (2.0*PI)/nv.at(ci);
+	r[gi+1] = r[gi];
+	kbi[gi+1] = kbi[gi];
+
+	cout << "new:" << endl;
+	cout << "vertex " << gi << "; (" << x[NDIM*gi] << ", " << x[NDIM*gi + 1] << ")" << endl;
+	cout << "vertex " << gip1 << "; (" << x[NDIM*gip1] << ", " << x[NDIM*gip1 + 1] << ")" << endl;
+	cout << "vertex " << ip1[gip1] << "; (" << x[NDIM*ip1[gip1]] << ", " << x[NDIM*ip1[gip1] + 1] << ")" << endl;
+	cout << endl;
+
+	// // print out to console
+	// for (gi=0; gi<NVTOT; gi++)
+	// 	cout << "gi=" << gi << ",  " << im1[gi] << ",  " << ip1[gi] << endl;
+	// exit(1);
+
+}
+
 
 // set t0 to current angles
 void meso2D::t0ToCurrent(){
@@ -1478,11 +1757,6 @@ void meso2D::t0ToCurrent(){
 		t0[gi] = ti;
 	}
 }
-
-
-
-
-
 
 
 

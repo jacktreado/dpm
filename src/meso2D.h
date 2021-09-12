@@ -25,6 +25,9 @@ typedef void (meso2D::*meso2DMemFn)(void);
 
 class meso2D : public dpm{
 protected:
+	// int for maximum number of vertices
+	int NVMAX;
+
 	// bending energy per vertex
 	// NOTE: will need to add different Hessian computation
 	std::vector<double> kbi;
@@ -53,7 +56,7 @@ protected:
 public:
 
 	// constructor and destructor
-	meso2D(int n, int seed) : dpm(n,seed) { betaEff=0.0; ctcdel=1.0; ctch=0.5; cL=0.0; aL=1.0; cB=0.0; cKb=0.0; zc.resize(n); };
+	meso2D(int n, int seed) : dpm(n,seed) { betaEff=0.0; ctcdel=1.0; ctch=0.5; cL=0.0; aL=1.0; cB=0.0; cKb=0.0; zc.resize(n); NVMAX = n; };
 
 	// File openers
 	void openHessObject(std::string& str) {
@@ -78,6 +81,7 @@ public:
 
 
 	// setters
+	void setNVMAX(int val) { NVMAX = val; };
 	void setkbi(double val) { fill(kbi.begin(), kbi.end(), val); };
 	void setbetaEff(double val) { betaEff = val; };
 	void setctcdel(double val) { ctcdel = val; };
@@ -115,6 +119,9 @@ public:
 	// protocol helpers
 	void updateMesophyllBondNetwork();
 	void ageMesophyllShapeParameters();
+	void addMesophyllCellMaterial();
+	int mesoBondedCTCS(int gi);
+	void addVertex(int gi);
 	void t0ToCurrent();
 
 	// hessian computation

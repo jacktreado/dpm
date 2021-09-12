@@ -23,11 +23,11 @@ mkdir -p out
 NCELLS=$1
 n1=$2
 calA0=$3
-betaEff=$4
-cL=$5
-aL=$6
-cB=$7
-cKb=$8
+kb0=$4
+betaEff=$5
+cL=$6
+aL=$7
+cB=$8
 partition=$9
 time="${10}"
 numRuns="${11}"
@@ -41,7 +41,7 @@ let numSeeds=$numSeedsPerRun*$numRuns
 let endSeed=$startSeed+$numSeeds-1
 
 # name strings
-basestr=meso2D_N"$NCELLS"_n"$n1"_ca"$calA0"_be"$betaEff"_cL"$cL"_aL"$aL"_cB"$cB"_cKb"$cKb"
+basestr=meso2D_N"$NCELLS"_n"$n1"_ca"$calA0"_kb0"$kb0"_be"$betaEff"_cL"$cL"_aL"$aL"_cB"$cB"
 runstr="$basestr"_startseed"$startSeed"_endseed"$endSeed"
 
 # make directory specific for this simulation
@@ -55,11 +55,11 @@ echo Running mesoNetwork2D simulations with parameters:
 echo NCELLS = "$NCELLS"
 echo n1 = "$n1"
 echo calA0 = "$calA0"
+echo kb0 = "$kb0"
 echo betaEff = "$betaEff"
 echo cL = "$cL"
 echo aL = "$aL"
 echo cB = "$cB"
-echo cKb = "$cKb"
 
 # run compiler
 rm -f $binf
@@ -105,7 +105,7 @@ for seed in `seq $startSeed $numSeedsPerRun $endSeed`; do
         posf=$simdatadir/$filestr.pos
 
         # append to runString
-        runString="$runString ; ./$binf $NCELLS $n1 $disp $calA0 $betaEff $cL $aL $cB $cKb $runseed $posf"
+        runString="$runString ; ./$binf $NCELLS $n1 $disp $calA0 $betaEff $kb0 $cL $aL $cB $runseed $posf"
     done
 
     # finish off run string
@@ -160,10 +160,10 @@ sbatch -t $time $slurmf
 # 2. n
 # 4. calA0
 # 5. betaEff
-# 6. cL (perimeter aging)
-# 7. aL (either age contact (0) or void (1) perimeter)
-# 8. cB (bending angle aging)
-# 9. cKb (bending energy stiffening)
+# 6. kb0
+# 7. cL (perimeter aging)
+# 8. aL (either age contact (0) or void (1) perimeter)
+# 9. cB (bending angle aging)
 # 10. partition
 # 11. time
 # 12. number of runs (number of array entries, i.e. arraynum)
