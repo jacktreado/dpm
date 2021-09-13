@@ -131,6 +131,7 @@ public:
 	// printing functions
 	void printMesoNetwork2D();
 	void printMesoPin2D(std::vector<double> &xpin, double h);
+	void printMesoBondNetwork();
 };
 
 #endif

@@ -6,6 +6,7 @@ clc;
 
 % file name string
 fstr = '~/Jamming/CellSim/dpm/pos.test';
+bondstr = '~/Jamming/CellSim/dpm/bond.test';
 
 % read in data
 dpmData = readMesoPin2D(fstr);
@@ -26,7 +27,6 @@ px = dpmData.px;
 py = dpmData.py;
 zc = dpmData.zc;
 zv = dpmData.zv;
-zg = dpmData.zg;
 a0 = dpmData.a0;
 l0 = dpmData.l0;
 t0 = dpmData.t0;
@@ -61,7 +61,7 @@ h = dpmData.h;
 showverts = 1;
 
 % color by shape or size
-colorShape = 0;
+colorShape = 3;
 
 if colorShape == 1
     % color by real shape
@@ -73,6 +73,9 @@ elseif colorShape == 2
     NCLR = 100;
     calA0Bins = linspace(0.999*min(calA0(:)),1.001*max(calA0(:)),NCLR+1);
     cellCLR = jet(NCLR);
+elseif colorShape == 3
+    clrOrig = [0 0 1];
+    clrNew = [1 1 1];
 else
     [nvUQ, ~, IC] = unique(nv);
     NUQ = length(nvUQ);
@@ -83,6 +86,36 @@ else
     end
 end
 
+% draw cell cell contacts
+if ~isempty(who('bondstr')) && exist(bondstr,'file')
+    % can choose to draw contacts
+    drawBonds = 1;
+
+    % load in ctc data
+    if drawBonds == 1
+        gijList = cell(NFRAMES,1);
+        fid = fopen(bondstr);
+        for ff = 1:NFRAMES
+            NVTOT = sum(nv(ff,:));
+            NVVCTCS = 0.5*NVTOT*(NVTOT-1);
+            gijtmp = textscan(fid,repmat('%f',1,NVVCTCS),1);
+            gijtmp = cell2mat(gijtmp);
+            gg = 1;
+            gij = zeros(NVTOT);
+            for gi = 1:NVTOT
+                for gj = (gi+1):NVTOT
+                    gij(gi,gj) = gijtmp(gg);
+                    gij(gj,gi) = gij(gi,gj);
+                    gg = gg + 1;
+                end
+            end
+            gijList{ff} = gij;
+        end
+        fclose(fid);
+    end
+else
+    drawBonds = 0;
+end
 
 % get frames to plot
 if showverts == 0
@@ -100,14 +133,13 @@ end
 % make a movie
 makeAMovie = 0;
 if makeAMovie == 1
-    moviestr = 'tumorInterface.mp4';
+    moviestr = 'mesoPin2D.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
 end
 
 fnum = 1;
-figure(fnum), clf, hold on, box on;
 for ff = FSTART:FSTEP:FEND
     % reset figure for this frame
     figure(fnum), clf, hold on, box on;
@@ -117,23 +149,23 @@ for ff = FSTART:FSTEP:FEND
     xf = x(ff,:);
     yf = y(ff,:);
     rf = r(ff,:);
-    zctmp = zc(ff,:);
+    zvf = zv(ff,:);
     nvtmp = nv(ff,:);
     gi = 1;
     for nn = 1:NCELLS
         xtmp = xf{nn};
         ytmp = yf{nn};
         rtmp = rf{nn};
-        clr = cellCLR(nn,:);
+        zvtmp = zvf{nn};
         if showverts == 1
             for vv = 1:nvtmp(nn)
                 rv = rtmp(vv);
                 xplot = xtmp(vv) - rv;
                 yplot = ytmp(vv) - rv;
-                if gi==8 || gi==9
-                    rectangle('Position',[xplot, yplot, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','k','LineWidth',0.2);
+                if zvtmp(vv) < 0
+                    rectangle('Position',[xplot, yplot, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clrNew,'LineWidth',0.2);
                 else
-                    rectangle('Position',[xplot, yplot, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',0.2);
+                    rectangle('Position',[xplot, yplot, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clrOrig,'LineWidth',0.2);
                 end
                 gi = gi + 1;
             end
@@ -147,7 +179,7 @@ for ff = FSTART:FSTEP:FEND
             ytmp = ytmp + 0.8*rtmp.*(ry./rads);
             vpos = [xtmp, ytmp];
             finfo = [1:nvtmp(nn) 1];
-            patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k');
+            patch('Faces',finfo,'vertices',vpos,'FaceColor',clrOrig,'EdgeColor','k');
         end
     end
     
@@ -164,6 +196,26 @@ for ff = FSTART:FSTEP:FEND
         plot(px(ff,cc),py(ff,cc),'ko','markersize',10,'markerfacecolor','k');
     end
     
+    % draw bonds if available
+    if drawBonds == 1
+        NVTOT = sum(nv(ff,:));
+        gij = gijList{ff};
+        xall = cell2mat(xf');
+        yall = cell2mat(yf');
+        for gi = 1:NVTOT
+            for gj = (gi+1):NVTOT
+                if (gij(gi,gj) == 1)
+                    xi = xall(gi);
+                    yi = yall(gi);
+                    
+                    xj = xall(gj);
+                    yj = yall(gj);
+                    
+                    plot([xi xj],[yi yj],'k-','linewidth',2);
+                end
+            end
+        end
+    end
     
     % if making a movie, save frame
     if makeAMovie == 1

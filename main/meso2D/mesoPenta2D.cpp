@@ -47,7 +47,7 @@ const double boxLengthScale 	= 2.5;		// neighbor list box size in units of initi
 const double dt0 				= 1e-2;		// initial magnitude of time step in units of MD time
 const double Ftol 				= 1e-12; 	// force tolerance
 const double kcspring 			= 1.0; 		// spring connecting to centers
-const double kl 				= 0.5; 		// perimeter spring constant
+const double kl 				= 1.0; 		// perimeter spring constant
 
 int main(int argc, char const *argv[])
 {
@@ -69,6 +69,7 @@ int main(int argc, char const *argv[])
 	string cKb_str 			= argv[11];
 	string seed_str 		= argv[12];
 	string positionFile 	= argv[13];
+	string bondFile 		= argv[14];
 
 	// using sstreams to get parameters
 	stringstream n1ss(n1_str);
@@ -114,6 +115,7 @@ int main(int argc, char const *argv[])
 
 	// open position config file
 	meso2Dobj.openPosObject(positionFile);
+	meso2Dobj.openCTCObject(bondFile);
 
 	// initialize particles
 	meso2Dobj.initializeMesophyllCells(0.0, calA0, phi0, Ftol, n1);
@@ -138,10 +140,6 @@ int main(int argc, char const *argv[])
 		th += (2.0*PI)/(NCELLS-1);
 	}
 
-	// draw pins to box center
-	meso2Dobj.setkl(kl);
-	meso2Dobj.mesoPinFIRE(xpin0, Ftol, dt0, 0.1*kcspring);
-
 	// set aging parameters
 	meso2Dobj.setbetaEff(betaEff);
 	meso2Dobj.setctcdel(ctcdel);
@@ -151,6 +149,10 @@ int main(int argc, char const *argv[])
 	meso2Dobj.setcB(cB);
 	meso2Dobj.setcKb(cKb);
 	meso2Dobj.setkbi(kb0);
+
+	// draw pins to box center
+	meso2Dobj.setkl(kl);
+	meso2Dobj.mesoPinFIRE(xpin0, Ftol, dt0, 0.1*kcspring);
 
 	// initialize adhesive network contacts
 	meso2Dobj.initializeMesophyllBondNetwork();
