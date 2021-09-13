@@ -7,22 +7,24 @@ clc;
 % create file name
 
 % parameters
-Nstr = '64';
+Nstr = '32';
 nstr = '24';
 castr = '1.06';
-bestr = '10';
-cLstr = '0.1';
+bestr = '5';
+kb0str = '1e-4';
+cLstr = '0.01';
 aLstr = '1';
-cBstr = '0';
+cBstr = '1e-4';
 cKbstr = '0';
 
 % seed
-seed = 10;
+seed = 9;
 seedstr = num2str(seed);
 
 % file name str
 floc = '~/Jamming/CellSim/dpm/viz/meso2D/local/meso2D_data';
-fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_cKb' cKbstr '_seed' seedstr];
+% fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_cKb' cKbstr '_seed' seedstr];
+fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_kb0' kb0str '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_seed' seedstr];
 fstr = [floc '/' fpattern '.pos'];
 
 % read in data
@@ -33,7 +35,7 @@ NFRAMES = mesoData.NFRAMES;
 
 % sim info
 NCELLS = mesoData.NCELLS;
-nv = mesoData.nv(1,:);
+nv = mesoData.nv;
 L = mesoData.L(1,:);
 Lx = L(1);
 Ly = L(2);
@@ -201,7 +203,7 @@ else
 end
 
 % make a movie
-makeAMovie = 1;
+makeAMovie = 0;
 if makeAMovie == 1
     moviestr = [fpattern '.mp4'];
     vobj = VideoWriter(moviestr,'MPEG-4');
@@ -225,6 +227,7 @@ for ff = FSTART:FSTEP:FEND
         xtmp = xf{nn};
         ytmp = yf{nn};
         rtmp = rf{nn};
+        nvtmp = nv(ff,nn);
         if colorShape == 2
             cbin = calA0(ff,nn) > calA0Bins(1:end-1) & calA0(ff,nn) < calA0Bins(2:end);
             clr = cellCLR(cbin,:);
@@ -235,7 +238,7 @@ for ff = FSTART:FSTEP:FEND
             clr = cellCLR(IC(nn),:);
         end
         if showverts == 1
-            for vv = 1:nv(nn)
+            for vv = 1:nvtmp
                 rv = rtmp(vv);
                 xplot = xtmp(vv) - rv;
                 yplot = ytmp(vv) - rv;
@@ -260,7 +263,7 @@ for ff = FSTART:FSTEP:FEND
             for xx = -1:1
                 for yy = -1:1
                     vpos = [xtmp + xx*Lx, ytmp + yy*Ly];
-                    finfo = [1:nv(nn) 1];
+                    finfo = [1:nvtmp 1];
                     patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k');
                 end
             end
@@ -274,9 +277,9 @@ for ff = FSTART:FSTEP:FEND
 %         rn = sqrt(rx.^2 + ry.^2);
 %         urx = rx./rn;
 %         ury = ry./rn;
-%         Gxx = sum(rx.*urx)/nv(nn);
-%         Gyy = sum(ry.*ury)/nv(nn);
-%         Gxy = sum(rx.*ury)/nv(nn);
+%         Gxx = sum(rx.*urx)/nvtmp;
+%         Gyy = sum(ry.*ury)/nvtmp;
+%         Gxy = sum(rx.*ury)/nvtmp;
 %         [V,D] = eig([Gxx, Gxy; Gxy, Gyy]);
 %         lambda = diag(D);
 %         cx = mod(cx,Lx);
