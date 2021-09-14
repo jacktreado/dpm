@@ -1186,7 +1186,7 @@ void meso2D::mesoNetworkExtension(meso2DMemFn forceCall, double Ftol, double dt0
 void meso2D::mesoPinExtension(double Ftol, double dt0, double hmax, double dh, double dhprint, double kcspring, int cellskip){
 	// local variables
 	int k=0, ci, gi, vi;
-	double cx, cy, dcx, dcy, rho0, h=0.0, lastPrinth=0.0;
+	double cx, cy, dcx, dcy, rho0, h=0.0, lastPrinth=-10.0;
 	vector<double> th(NCELLS,0.0);
 	vector<double> xpin(NDIM*NCELLS,0.0);
 
@@ -1504,8 +1504,14 @@ void meso2D::addMesophyllCellMaterial(){
 
 	// loop over vertices, decide which to grow
 	for (gi=0; gi<NVTOT; gi++){
-		// look at contacts between i and ip1
+		// info for vertex gi
+		cindices(ci,vi,gi);
+		meanl = perimeter(ci)/nv[ci];
 		gip1 = ip1[gi];
+		gim1 = im1[gi];
+
+		// add if neighbors connected to different cells, or if center not connected,
+		// but ip1 and im1 are connected
 		if (zv[gi] > 0 && zv[gip1] > 0){
 			// check min contact to gi
 			dmin = 1e6;
@@ -1580,20 +1586,48 @@ void meso2D::addMesophyllCellMaterial(){
 				growthVerts.push_back(gi);
 			}
 		}
+
+		// add vertices between unconnected and connected fwd
+		else if (zv[gi] == 0 && zv[gip1] > 0){
+			// check distance to forward neighbor
+			dx = x[NDIM*gip1] - x[NDIM*gi];
+			dy = x[NDIM*gip1 + 1] - x[NDIM*gi + 1];
+			if (pbc[0])
+				dx -= L[0]*round(dx/L[0]);
+			if (pbc[1])
+				dy -= L[1]*round(dy/L[1]);
+			dr = sqrt(dx*dx + dy*dy);
+
+			// birth vertex if segmnent is extended
+			if (dr > meanl)
+				growthVerts.push_back(gi);
+		}
+
+		// add vertices between unconnected and connected bwd
+		else if (zv[gim1] > 0 && zv[gi] == 0){
+			// check distance to forward neighbor
+			dx = x[NDIM*gi] - x[NDIM*gim1];
+			dy = x[NDIM*gi + 1] - x[NDIM*gim1 + 1];
+			if (pbc[0])
+				dx -= L[0]*round(dx/L[0]);
+			if (pbc[1])
+				dy -= L[1]*round(dy/L[1]);
+			dr = sqrt(dx*dx + dy*dy);
+
+			// birth vertex if segmnent is extended
+			if (dr > meanl)
+				growthVerts.push_back(gim1);
+		}
+
 		// add vertices between neighbors of new vertices
 		else if (zv[gi] == -1){
-			// get index of backward neighbor
-			gim1 = im1[gi];
-
 			// relax new vertex toward mean segment length of cell
-			cindices(ci,vi,gi);
-			meanl = perimeter(ci)/nv[ci];
 			l0[gi] += cL*(meanl - l0[gi]);
 			l0[gim1] += cL*(meanl - l0[gim1]);
 
 			// check distance to backward neighbor
-			dx = x[NDIM*gim1] - x[NDIM*gi];
-			dy = x[NDIM*gim1 + 1] - x[NDIM*gi + 1];
+			dx = x[NDIM*gi] - x[NDIM*gim1];
+			dy = x[NDIM*gi + 1] - x[NDIM*gim1 + 1];
 			if (pbc[0])
 				dx -= L[0]*round(dx/L[0]);
 			if (pbc[1])
@@ -1726,6 +1760,7 @@ void meso2D::addVertex(int gi){
 
 	// add to counters
 	NVTOT++;
+	vertDOF += NDIM;
 	nv.at(ci)++;
 
 	// recompute szList, neighbor lists
@@ -1780,9 +1815,10 @@ void meso2D::addVertex(int gi){
 	v[NDIM*(gi+1) + 1] = 0.0;
 	F[NDIM*(gi+1)] = 0.0;
 	F[NDIM*(gi+1) + 1] = 0.0;
-	l0[gi+1] = 0.5*dr;
-	l0[gi] = 0.5*dr;
-	t0[gi+1] = (2.0*PI)/nv.at(ci);
+	l0[gi+1] = 0.5*(1.0 + cL)*dr;
+	l0[gi] = 0.5*(1.0 + cL)*dr;
+	// t0[gi+1] = (2.0*PI)/nv.at(ci);
+	t0[gi+1] = 0.0;
 	r[gi+1] = r[gi];
 	kbi[gi+1] = kbi[gi];
 	zv[gi+1] = -1;

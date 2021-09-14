@@ -55,37 +55,6 @@ P = 0.5*(S(:,1) + S(:,2));
 % pulling h
 h = dpmData.h;
 
-%% Draw cells
-
-% show vertices or not
-showverts = 1;
-
-% color by shape or size
-colorShape = 3;
-
-if colorShape == 1
-    % color by real shape
-    NCLR = 100;
-    calABins = linspace(0.999*min(calA(:)),1.001*max(calA(:)),NCLR+1);
-    cellCLR = jet(NCLR);
-elseif colorShape == 2
-    % color by preferred shape
-    NCLR = 100;
-    calA0Bins = linspace(0.999*min(calA0(:)),1.001*max(calA0(:)),NCLR+1);
-    cellCLR = jet(NCLR);
-elseif colorShape == 3
-    clrOrig = [0 0 1];
-    clrNew = [1 1 1];
-else
-    [nvUQ, ~, IC] = unique(nv);
-    NUQ = length(nvUQ);
-    cellCLROpts = summer(NUQ);
-    cellCLR = zeros(NCELLS,3);
-    for cc = 1:NCELLS
-        cellCLR(cc,:) = cellCLROpts(IC(cc),:);
-    end
-end
-
 % draw cell cell contacts
 if ~isempty(who('bondstr')) && exist(bondstr,'file')
     % can choose to draw contacts
@@ -115,6 +84,37 @@ if ~isempty(who('bondstr')) && exist(bondstr,'file')
     end
 else
     drawBonds = 0;
+end
+
+%% Draw cells
+
+% show vertices or not
+showverts = 0;
+
+% color by shape or size
+colorShape = 3;
+
+if colorShape == 1
+    % color by real shape
+    NCLR = 100;
+    calABins = linspace(0.999*min(calA(:)),1.001*max(calA(:)),NCLR+1);
+    cellCLR = jet(NCLR);
+elseif colorShape == 2
+    % color by preferred shape
+    NCLR = 100;
+    calA0Bins = linspace(0.999*min(calA0(:)),1.001*max(calA0(:)),NCLR+1);
+    cellCLR = jet(NCLR);
+elseif colorShape == 3
+    clrOrig = [0 0 1];
+    clrNew = [1 1 1];
+else
+    [nvUQ, ~, IC] = unique(nv);
+    NUQ = length(nvUQ);
+    cellCLROpts = summer(NUQ);
+    cellCLR = zeros(NCELLS,3);
+    for cc = 1:NCELLS
+        cellCLR(cc,:) = cellCLROpts(IC(cc),:);
+    end
 end
 
 % get frames to plot
@@ -193,7 +193,7 @@ for ff = FSTART:FSTEP:FEND
     
     % plot pin locs
     for cc = 1:NCELLS
-        plot(px(ff,cc),py(ff,cc),'ko','markersize',10,'markerfacecolor','k');
+        plot(px(ff,cc),py(ff,cc),'ko','markersize',6,'markerfacecolor','k');
     end
     
     % draw bonds if available

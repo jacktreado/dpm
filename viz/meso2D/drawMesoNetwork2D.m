@@ -10,7 +10,7 @@ clc;
 Nstr = '32';
 nstr = '24';
 castr = '1.06';
-kb0str = '0.01';
+kb0str = '1e-4';
 bestr = '10';
 cLstr = '0.05';
 aLstr = '1';
@@ -18,7 +18,7 @@ cBstr = '1e-4';
 cKbstr = '1';
 
 % seed
-seed = 7;
+seed = 2;
 seedstr = num2str(seed);
 
 % meso2D_N32_n24_ca1.06_kb00.01_be20_cL0.05_aL1_cB1e-4_seed1.pos
@@ -33,25 +33,29 @@ fstr = [floc '/' fpattern '.pos'];
 % read in data
 mesoData = readMesoNetwork2D(fstr);
 
-% get number of frames
-NFRAMES = mesoData.NFRAMES;
+% packing fraction (only take frames with phi > 0.25)
+phi = mesoData.phi;
+idx = phi > 0.25;
+
+% number of frames
+NFRAMES = sum(idx);
 
 % sim info
 NCELLS = mesoData.NCELLS;
-nv = mesoData.nv;
+nv = mesoData.nv(idx,:);
 L = mesoData.L(1,:);
 Lx = L(1);
 Ly = L(2);
-x = mesoData.x;
-y = mesoData.y;
-r = mesoData.r;
-zc = mesoData.zc;
-zv = mesoData.zv;
-a0 = mesoData.a0;
-l0 = mesoData.l0;
-t0 = mesoData.t0;
-kb = mesoData.kb;
-
+x = mesoData.x(idx,:);
+y = mesoData.y(idx,:);
+r = mesoData.r(idx,:);
+zc = mesoData.zc(idx,:);
+zv = mesoData.zv(idx,:);
+a0 = mesoData.a0(idx,:);
+l0 = mesoData.l0(idx,:);
+t0 = mesoData.t0(idx,:);
+kb = mesoData.kb(idx,:);
+phi0 = sum(a0,2)/(Lx*Ly);
 
 % get preferred shape
 calA0 = zeros(NFRAMES,NCELLS);
@@ -65,18 +69,13 @@ for ff = 1:NFRAMES
 end
 
 % particle shape data
-p = mesoData.p;
-a = mesoData.a;
+p = mesoData.p(idx,:);
+a = mesoData.a(idx,:);
 calA = p.^2./(4.0*pi*a);
 
 % stress data
-S = mesoData.S;
+S = mesoData.S(idx,:);
 P = 0.5*(S(:,1) + S(:,2));
-
-% packing fraction
-phi = mesoData.phi;
-phi0 = sum(a0,2)/(Lx*Ly);
-
 
 % print if multiple frames
 if NFRAMES > 5
@@ -143,7 +142,7 @@ ey = sin(th);
 
 
 % show vertices or not
-showverts = 1;
+showverts = 0;
 
 % color by shape or size
 colorShape = 2;
@@ -218,7 +217,7 @@ figure(fnum), clf, hold on, box on;
 for ff = FSTART:FSTEP:FEND
     % reset figure for this frame
     figure(fnum), clf, hold on, box on;
-    fprintf('printing frame ff = %d/%d\n',ff,FEND);
+    fprintf('printing frame ff = %d/%d, phi=%0.3g, phi0=%0.3g\n',ff,FEND,phi(ff),phi0(ff));
     
     % get geometric info
     xf = x(ff,:);
@@ -270,6 +269,7 @@ for ff = FSTART:FSTEP:FEND
                 end
             end
         end
+        plot(mean(xtmp),mean(ytmp),'wo','markersize',8,'markerfacecolor','w');
         
 %         % get shape tensor
 %         cx = mean(xtmp);

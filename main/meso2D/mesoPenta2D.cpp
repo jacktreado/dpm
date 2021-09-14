@@ -7,7 +7,7 @@
 // 
 // Compilation command:
 // g++ -O3 --std=c++11 -I src main/meso2D/mesoPenta2D.cpp src/*.cpp -o meso.o
-// ./meso.o 24 1.06 1e-3 1e-6 10.0 1.0 0.5 0.01 1.0 0.001 0 1 pos.test
+// ./meso.o 24 1.16 1e-3 1e-4 10.0 1.0 0.5 0.05 1.0 0 0 1 pos.test bond.test
 // 
 // 
 // Parameter input list
@@ -43,11 +43,11 @@ const int NCELLS 				= 6;		// always 6 cells (5 boundary, 1 center)
 const double phi0 				= 0.1;		// initial packing fraction, for viz
 const double hmax 				= 2.5;		// max step length
 const double dhprint 			= 0.01;		// dh before print step
-const double boxLengthScale 	= 2.5;		// neighbor list box size in units of initial l0
+const double boxLengthScale 	= 2.0;		// neighbor list box size in units of initial l0
 const double dt0 				= 1e-2;		// initial magnitude of time step in units of MD time
-const double Ftol 				= 1e-12; 	// force tolerance
+const double Ftol 				= 1e-10; 	// force tolerance
 const double kcspring 			= 1.0; 		// spring connecting to centers
-const double kl 				= 1.0; 		// perimeter spring constant
+const double kl 				= 0.5; 		// perimeter spring constant
 
 int main(int argc, char const *argv[])
 {
@@ -153,6 +153,7 @@ int main(int argc, char const *argv[])
 	// draw pins to box center
 	meso2Dobj.setkl(kl);
 	meso2Dobj.mesoPinFIRE(xpin0, Ftol, dt0, 0.1*kcspring);
+	meso2Dobj.t0ToCurrent();
 
 	// initialize adhesive network contacts
 	meso2Dobj.initializeMesophyllBondNetwork();
