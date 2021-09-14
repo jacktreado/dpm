@@ -45,7 +45,7 @@ const double Ptol = 1e-6;		   	// target pressure in initial compression
 const double Ftol = 1e-10; 			// force tolerance
 const double phiMin = 0.4;			// minimum packing fraction in decompression algorithm
 const double T0 = 1e-3; 			// temperature for jamming preparation protocol
-const double trun = 10.0; 			// amount of time to run annealing
+const double trun = 100.0; 			// amount of time to run annealing
 
 // set parameters
 const double ctcdel = 1.0;
@@ -57,7 +57,7 @@ int main(int argc, char const *argv[])
 {
 	// local variables to be read in
 	int NCELLS, n1, seed;
-	double dispersion, calA0, kb0, phiMin, betaEff, cL, aL, cB;
+	double dispersion, calA0, kb0, phiMin, betaEff, cL, aL, cB, NVMAX;
 
 	// read in parameters from command line input
 	string NCELLS_str 		= argv[1];
@@ -107,6 +107,10 @@ int main(int argc, char const *argv[])
 
 	// initialize neighbor linked list
 	meso2Dobj.initializeNeighborLinkedList2D(boxLengthScale);
+
+	// set max # of vertices
+	NVMAX = 2*meso2Dobj.getNVTOT();
+	meso2Dobj.setNVMAX(NVMAX);
 
 	// compress to target packing pressure
 	double Ftoltmp = Ftol;

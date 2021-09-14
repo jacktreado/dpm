@@ -10,23 +10,25 @@ clc;
 Nstr = '32';
 nstr = '24';
 castr = '1.06';
-bestr = '5';
-kb0str = '1e-4';
-cLstr = '0.01';
+kb0str = '0.01';
+bestr = '10';
+cLstr = '0.05';
 aLstr = '1';
 cBstr = '1e-4';
-cKbstr = '0';
+cKbstr = '1';
 
 % seed
-seed = 9;
+seed = 7;
 seedstr = num2str(seed);
+
+% meso2D_N32_n24_ca1.06_kb00.01_be20_cL0.05_aL1_cB1e-4_seed1.pos
 
 % file name str
 floc = '~/Jamming/CellSim/dpm/viz/meso2D/local/meso2D_data';
 % fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_cKb' cKbstr '_seed' seedstr];
 fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_kb0' kb0str '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_seed' seedstr];
-% fstr = [floc '/' fpattern '.pos'];
-fstr = '~/Jamming/CellSim/dpm/pos.test';
+fstr = [floc '/' fpattern '.pos'];
+% fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetwork2D(fstr);
@@ -141,7 +143,7 @@ ey = sin(th);
 
 
 % show vertices or not
-showverts = 0;
+showverts = 1;
 
 % color by shape or size
 colorShape = 2;
@@ -197,9 +199,9 @@ if showverts == 0
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
-    FSTART = NFRAMES;
+    FSTART = 1;
     FSTEP = 1;
-    FEND = NFRAMES;
+    FEND = FSTART;
 end
 
 % make a movie
