@@ -1866,8 +1866,8 @@ void meso2D::addMesophyllCellMaterial(){
 		// add vertices between neighbors of new vertices
 		else if (zv[gi] == -1){
 			// relax new vertex toward mean segment length of cell
-			// l0[gi] += cL*(meanl - l0[gi]);
-			// l0[gim1] += cL*(meanl - l0[gim1]);
+			l0[gi] += 0.05*cL*(meanl - l0[gi]);
+			l0[gim1] += 0.05*cL*(meanl - l0[gim1]);
 
 			// birth if bwd neighbor is connected
 			if (zv[gim1] > 0 && dlim1 > testl)
