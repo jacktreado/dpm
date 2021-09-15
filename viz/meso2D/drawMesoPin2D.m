@@ -89,7 +89,7 @@ end
 %% Draw cells
 
 % show vertices or not
-showverts = 0;
+showverts = 1;
 
 % color by shape or size
 colorShape = 3;

@@ -10,7 +10,7 @@ clc;
 Nstr = '32';
 nstr = '24';
 castr = '1.15';
-kb0str = '1e-4';
+kb0str = '1e-2';
 bestr = '5';
 cLstr = '0.01';
 aLstr = '1';
@@ -26,7 +26,7 @@ floc = '~/Jamming/CellSim/dpm/viz/meso2D/local/meso2D_data';
 % fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_cKb' cKbstr '_seed' seedstr];
 fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_kb0' kb0str '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_seed' seedstr];
 fstr = [floc '/' fpattern '.pos'];
-% fstr = '~/Jamming/CellSim/dpm/pos.test';
+fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetwork2D(fstr);
@@ -84,11 +84,11 @@ if NFRAMES > 5
     
     figure(10), clf, hold on, box on;
     
-    plot(1-phi(Sxx<0),abs(Sxx(Sxx<0)),'ks','markersize',10,'MarkerFaceColor','b');
-    plot(1-phi(Sxx>0),Sxx(Sxx>0),'ro','markersize',10);
+    plot(phi(Sxx<0),abs(Sxx(Sxx<0)),'ks','markersize',10,'MarkerFaceColor','b');
+    plot(phi(Sxx>0),Sxx(Sxx>0),'ro','markersize',10);
     
-    plot(1-phi(Syy<0),abs(Syy(Syy<0)),'ks','markersize',10,'MarkerFaceColor','r');
-    plot(1-phi(Syy>0),Syy(Syy>0),'bo','markersize',10);
+    plot(phi(Syy<0),abs(Syy(Syy<0)),'ks','markersize',10,'MarkerFaceColor','r');
+    plot(phi(Syy>0),Syy(Syy>0),'bo','markersize',10);
     
     xlabel('$1-\phi$','Interpreter','latex');
     ylabel('$\Sigma_{xx}$, $\Sigma_{yy}$','Interpreter','latex');
@@ -97,8 +97,8 @@ if NFRAMES > 5
     
     figure(11), clf, hold on, box on;
     
-    plot(1-phi(Sxy<0),abs(Sxy(Sxy<0)),'ks','markersize',10,'MarkerFaceColor','k');
-    plot(1-phi(Sxy>0),Sxy(Sxy>0),'ko','markersize',10);
+    plot(phi(Sxy<0),abs(Sxy(Sxy<0)),'ks','markersize',10,'MarkerFaceColor','k');
+    plot(phi(Sxy>0),Sxy(Sxy>0),'ko','markersize',10);
     
     xlabel('$1-\phi$','Interpreter','latex');
     ylabel('$\Sigma_{xy}$','Interpreter','latex');
@@ -106,8 +106,8 @@ if NFRAMES > 5
     ax.FontSize = 22;
     
     figure(12), clf, hold on, box on;
-    plot(1-phi,calA,'-','color',[0.5 0.5 0.5],'linewidth',1.2);
-    errorbar(1-phi,mean(calA,2),std(calA,0,2),'k--','linewidth',2);
+    plot(phi,calA,'-','color',[0.5 0.5 0.5],'linewidth',1.2);
+    errorbar(phi,mean(calA,2),std(calA,0,2),'k--','linewidth',2);
     
     xlabel('$1-\phi$','Interpreter','latex');
     ylabel('$\mathcal{A}$','Interpreter','latex');
@@ -122,9 +122,9 @@ if NFRAMES > 5
     sXY = -Sxy./P;
     tau = sqrt(sN.^2 + sXY.^2);
     figure(13), clf, hold on, box on;
-    plot(1-phi,tau,'k-','linewidth',2);
-    plot(1-phi,abs(sN),'b--','linewidth',2);
-    plot(1-phi,abs(sXY),'r--','linewidth',2);
+    plot(phi,tau,'k-','linewidth',2);
+    plot(phi,abs(sN),'b--','linewidth',2);
+    plot(phi,abs(sXY),'r--','linewidth',2);
     xlabel('$1-\phi$','Interpreter','latex');
     ylabel('$\hat{\tau}$','Interpreter','latex');
     ax = gca;
@@ -144,14 +144,14 @@ ey = sin(th);
 showverts = 0;
 
 % color by shape or size
-colorShape = 0;
+colorOpt = 0;
 
-if colorShape == 1
+if colorOpt == 1
     % color by real shape
     NCLR = 100;
     calABins = linspace(0.999*min(calA(:)),1.001*max(calA(:)),NCLR+1);
     cellCLR = jet(NCLR);
-elseif colorShape == 2
+elseif colorOpt == 2
     % color by preferred shape
     NCLR = 100;
     calA0Bins = linspace(0.999*min(calA0(:)),1.001*max(calA0(:)),NCLR+1);
@@ -229,10 +229,10 @@ for ff = FSTART:FSTEP:FEND
         ytmp = yf{nn};
         rtmp = rf{nn};
         nvtmp = nv(ff,nn);
-        if colorShape == 2
+        if colorOpt == 2
             cbin = calA0(ff,nn) > calA0Bins(1:end-1) & calA0(ff,nn) < calA0Bins(2:end);
             clr = cellCLR(cbin,:);
-        elseif colorShape == 1
+        elseif colorOpt == 1
             cbin = calA(ff,nn) > calABins(1:end-1) & calA(ff,nn) < calABins(2:end);
             clr = cellCLR(cbin,:);
         else

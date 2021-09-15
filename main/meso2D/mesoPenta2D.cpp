@@ -7,7 +7,7 @@
 // 
 // Compilation command:
 // g++ -O3 --std=c++11 -I src main/meso2D/mesoPenta2D.cpp src/*.cpp -o meso.o
-// ./meso.o 24 1.16 1e-3 1e-4 10.0 1.0 0.5 0.05 1.0 0 0 1 pos.test bond.test
+// ./meso.o 24 1.08 1e-4 1e-4 5.0 1.0 0.5 0.1 1.0 1e-4 1e-6 1 pos.test bond.test
 // 
 // 
 // Parameter input list
@@ -40,9 +40,9 @@ using namespace std;
 
 // global constants
 const int NCELLS 				= 6;		// always 6 cells (5 boundary, 1 center)
-const double phi0 				= 0.1;		// initial packing fraction, for viz
+const double phi0 				= 0.2;		// initial packing fraction, for viz
 const double hmax 				= 2.5;		// max step length
-const double dhprint 			= 0.01;		// dh before print step
+const double dhprint 			= 0.005;	// dh before print step
 const double boxLengthScale 	= 2.0;		// neighbor list box size in units of initial l0
 const double dt0 				= 1e-2;		// initial magnitude of time step in units of MD time
 const double Ftol 				= 1e-10; 	// force tolerance
@@ -148,18 +148,18 @@ int main(int argc, char const *argv[])
 	meso2Dobj.setaL(aL);
 	meso2Dobj.setcB(cB);
 	meso2Dobj.setcKb(cKb);
-	meso2Dobj.setkbi(kb0);
 
 	// draw pins to box center
 	meso2Dobj.setkl(kl);
 	meso2Dobj.mesoPinFIRE(xpin0, Ftol, dt0, 0.1*kcspring);
-	meso2Dobj.t0ToCurrent();
+	meso2Dobj.setkbi(kb0);
+	// meso2Dobj.t0ToCurrent();
 
 	// initialize adhesive network contacts
 	meso2Dobj.initializeMesophyllBondNetwork();
 
 	// run stretching simulation to create network
-	meso2Dobj.mesoPinExtension(Ftol, dt0, hmax, dh, dhprint, kcspring, 0);
+	meso2Dobj.mesoPinExtension(Ftol, dt0, hmax, dh, dhprint, kcspring, 10);
 
 	// say goodbye
 	cout << "\n** Finished mesoPenta2D.cpp, ending. " << endl;

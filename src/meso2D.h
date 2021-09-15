@@ -56,6 +56,7 @@ protected:
 public:
 
 	// constructor and destructor
+	meso2D(std::string &inputFile, int seed);
 	meso2D(int n, int seed) : dpm(n,seed) { betaEff=0.0; ctcdel=1.0; ctch=0.5; cL=0.0; aL=1.0; cB=0.0; cKb=0.0; zc.resize(n); NVMAX = n; };
 
 	// File openers

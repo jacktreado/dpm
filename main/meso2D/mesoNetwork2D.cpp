@@ -7,7 +7,7 @@
 //
 // Compilation command:
 // g++ -O3 --std=c++11 -I src main/meso2D/mesoNetwork2D.cpp src/*.cpp -o meso.o
-// ./meso.o 16 24 0.1 1.06 1e-4 10.0 0.01 1 0.01 1 pos.test
+// ./meso.o 16 24 0.1 1.12 1e-2 5.0 0.01 1 0.01 1 pos.test
 //
 //
 // Parameter input list
@@ -36,7 +36,7 @@ using namespace std;
 // global constants
 const double plotCompression = 0;  	// whether or not to plot compression
 const double dphiGrow = 0.01;	   	// packing fraction increment during initial growth step
-const double delShrink = 0.001;	   	// fractional change in effective box length during extension
+const double delShrink = 0.0001;	// fractional change in effective box length during extension
 const double dphiPrint = 0.01;	   	// packing fractions to skip between print steps
 const double boxLengthScale = 2.5; 	// neighbor list box size in units of initial l0
 const double phi0 = 0.5;		   	// initial packing fraction
@@ -44,7 +44,7 @@ const double dt0 = 1e-2;		   	// initial magnitude of time step in units of MD t
 const double Ptol = 1e-6;		   	// target pressure in initial compression
 const double Ftol = 1e-10; 			// force tolerance
 const double phiMin = 0.4;			// minimum packing fraction in decompression algorithm
-const double T0 = 1e-3; 			// temperature for jamming preparation protocol
+const double T0 = 1e-2; 			// temperature for jamming preparation protocol
 const double trun = 100.0; 			// amount of time to run annealing
 
 // set parameters

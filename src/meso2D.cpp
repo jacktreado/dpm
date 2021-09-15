@@ -13,6 +13,156 @@ using namespace Eigen;
 using namespace std;
 
 
+/******************************
+
+	R E A D - I N
+
+	C O N S T R U C T O R
+
+*******************************/
+
+meso2D::meso2D(string &inputFileStr,int seed) : dpm(2) {
+	// open file
+	ifstream inputobj(inputFileStr.c_str());
+	if (!inputobj.is_open()){
+		cerr << "** ERROR: In meso2D constructor, could not open file " << inputFileStr << ", ending here. " << endl;
+		exit(1);
+	}
+
+	// set variables to default
+	betaEff=0.0; ctcdel=1.0; ctch=0.5; cL=0.0; aL=1.0; cB=0.0; cKb=0.0; pbc[0]=1; pbc[1]=1;
+	ka = 1.0;
+	kl = 1.0;
+	kb = 0.0;
+	kc = 1.0;
+
+	// local variables
+	int nvtmp, ci, vi, i;
+	double val;
+	double lxtmp, lytmp;
+	double s1, s2, s3;
+	double wp1, wp2;
+	double a0tmp, l0tmp, t0tmp, kbitmp;
+	double xtmp, ytmp, rtmp;
+	string inputStr;
+
+	// LINE 1: should be NEWFR
+	getline(inputobj, inputStr);
+	if (inputStr.compare(0,5,"NEWFR") != 0){
+		cerr << "** ERROR: In meso2D constructor, first line of input file NOT NEWFR, first line = " << inputStr << ". Ending." << endl;
+		exit(1);
+	}
+
+	// read in simulation information from header
+	getline(inputobj, inputStr);
+	sscanf(inputStr.c_str(),"NUMCL %d",&NCELLS);
+	cout << "\t ** " << inputStr << endl;
+
+	// verify input file
+	if (NCELLS < 1){
+		cerr << "** ERROR: in meso2D constructor, NCELLStmp = " << NCELLS << ". Ending here." << endl;
+		exit(1);
+	}
+	
+	getline(inputobj, inputStr);
+	sscanf(inputStr.c_str(),"PACKF %lf",&val);
+	cout << "\t ** " << inputStr << endl;
+
+	// initialize box lengths
+	getline(inputobj, inputStr);
+	sscanf(inputStr.c_str(),"BOXSZ %lf %lf",&lxtmp,&lytmp);
+	cout << "\t ** " << inputStr << endl;
+
+	L.at(0) = lxtmp;
+	L.at(1) = lytmp;
+
+	// initialize stress
+	getline(inputobj, inputStr);
+	sscanf(inputStr.c_str(),"STRSS %lf %lf %lf",&s1,&s2,&s3);
+	cout << "\t ** " << inputStr << endl;
+
+	stress.at(0) = s1;
+	stress.at(1) = s2;
+	stress.at(2) = s3;
+
+	// szList and nv (keep track of global vertex indices)
+	nv.resize(NCELLS);
+	szList.resize(NCELLS);
+	a0.resize(NCELLS);
+
+	// initialize NVTOT to 0
+	NVTOT = 0;
+
+	// loop over cells, read in coordinates
+	cout << "\n\n** LOOPING OVER DATA, PRINTING INFO..." << endl;
+	for (ci=0; ci<NCELLS; ci++){
+		// first parse cell info
+		getline(inputobj, inputStr);
+		sscanf(inputStr.c_str(),"CINFO %d %*d %lf %*lf %*lf",&nvtmp,&a0tmp);
+
+		// print to console
+		cout << "\t ** " << inputStr << endl;
+
+		// store in vectors
+		nv.at(ci) = nvtmp;
+		a0.at(ci) = a0tmp;
+
+		// update NVTOT
+		NVTOT += nvtmp;
+
+		// increment szList
+		if (ci > 0)
+			szList.at(ci) = szList.at(ci-1) + nv.at(ci-1);
+
+		// loop over vertices, store coordinates
+		for (vi=0; vi<nvtmp; vi++){
+			// parse vertex coordinate info
+			getline(inputobj, inputStr);
+			sscanf(inputStr.c_str(),"VINFO %*d %*d %lf %lf %lf %lf %lf %lf %*lf",&xtmp,&ytmp,&rtmp,&l0tmp,&t0tmp,&kbitmp);
+
+			// print to console
+			cout << "\t ** " << inputStr << endl;
+
+			// push back 
+			x.push_back(xtmp);
+			x.push_back(ytmp);
+			r.push_back(rtmp);
+			l0.push_back(l0tmp);
+			t0.push_back(t0tmp);
+			kbi.push_back(kbitmp);
+		}
+	}
+	vertDOF = NDIM * NVTOT;
+	cout << "** NVTOT = " << NVTOT << ", vertDOF = " << vertDOF << ", NCELLS = " << NCELLS << endl;
+	cout << "** FINISHED LOOPING OVER DATA, CLOSING INPUT FILE OBJ\n" << endl;
+
+	// initialize vertex indexing
+	initializeVertexIndexing2D();
+
+	// initialize contact information
+	cij.resize(NCELLS * (NCELLS - 1) / 2);
+	zv.resize(NVTOT);
+	zc.resize(NVTOT);
+	
+	fill(cij.begin(),cij.end(),0);
+	fill(zv.begin(), zv.end(), 0);
+	fill(zc.begin(), zc.end(), 0);
+
+	// initialize contact network for bonds
+	initializeVertexContactNetwork();
+
+	// close input file object
+	inputobj.close();
+
+	// seed random number generator
+	srand48(seed);
+}
+
+
+
+
+
+
 
 
 /******************************
@@ -1112,11 +1262,14 @@ void meso2D::mesoNetworkNVE(ofstream &enout, meso2DMemFn forceCall, double T, do
 // simulate network extension using decompression
 void meso2D::mesoNetworkExtension(meso2DMemFn forceCall, double Ftol, double dt0, double delShrink, double dphiPrint, double phiMin){
 	// local variables
-	int k = 0;
+	int ci, k = 0;
 	double lastPrintPhi, scaleFactor = 1.0 - 2.0*delShrink;
 
-	// current preferred packing fraction
-	double phi0 = vertexPreferredPackingFraction2D();
+	// current preferred packing fraction (neglect contribution from vertices)
+	double phi0 = 0.0;
+	for (ci=0; ci<NCELLS; ci++)
+		phi0 += a0.at(ci);
+	phi0 /= L[0]*L[1];
 	lastPrintPhi = phi0;
 
 	// loop until phi0 < phiMin
@@ -1174,8 +1327,11 @@ void meso2D::mesoNetworkExtension(meso2DMemFn forceCall, double Ftol, double dt0
 		// scale particle sizes
 		scaleParticleSizes2D(scaleFactor);
 
-		// update new packing fraction
-		phi0 = vertexPreferredPackingFraction2D();
+		// update new preferred fraction
+		phi0 = 0.0;
+		for (ci=0; ci<NCELLS; ci++)
+			phi0 += a0.at(ci);
+		phi0 /= L[0]*L[1];
 
 		// update iterate
 		k++;
@@ -1186,7 +1342,7 @@ void meso2D::mesoNetworkExtension(meso2DMemFn forceCall, double Ftol, double dt0
 void meso2D::mesoPinExtension(double Ftol, double dt0, double hmax, double dh, double dhprint, double kcspring, int cellskip){
 	// local variables
 	int k=0, ci, gi, vi;
-	double cx, cy, dcx, dcy, rho0, h=0.0, lastPrinth=-10.0;
+	double phi0, cx, cy, dcx, dcy, rho0, h=0.0, lastPrinth=-10.0;
 	vector<double> th(NCELLS,0.0);
 	vector<double> xpin(NDIM*NCELLS,0.0);
 
@@ -1247,6 +1403,7 @@ void meso2D::mesoPinExtension(double Ftol, double dt0, double hmax, double dh, d
 		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
 		cout << endl;
 		cout << "	* NVTOT / NVMAX		= " << NVTOT << "/" << NVMAX << endl << endl;
+		cout << "	* phi0 			= " << phi0 << endl;
 		cout << "	* k 			= " << k << endl;
 		cout << "	* h 			= " << h << endl;
 		cout << "	* lastPrinth 	= " << lastPrinth << endl;
@@ -1287,6 +1444,12 @@ void meso2D::mesoPinExtension(double Ftol, double dt0, double hmax, double dh, d
 			}
 		}
 
+		// scale particle sizes
+		scaleParticleSizes2D(1.0 - dh);
+
+		// update new packing fraction
+		phi0 = vertexPreferredPackingFraction2D();
+
 		// update new h
 		h += dh;
 
@@ -1317,121 +1480,122 @@ void meso2D::mesoPinExtension(double Ftol, double dt0, double hmax, double dh, d
 // update mesophyll network using MC
 void meso2D::updateMesophyllBondNetwork(){
 	// local variables
-	bool isConnected, cijpairfound;
-	int zctmp, ci, cj, ck, vi, vj, gi, gj;
+	bool isConnected, canBreak;
+	int cijctc, zitmp, zjtmp, ci, cj, ck, vi, vj, gi, gj;
 	double dx, dy, sij, rij, dU, poff, h=ctch, h2=h*h, rdraw;
+
+	// MINIMUM NUMBER OF CONTACTS
+	int CTCMIN = 3;
 
 	// loop over pairs of vertices, check whether to connect or detach
 	for (ci=0; ci<NCELLS; ci++){
 		// get total number of cells in contact with ci
-		zctmp = 0;
+		zitmp = 0;
 		for (cj=0; cj<NCELLS; cj++){
 			if (cj > ci){
 				if (cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2] > 0)
-					zctmp++;
+					zitmp++;
 			}
 			else if (ci > cj){
 				if (cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2] > 0)
-					zctmp++;
+					zitmp++;
 			}
 		}
-		// only check other cells if ci has > 3 contacts
-		if (zctmp > 3){
-			for (cj=(ci+1); cj<NCELLS; cj++){
-				// get total number of cells in contact with cj
-				zctmp = 0;
-				for (ck=0; ck<NCELLS; ck++){
-					if (ck > cj){
-						if (cij[NCELLS*cj + ck - (cj+1)*(cj+2)/2] > 0)
-							zctmp++;
-					}
-					else if (cj > ck){
-						if (cij[NCELLS*ck + cj - (ck+1)*(ck+2)/2] > 0)
-							zctmp++;
-					}
+		for (cj=(ci+1); cj<NCELLS; cj++){
+			// number of contacts shared between ci and cj
+			cijctc = cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2];
+
+			// get total number of cells in contact with cj
+			zjtmp = 0;
+			for (ck=0; ck<NCELLS; ck++){
+				if (ck > cj){
+					if (cij[NCELLS*cj + ck - (cj+1)*(cj+2)/2] > 0)
+						zjtmp++;
 				}
+				else if (cj > ck){
+					if (cij[NCELLS*ck + cj - (ck+1)*(ck+2)/2] > 0)
+						zjtmp++;
+				}
+			}
+			// use global label of vi
+			gi = szList[ci];
+			for (vi=0; vi<nv[ci]; vi++){
+				// use global label of vj
+				gj = szList[cj];
+				for (vj=0; vj<nv[cj]; vj++){
+					// check if connected, otherwise go to next vertex (no rebonding)
+					isConnected = gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2];
+					if (isConnected){
+						// contact distance
+						sij = r[gi] + r[gj];
 
-				// only check vertex neighbors if cj has > 3 cell-cell contacts
-				if (zctmp > 3){
-					// use global label of vi
-					gi = szList[ci];
-					for (vi=0; vi<nv[ci]; vi++){
-						// use global label of vj
-						gj = szList[cj];
-						for (vj=0; vj<nv[cj]; vj++){
-							// check if connected, otherwise go to next vertex (no rebonding)
-							isConnected = gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2];
-							if (isConnected){
-								// contact distance
-								sij = r[gi] + r[gj];
+						// get vertex-vertex distances
+						dx = x[NDIM*gj] - x[NDIM*gi];
+						if (pbc[0])
+							dx -= L[0]*round(dx/L[0]);
 
-								// get vertex-vertex distances
-								dx = x[NDIM*gj] - x[NDIM*gi];
-								if (pbc[0])
-									dx -= L[0]*round(dx/L[0]);
+						dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
+						if (pbc[1])
+							dy -= L[1]*round(dy/L[1]);
 
-								dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
-								if (pbc[1])
-									dy -= L[1]*round(dy/L[1]);
+						// true distance
+						rij = sqrt(dx*dx + dy*dy);
 
-								// true distance
-								rij = sqrt(dx*dx + dy*dy);
+						// check that break allowed (preserves flat interfaces, min contacts)
+						canBreak = (zitmp > CTCMIN && zjtmp > CTCMIN) || cijctc > 2;
 
-								// only check bond if extended
-								if (rij > sij){
-									// change in energy from bond breaking
-									dU = 1.0 - (pow(1 - (rij/sij),2.0)/h2);
+						// only check bond if extended
+						if (rij > sij && canBreak){
+							// change in energy from bond breaking
+							dU = 1.0 - (pow(1 - (rij/sij),2.0)/h2);
 
-									// remove if bond detaching decreases energy
-									if (dU < 0){
-										// remove vertex-vertex bond
-										gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 0;
+							// remove if bond detaching decreases energy
+							if (dU < 0){
+								// remove vertex-vertex bond
+								gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 0;
 
-										// remove single cell-cell contact
-										cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]--;
+								// remove single cell-cell contact
+								cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]--;
 
-										// update contact lists 
-										zc[ci]--;
-										zc[cj]--;
+								// update contact lists 
+								zc[ci]--;
+								zc[cj]--;
 
-										zv[gi]--;
-										zv[gj]--;
-									}
-									else{
-										// else, remove conditionally
-										poff = exp(-betaEff*dU);
-										rdraw = drand48();
+								zv[gi]--;
+								zv[gj]--;
+							}
+							else{
+								// else, remove conditionally
+								poff = exp(-betaEff*dU);
+								rdraw = drand48();
 
-										// detach
-										if (poff > rdraw){
-											// detach vv contact
-											gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 0;
+								// detach
+								if (poff > rdraw){
+									// detach vv contact
+									gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 0;
 
-											// remove single cell-cell contact
-											cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]--;
+									// remove single cell-cell contact
+									cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]--;
 
-											// update contact lists 
-											zc[ci]--;
-											zc[cj]--;
+									// update contact lists 
+									zc[ci]--;
+									zc[cj]--;
 
-											zv[gi]--;
-											zv[gj]--;
-										}
-									}
+									zv[gi]--;
+									zv[gj]--;
 								}
 							}
-
-							// increment global vertex index
-							gj++;
 						}
-
-						// increment global vertex index
-						gi++;
 					}
+
+					// increment global vertex index
+					gj++;
 				}
+
+				// increment global vertex index
+				gi++;
 			}
 		}
-		
 	}
 }
 
@@ -1482,6 +1646,9 @@ void meso2D::ageMesophyllShapeParameters(){
 		ti = atan2(sini,cosi);
 
 		// update t0
+		// if (zv[gi] > 0 || zv[ip1[gi]] > 0 || zv[im1[gi]] > 0)
+		// 	t0[gi] = 0.0;
+		// else
 		t0[gi] += cB*(ti - t0[gi]);
 
 
@@ -1497,7 +1664,7 @@ void meso2D::addMesophyllCellMaterial(){
 	// local variables
 	bool gtmp = 0;
 	int d, gi, gj, gim1, gip1, ctc_im_jn, ctc_ip1m_kp, ci, vi, cin, vin, cip1p, vip1p;
-	double roll, dx, dy, dr, di, dmin, lix, liy, meanl;
+	double dx, dy, dli, dlim1, di, dmin, lix, liy, meanl, testl;
 
 	// vector to pushback vertices where extra material is added
 	vector<int> growthVerts;
@@ -1507,12 +1674,31 @@ void meso2D::addMesophyllCellMaterial(){
 		// info for vertex gi
 		cindices(ci,vi,gi);
 		meanl = perimeter(ci)/nv[ci];
+		testl = meanl;
 		gip1 = ip1[gi];
 		gim1 = im1[gi];
 
+		// check distance to backward neighbor
+		dx = x[NDIM*gi] - x[NDIM*gim1];
+		dy = x[NDIM*gi + 1] - x[NDIM*gim1 + 1];
+		if (pbc[0])
+			dx -= L[0]*round(dx/L[0]);
+		if (pbc[1])
+			dy -= L[1]*round(dy/L[1]);
+		dlim1 = sqrt(dx*dx + dy*dy);
+
+		// check distance to forward neighbor
+		dx = x[NDIM*gip1] - x[NDIM*gi];
+		dy = x[NDIM*gip1 + 1] - x[NDIM*gi + 1];
+		if (pbc[0])
+			dx -= L[0]*round(dx/L[0]);
+		if (pbc[1])
+			dy -= L[1]*round(dy/L[1]);
+		dli = sqrt(dx*dx + dy*dy);
+
 		// add if neighbors connected to different cells, or if center not connected,
 		// but ip1 and im1 are connected
-		if (zv[gi] > 0 && zv[gip1] > 0){
+		if (zv[gi] > 0 && zv[gip1] > 0 && dli > testl){
 			// check min contact to gi
 			dmin = 1e6;
 			for (gj=0; gj<NVTOT; gj++){
@@ -1569,15 +1755,6 @@ void meso2D::addMesophyllCellMaterial(){
 				}
 			}
 
-			// get distance between i and ip1
-			dx = x[NDIM*gip1] - x[NDIM*gi];
-			dy = x[NDIM*gip1 + 1] - x[NDIM*gi + 1];
-			if (pbc[0])
-				dx -= L[0]*round(dx/L[0]);
-			if (pbc[1])
-				dy -= L[1]*round(dy/L[1]);
-			dr = sqrt(dx*dx + dy*dy);
-
 			// if contacts are on different cells, add vertex between contacts if space available
 			cindices(cin,vin,ctc_im_jn);
 			cindices(cip1p,vip1p,ctc_ip1m_kp);
@@ -1587,68 +1764,117 @@ void meso2D::addMesophyllCellMaterial(){
 			}
 		}
 
-		// add vertices between unconnected and connected fwd
-		else if (zv[gi] == 0 && zv[gip1] > 0){
-			// check distance to forward neighbor
-			dx = x[NDIM*gip1] - x[NDIM*gi];
-			dy = x[NDIM*gip1 + 1] - x[NDIM*gi + 1];
-			if (pbc[0])
-				dx -= L[0]*round(dx/L[0]);
-			if (pbc[1])
-				dy -= L[1]*round(dy/L[1]);
-			dr = sqrt(dx*dx + dy*dy);
+		// // add vertices between unconnected and connected fwd
+		// else if (zv[gi] == 0 && zv[gip1] > 0){
+		// 	// check distance to forward neighbor
+		// 	dx = x[NDIM*gip1] - x[NDIM*gi];
+		// 	dy = x[NDIM*gip1 + 1] - x[NDIM*gi + 1];
+		// 	if (pbc[0])
+		// 		dx -= L[0]*round(dx/L[0]);
+		// 	if (pbc[1])
+		// 		dy -= L[1]*round(dy/L[1]);
+		// 	dr = sqrt(dx*dx + dy*dy);
 
-			// birth vertex if segmnent is extended
-			if (dr > meanl)
-				growthVerts.push_back(gi);
-		}
+		// 	// birth vertex if segmnent is extended
+		// 	if (dr > meanl)
+		// 		growthVerts.push_back(gi);
+		// }
 
-		// add vertices between unconnected and connected bwd
-		else if (zv[gim1] > 0 && zv[gi] == 0){
-			// check distance to forward neighbor
-			dx = x[NDIM*gi] - x[NDIM*gim1];
-			dy = x[NDIM*gi + 1] - x[NDIM*gim1 + 1];
-			if (pbc[0])
-				dx -= L[0]*round(dx/L[0]);
-			if (pbc[1])
-				dy -= L[1]*round(dy/L[1]);
-			dr = sqrt(dx*dx + dy*dy);
+		// // add vertices between unconnected and connected bwd
+		// else if (zv[gim1] > 0 && zv[gi] == 0){
+		// 	// check distance to forward neighbor
+		// 	dx = x[NDIM*gi] - x[NDIM*gim1];
+		// 	dy = x[NDIM*gi + 1] - x[NDIM*gim1 + 1];
+		// 	if (pbc[0])
+		// 		dx -= L[0]*round(dx/L[0]);
+		// 	if (pbc[1])
+		// 		dy -= L[1]*round(dy/L[1]);
+		// 	dr = sqrt(dx*dx + dy*dy);
 
-			// birth vertex if segmnent is extended
-			if (dr > meanl)
+		// 	// birth vertex if segmnent is extended
+		// 	if (dr > meanl)
+		// 		growthVerts.push_back(gim1);
+		// }
+
+		// add if lone vertex between two connected vertices, connected to different cells
+		else if (zv[gim1] > 0 && zv[gip1] > 0 && zv[gi] == 0 && dli > testl && dlim1 > testl){
+			// check min contact to gim1
+			dmin = 1e6;
+			for (gj=0; gj<NVTOT; gj++){
+				if (gj < gim1)
+					gtmp = gij[NVTOT*gj + gim1 - (gj+1)*(gj+2)/2];
+				else if (gj > gim1)
+					gtmp = gij[NVTOT*gim1 + gj - (gim1+1)*(gim1+2)/2];
+
+				if (gtmp && gim1 != gj){
+					// distance between j and i in x
+					dx = x[NDIM*gj] - x[NDIM*gim1];
+					if (pbc[0])
+						dx -= L[0]*round(dx/L[0]);
+
+					// distance between j and i in y
+					dy = x[NDIM*gj + 1] - x[NDIM*gim1 + 1];
+					if (pbc[1])
+						dy -= L[1]*round(dy/L[1]);
+
+					// full distance
+					di = dx*dx + dy*dy;
+					if (di < dmin){
+						dmin = di;
+						ctc_im_jn = gj;
+					}
+				}
+			}
+
+			// check min contact to gip1
+			dmin = 1e6;
+			for (gj=0; gj<NVTOT; gj++){
+				if (gj < gip1)
+					gtmp = gij[NVTOT*gj + gip1 - (gj+1)*(gj+2)/2];
+				else if (gj > gip1)
+					gtmp = gij[NVTOT*gip1 + gj - (gip1+1)*(gip1+2)/2]; 
+
+				if (gtmp && gip1 != gj){
+					// distance between j and i in x
+					dx = x[NDIM*gj] - x[NDIM*gip1];
+					if (pbc[0])
+						dx -= L[0]*round(dx/L[0]);
+
+					// distance between j and i in y
+					dy = x[NDIM*gj + 1] - x[NDIM*gip1 + 1];
+					if (pbc[1])
+						dy -= L[1]*round(dy/L[1]);
+
+					// full distance
+					di = dx*dx + dy*dy;
+					if (di < dmin){
+						dmin = di;
+						ctc_ip1m_kp = gj;
+					}
+				}
+			}
+
+			// if contacts are on different cells, add vertex between contacts
+			cindices(cin,vin,ctc_im_jn);
+			cindices(cip1p,vip1p,ctc_ip1m_kp);
+			if (cin != cip1p){
 				growthVerts.push_back(gim1);
+				growthVerts.push_back(gi);
+			}
 		}
 
 		// add vertices between neighbors of new vertices
 		else if (zv[gi] == -1){
 			// relax new vertex toward mean segment length of cell
-			l0[gi] += cL*(meanl - l0[gi]);
-			l0[gim1] += cL*(meanl - l0[gim1]);
-
-			// check distance to backward neighbor
-			dx = x[NDIM*gi] - x[NDIM*gim1];
-			dy = x[NDIM*gi + 1] - x[NDIM*gim1 + 1];
-			if (pbc[0])
-				dx -= L[0]*round(dx/L[0]);
-			if (pbc[1])
-				dy -= L[1]*round(dy/L[1]);
-			dr = sqrt(dx*dx + dy*dy);
+			// l0[gi] += cL*(meanl - l0[gi]);
+			// l0[gim1] += cL*(meanl - l0[gim1]);
 
 			// birth if bwd neighbor is connected
-			if (zv[gim1] > 0 && dr > meanl)
+			if (zv[gim1] > 0 && dlim1 > testl)
 				growthVerts.push_back(gim1);
 
-			// check distance to forward neighbor
-			dx = x[NDIM*gip1] - x[NDIM*gi];
-			dy = x[NDIM*gip1 + 1] - x[NDIM*gi + 1];
-			if (pbc[0])
-				dx -= L[0]*round(dx/L[0]);
-			if (pbc[1])
-				dy -= L[1]*round(dy/L[1]);
-			dr = sqrt(dx*dx + dy*dy);
-
 			// birth vertex if fwd neighbor is connected
-			if (zv[gip1] > 0 && dr > meanl)
+			if (zv[gip1] > 0 && dli > testl)
 				growthVerts.push_back(gi);
 		}
 	}
@@ -1690,6 +1916,8 @@ int meso2D::mesoBondedCTCS(int gi){
 
 
 // add vertex and update all relevant variables
+// NOTE: add that only material can be added between contacts of different cells
+// * add man file to start from jammed configuration, saves overhead
 void meso2D::addVertex(int gi){
 	// local variables
 	int NVVCTS;
