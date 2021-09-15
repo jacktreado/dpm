@@ -131,9 +131,9 @@ else
 end
 
 % make a movie
-makeAMovie = 0;
+makeAMovie = 1;
 if makeAMovie == 1
-    moviestr = 'mesoPin2D.mp4';
+    moviestr = 'mesoPin2D_patch.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -188,8 +188,8 @@ for ff = FSTART:FSTEP:FEND
     ax = gca;
     ax.XTick = [];
     ax.YTick = [];
-    ax.XLim = [-0.25 1.25]*Lx;
-    ax.YLim = [-0.25 1.25]*Ly;
+    ax.XLim = [0 1]*Lx;
+    ax.YLim = [0 1]*Ly;
     
     % plot pin locs
     for cc = 1:NCELLS
