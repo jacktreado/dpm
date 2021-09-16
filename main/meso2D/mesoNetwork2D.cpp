@@ -36,7 +36,7 @@ using namespace std;
 // global constants
 const double plotCompression = 0;  	// whether or not to plot compression
 const double dphiGrow = 0.01;	   	// packing fraction increment during initial growth step
-const double delShrink = 0.0001;	// fractional change in effective box length during extension
+const double delShrink = 0.001;		// fractional change in effective box length during extension
 const double dphiPrint = 0.01;	   	// packing fractions to skip between print steps
 const double boxLengthScale = 2.5; 	// neighbor list box size in units of initial l0
 const double phi0 = 0.5;		   	// initial packing fraction

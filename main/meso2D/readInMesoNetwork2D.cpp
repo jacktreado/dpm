@@ -4,7 +4,7 @@
 
 // Compilation command:
 // g++ -O3 --std=c++11 -I src main/meso2D/readInMesoNetwork2D.cpp src/*.cpp -o meso.o
-// ./meso.o input.test 0.01 5.0 0.0 0.01 1 0.01 1 pos.test
+// ./meso.o input.test 1e-4 5.0 1.0 5 1 1 1 pos.test
 //
 //
 // Parameter input list

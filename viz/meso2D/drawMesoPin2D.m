@@ -5,8 +5,12 @@ close all;
 clc;
 
 % file name string
-fstr = '~/Jamming/CellSim/dpm/pos.test';
-bondstr = '~/Jamming/CellSim/dpm/bond.test';
+floc = '~/Jamming/CellSim/dpm/viz/meso2D/local/mesoPenta2D_data';
+fpattern = 'penta_n32_ca1.12_kb01e-4_be5_cd1_ch0.5_cL5_aL1_cB1_cKb0';
+fstr = [floc '/' fpattern '.pos'];
+bondstr = [floc '/' fpattern '.bnd'];
+% fstr = '~/Jamming/CellSim/dpm/pos.test';
+% bondstr = '~/Jamming/CellSim/dpm/bond.test';
 
 % read in data
 dpmData = readMesoPin2D(fstr);
@@ -307,7 +311,7 @@ end
 %% Draw center particle "growth"
 
 NPLOTS = 5;
-NMAX = round(0.75*NFRAMES);
+NMAX = round(0.3*NFRAMES);
 fplots = round(linspace(1,NMAX,NPLOTS));
 figure(2), clf, hold on, box on;
 for ii = 1:NPLOTS
@@ -338,7 +342,7 @@ for ii = 1:NPLOTS
         rv = rf(vv);
         xplot = rx(vv) - rv;
         yplot = ry(vv) - rv;
-        if zvf(vv) < 0
+        if zvf(vv) <= 0
 %             rectangle('Position',[xplot, yplot, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clrNew,'LineWidth',0.2);
             plot([rx(vv) rx(ip1(vv))],[ry(vv) ry(ip1(vv))],'-','linewidth',3,'color','b');
         else
