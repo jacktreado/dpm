@@ -41,13 +41,14 @@ using namespace std;
 // global constants
 const int NCELLS 				= 6;		// always 6 cells (5 boundary, 1 center)
 const double phi0 				= 0.2;		// initial packing fraction, for viz
-const double hmax 				= 2.5;		// max step length
-const double dhprint 			= 0.005;	// dh before print step
+const double hmax 				= 1.25;		// max step length
+const double dhprint 			= 0.01;		// dh before print step
 const double boxLengthScale 	= 2.0;		// neighbor list box size in units of initial l0
 const double dt0 				= 1e-2;		// initial magnitude of time step in units of MD time
-const double Ftol 				= 1e-10; 	// force tolerance
+const double Ftol 				= 1e-12; 	// force tolerance
 const double kcspring 			= 1.0; 		// spring connecting to centers
-const double kl 				= 0.5; 		// perimeter spring constant
+const double kl 				= 0.1; 		// perimeter spring constant
+const double kc 				= 0.1; 		// interaction spring constant
 
 int main(int argc, char const *argv[])
 {
@@ -112,6 +113,7 @@ int main(int argc, char const *argv[])
 	meso2Dobj.setpbc(0,false);
 	meso2Dobj.setpbc(1,false);
 	meso2Dobj.setkl(kl);
+	meso2Dobj.setkc(kc);
 
 	// open position config file
 	meso2Dobj.openPosObject(positionFile);

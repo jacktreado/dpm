@@ -86,13 +86,42 @@ else
     drawBonds = 0;
 end
 
+% plot area strain
+if NFRAMES > 5
+    figure(10), clf, hold on, box on;
+    dela = a./a0 - 1;
+    for nn = 1:NCELLS
+        if nn == 1
+            plot(h,dela(:,nn),'-','linewidth',2.5,'color',[0.5 0.5 0.5]);
+        else
+            plot(h,dela(:,nn),'-','linewidth',1.5,'color',[0.5 0.5 0.5]);
+        end
+    end
+    
+        p0 = zeros(NFRAMES,NCELLS);
+    for ff = 1:NFRAMES
+        for nn = 1:NCELLS
+            p0(ff,nn) = sum(l0{ff,nn});
+        end
+    end
+    delp = p./p0 - 1;
+    for nn = 1:NCELLS
+        plot(h,delp(:,nn),'--','linewidth',1.5,'color',[0.5 0.5 0.5]);
+    end
+    
+end
+xlabel('$h$','Interpreter','latex');
+ylabel('$\Delta_a, \Delta_p$','Interpreter','latex');
+ax = gca;
+ax.FontSize = 18;
+
 %% Draw cells
 
 % show vertices or not
-showverts = 1;
+showverts = 0;
 
 % color by shape or size
-colorShape = 3;
+colorShape = 4;
 
 if colorShape == 1
     % color by real shape
@@ -107,6 +136,20 @@ elseif colorShape == 2
 elseif colorShape == 3
     clrOrig = [0 0 1];
     clrNew = [1 1 1];
+elseif colorShape == 4
+    faceColor = 'w';
+    NCLR = 100;
+    t0All = cell2mat(t0(:));
+    mint0 = min(t0All);
+    maxt0 = max(t0All);
+    t0Bins = linspace(mint0 - 0.001*abs(mint0),maxt0 + 0.001*abs(maxt0),NCLR+1);
+    t0clr = jet(NCLR);
+    NCBTICKS = 5;
+    t0ticks = linspace(0,1,NCBTICKS);
+    t0tickLabels = cell(length(t0ticks),1);
+    for cc = 1:NCBTICKS
+        t0tickLabels{cc} = ['$' sprintf('%0.3g',t0Bins(round(t0ticks(cc)*(NCLR-1)) + 1)) '$'];
+    end    
 else
     [nvUQ, ~, IC] = unique(nv);
     NUQ = length(nvUQ);
@@ -133,7 +176,7 @@ end
 % make a movie
 makeAMovie = 1;
 if makeAMovie == 1
-    moviestr = 'mesoPin2D_patch.mp4';
+    moviestr = 'mesoPin2D_patch2.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -163,13 +206,14 @@ for ff = FSTART:FSTEP:FEND
                 xplot = xtmp(vv) - rv;
                 yplot = ytmp(vv) - rv;
                 if zvtmp(vv) < 0
-                    rectangle('Position',[xplot, yplot, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clrNew,'LineWidth',0.2);
+                    rectangle('Position',[xplot, yplot, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','c','LineWidth',0.2);
                 else
-                    rectangle('Position',[xplot, yplot, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clrOrig,'LineWidth',0.2);
+                    rectangle('Position',[xplot, yplot, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','b','LineWidth',0.2);
                 end
                 gi = gi + 1;
             end
         else
+            % geometric data
             cx = mean(xtmp);
             cy = mean(ytmp);
             rx = xtmp - cx;
@@ -179,7 +223,37 @@ for ff = FSTART:FSTEP:FEND
             ytmp = ytmp + 0.8*rtmp.*(ry./rads);
             vpos = [xtmp, ytmp];
             finfo = [1:nvtmp(nn) 1];
-            patch('Faces',finfo,'vertices',vpos,'FaceColor',clrOrig,'EdgeColor','k');
+            
+            % draw based on color
+            if colorShape == 1
+                cbin = calA(ff,nn) > calABins(1:end-1) & calA(ff,nn) < calABins(2:end);
+                clr = cellCLR(cbin,:);
+                patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k');
+            elseif colorShape == 2
+                cbin = calA0(ff,nn) > calA0Bins(1:end-1) & calA0(ff,nn) < calA0Bins(2:end);
+                clr = cellCLR(cbin,:);
+                patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k');
+            elseif colorShape == 3
+                CData = repmat(clrOrig,nvtmp(nn),1);
+                CData(zvtmp==-1,:) = repmat(clrNew,sum(zvtmp==-1),1);
+                patch('Faces',finfo,'vertices',vpos,CData,'FaceColor','c','EdgeColor','interp');
+            elseif colorShape == 4
+                t0tmp = t0{ff,nn};
+                CData = zeros(nvtmp(nn),3);
+                for vv = 1:nvtmp(nn)
+                    t0bin = t0tmp(vv) > t0Bins(1:end-1) & t0tmp(vv) < t0Bins(2:end);
+                    CData(vv,:) = t0clr(t0bin,:);
+                end
+                patch('Faces',finfo,'vertices',vpos,'FaceVertexCData',CData,'FaceColor',faceColor,'EdgeColor','interp','linewidth',2.5);
+                colormap('jet');
+                cb = colorbar;
+                cb.Ticks = t0ticks;
+                cb.TickLabels = t0tickLabels;
+                cb.TickLabelInterpreter = 'latex';
+                cb.FontSize = 18;
+            else
+                patch('Faces',finfo,'vertices',vpos,'FaceColor','b','EdgeColor','k');
+            end
         end
     end
     
@@ -188,8 +262,8 @@ for ff = FSTART:FSTEP:FEND
     ax = gca;
     ax.XTick = [];
     ax.YTick = [];
-    ax.XLim = [0 1]*Lx;
-    ax.YLim = [0 1]*Ly;
+    ax.XLim = [0.2 0.8]*Lx;
+    ax.YLim = [0.2 0.8]*Ly;
     
     % plot pin locs
     for cc = 1:NCELLS
@@ -228,4 +302,56 @@ end
 % close video object
 if makeAMovie == 1
     close(vobj);
+end
+
+%% Draw center particle "growth"
+
+NPLOTS = 5;
+NMAX = round(0.75*NFRAMES);
+fplots = round(linspace(1,NMAX,NPLOTS));
+figure(2), clf, hold on, box on;
+for ii = 1:NPLOTS
+    ff = fplots(ii);
+    xf = x{ff,1};
+    yf = y{ff,1};
+    rf = r{ff,1};
+    zvf = zv{ff,1};
+    nvtmp = nv(ff,1);
+    
+    % get rel pos
+    cx = mean(xf);
+    cy = mean(yf);
+    
+    rx = xf - cx;
+    ry = yf - cy;
+    
+    % scale
+    ascale = (1 + h(ff))./sqrt(a0(ff,1));
+    
+    rx = rx.*ascale;
+    ry = ry.*ascale;
+    rf = rf.*ascale;
+    
+    % plot
+    ip1 = [2:nvtmp 1];
+    for vv = 1:nvtmp
+        rv = rf(vv);
+        xplot = rx(vv) - rv;
+        yplot = ry(vv) - rv;
+        if zvf(vv) < 0
+%             rectangle('Position',[xplot, yplot, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clrNew,'LineWidth',0.2);
+            plot([rx(vv) rx(ip1(vv))],[ry(vv) ry(ip1(vv))],'-','linewidth',3,'color','b');
+        else
+%             rectangle('Position',[xplot, yplot, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clrOrig,'LineWidth',0.2);
+            plot([rx(vv) rx(ip1(vv))],[ry(vv) ry(ip1(vv))],'-','linewidth',1.5,'color','k');
+        end
+    end
+    
+    % plot box
+    axis equal;
+    ax = gca;
+    ax.XTick = [];
+    ax.YTick = [];
+    ax.XLim = [-0.5 0.5]*Lx;
+    ax.YLim = [-0.5 0.5]*Ly;
 end

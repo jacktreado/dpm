@@ -7,18 +7,18 @@ clc;
 % create file name
 
 % parameters
-Nstr = '32';
-nstr = '24';
-castr = '1.15';
-kb0str = '1e-2';
-bestr = '5';
-cLstr = '0.01';
+Nstr = '16';
+nstr = '32';
+castr = '1.10';
+kb0str = '1e-4';
+bestr = '10';
+cLstr = '0.05';
 aLstr = '1';
 cBstr = '1e-4';
 cKbstr = '1';
 
 % seed
-seed = 1;
+seed = 2;
 seedstr = num2str(seed);
 
 % file name str
@@ -26,7 +26,7 @@ floc = '~/Jamming/CellSim/dpm/viz/meso2D/local/meso2D_data';
 % fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_cKb' cKbstr '_seed' seedstr];
 fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_kb0' kb0str '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_seed' seedstr];
 fstr = [floc '/' fpattern '.pos'];
-fstr = '~/Jamming/CellSim/dpm/pos.test';
+% fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetwork2D(fstr);

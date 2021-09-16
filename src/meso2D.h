@@ -120,9 +120,10 @@ public:
 	// protocol helpers
 	void updateMesophyllBondNetwork();
 	void ageMesophyllShapeParameters();
+	void relaxByAdding();
 	void addMesophyllCellMaterial();
 	int mesoBondedCTCS(int gi);
-	void addVertex(int gi);
+	void addVertex(int gi, double newl0);
 	void t0ToCurrent();
 
 	// hessian computation

@@ -64,9 +64,10 @@ fi
 
 # create output file
 positionFile=$outputdir/"$basestr".pos
+bondFile=$outputdir/"$basestr".bnd
 
 # create runString
-runString="./$binf $n1 $calA0 $dh $kb0 $betaEff $ctcdel $ctch $cL $aL $cB $cKb $seed $positionFile"
+runString="./$binf $n1 $calA0 $dh $kb0 $betaEff $ctcdel $ctch $cL $aL $cB $cKb $seed $positionFile $bondFile"
 
 # setup slurm files
 slurmf=slurm/"$runstr".slurm

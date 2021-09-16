@@ -1377,17 +1377,22 @@ void meso2D::mesoPinExtension(double Ftol, double dt0, double hmax, double dh, d
 		// 	exit(1);
 
 		// relax current configuration
+		setdt(dt0);
 		mesoPinFIRE(xpin,Ftol,dt0,kcspring);
 
 		// update contact network
 		updateMesophyllBondNetwork();
 
 		// age particle shapes
+		dt = dh;
 		ageMesophyllShapeParameters();
 
 		// add vertices
 		if (NVTOT < NVMAX)
 			addMesophyllCellMaterial();
+
+		
+		// relaxByAdding();
 
 		// output to console
 		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
@@ -1486,6 +1491,7 @@ void meso2D::updateMesophyllBondNetwork(){
 
 	// MINIMUM NUMBER OF CONTACTS
 	int CTCMIN = 3;
+	int PAIRMIN = 2;
 
 	// loop over pairs of vertices, check whether to connect or detach
 	for (ci=0; ci<NCELLS; ci++){
@@ -1542,7 +1548,7 @@ void meso2D::updateMesophyllBondNetwork(){
 						rij = sqrt(dx*dx + dy*dy);
 
 						// check that break allowed (preserves flat interfaces, min contacts)
-						canBreak = (zitmp > CTCMIN && zjtmp > CTCMIN) || cijctc > 2;
+						canBreak = (zitmp > CTCMIN && zjtmp > CTCMIN) || cijctc > PAIRMIN;
 
 						// only check bond if extended
 						if (rij > sij && canBreak){
@@ -1632,9 +1638,72 @@ void meso2D::ageMesophyllShapeParameters(){
 
 		// update l0 (either void or contact)
 		if (zv[gi] > 0 && zv[ip1[gi]] > 0)
-			l0[gi] += (1.0-aL)*cL*(li - l0[gi]);
-		else if (zv[gi] == 0 || zv[ip1[gi]] == 0)
-			l0[gi] += aL*cL*(li - l0[gi]);
+			l0[gi] += (1.0-aL)*dt*cL*(li - l0[gi]);
+		else if (zv[gi] <= 0)
+			l0[gi] += aL*dt*cL*(li - l0[gi]);
+
+		// -- age angles
+
+		// angle trig functions
+		sini = lix*lim1y - liy*lim1x;
+		cosi = lix*lim1x + liy*lim1y;
+
+		// angle
+		ti = atan2(sini,cosi);
+
+		// update t0
+		if (zv[gi] > 0 && zv[ip1[gi]] > 0)
+			t0[gi] -= dt*cB*t0[gi];
+		else
+			t0[gi] += dt*cB*(ti - t0[gi]);
+
+
+		// age bending mechanical constant
+		if (kbi[gi] < kbmax - cKb)
+			kbi[gi] += dt*cKb;
+	}
+}
+
+
+// relax via addition of material
+void meso2D::relaxByAdding(){
+	// local variables
+	int gi, ngrow;
+	double lix, liy, lim1x, lim1y, li, ti, sini, cosi;
+
+	// vector to pushback vertices where extra material is added
+	vector<int> growthVerts;
+
+	ngrow = 0;
+	for (gi=0; gi<NVTOT; gi++){	
+		// segment from i to ip1
+		lix = x[NDIM*ip1[gi]] - x[NDIM*gi];
+		if (pbc[0])
+			lix -= L[0]*round(lix/L[0]);
+
+		liy = x[NDIM*ip1[gi] + 1] - x[NDIM*gi + 1];
+		if (pbc[1])
+			liy -= L[1]*round(liy/L[1]);
+
+		// segment from im1 to i
+		lim1x = x[NDIM*gi] - x[NDIM*im1[gi]];
+		if (pbc[0])
+			lim1x -= L[0]*round(lim1x/L[0]);
+
+		lim1y = x[NDIM*gi + 1] - x[NDIM*im1[gi] + 1];
+		if (pbc[1])
+			lim1y -= L[1]*round(lim1y/L[1]);
+
+		// -- age perimeter segments
+
+		// segment length
+		li = sqrt(lix*lix + liy*liy);
+
+		// update l0 (either void or contact)
+		if (zv[gi] > 0 && zv[ip1[gi]] > 0)
+			l0[gi] += dt*(1.0-aL)*cL*(li - l0[gi]);
+		else if (zv[gi] <= 0 && NVTOT + growthVerts.size() < NVMAX && li > (1+dt*aL*cL)*l0[gi])
+			growthVerts.push_back(gi);
 
 		// -- age angles
 
@@ -1649,13 +1718,23 @@ void meso2D::ageMesophyllShapeParameters(){
 		// if (zv[gi] > 0 || zv[ip1[gi]] > 0 || zv[im1[gi]] > 0)
 		// 	t0[gi] = 0.0;
 		// else
-		t0[gi] += cB*(ti - t0[gi]);
+		t0[gi] += dt*cB*(ti - t0[gi]);
 
 
 		// age bending mechanical constant
 		if (kbi[gi] < kbmax - cKb)
-			kbi[gi] += cKb;
+			kbi[gi] += dt*cKb;
 	}
+
+	// add vertices
+	ngrow = growthVerts.size();
+	if (ngrow > 0){
+		for (gi=0; gi<growthVerts.size(); gi++){
+			cout << "adding vertex between gi=" << growthVerts.at(gi)+gi << " and gip1=" << ip1[growthVerts.at(gi)+gi] << endl;
+			addVertex(growthVerts.at(gi)+gi,(1 + (cL/ngrow))*l0[growthVerts.at(gi)+gi]);
+		}
+	}
+	growthVerts.clear();
 }
 
 
@@ -1674,7 +1753,7 @@ void meso2D::addMesophyllCellMaterial(){
 		// info for vertex gi
 		cindices(ci,vi,gi);
 		meanl = perimeter(ci)/nv[ci];
-		testl = meanl;
+		testl = (1 + dt*0.01)*meanl;
 		gip1 = ip1[gi];
 		gim1 = im1[gi];
 
@@ -1698,7 +1777,7 @@ void meso2D::addMesophyllCellMaterial(){
 
 		// add if neighbors connected to different cells, or if center not connected,
 		// but ip1 and im1 are connected
-		if (zv[gi] > 0 && zv[gip1] > 0 && dli > testl){
+		if (zv[gi] > 0 && zv[gip1] > 0){
 			// check min contact to gi
 			dmin = 1e6;
 			for (gj=0; gj<NVTOT; gj++){
@@ -1797,7 +1876,7 @@ void meso2D::addMesophyllCellMaterial(){
 		// }
 
 		// add if lone vertex between two connected vertices, connected to different cells
-		else if (zv[gim1] > 0 && zv[gip1] > 0 && zv[gi] == 0 && dli > testl && dlim1 > testl){
+		else if (zv[gim1] > 0 && zv[gip1] > 0 && zv[gi] == 0){
 			// check min contact to gim1
 			dmin = 1e6;
 			for (gj=0; gj<NVTOT; gj++){
@@ -1865,9 +1944,9 @@ void meso2D::addMesophyllCellMaterial(){
 
 		// add vertices between neighbors of new vertices
 		else if (zv[gi] == -1){
-			// relax new vertex toward mean segment length of cell
-			l0[gi] += 0.05*cL*(meanl - l0[gi]);
-			l0[gim1] += 0.05*cL*(meanl - l0[gim1]);
+			// // relax new vertex toward mean segment length of cell
+			l0[gi] += 0.5*dt*cL*(meanl - l0[gi]);
+			l0[gim1] += 0.5*dt*cL*(meanl - l0[gim1]);
 
 			// birth if bwd neighbor is connected
 			if (zv[gim1] > 0 && dlim1 > testl)
@@ -1883,7 +1962,7 @@ void meso2D::addMesophyllCellMaterial(){
 	if (growthVerts.size() > 0){
 		for (gi=0; gi<growthVerts.size(); gi++){
 			cout << "adding vertex between gi=" << growthVerts.at(gi)+gi << " and gip1=" << ip1[growthVerts.at(gi)+gi] << endl;
-			addVertex(growthVerts.at(gi)+gi);
+			addVertex(growthVerts.at(gi)+gi,(1+(dt*cL/growthVerts.size()))*l0[growthVerts.at(gi)+gi]);
 		}
 	}
 	growthVerts.clear();
@@ -1918,7 +1997,7 @@ int meso2D::mesoBondedCTCS(int gi){
 // add vertex and update all relevant variables
 // NOTE: add that only material can be added between contacts of different cells
 // * add man file to start from jammed configuration, saves overhead
-void meso2D::addVertex(int gi){
+void meso2D::addVertex(int gi, double newl0){
 	// local variables
 	int NVVCTS;
 	int d, ci, vi, vj, vip1, vim1, cj, gj, gip1 = ip1[gi];
@@ -2043,8 +2122,8 @@ void meso2D::addVertex(int gi){
 	v[NDIM*(gi+1) + 1] = 0.0;
 	F[NDIM*(gi+1)] = 0.0;
 	F[NDIM*(gi+1) + 1] = 0.0;
-	l0[gi+1] = 0.5*(1.0 + cL)*dr;
-	l0[gi] = 0.5*(1.0 + cL)*dr;
+	l0[gi+1] = 0.5*newl0;
+	l0[gi] = 0.5*newl0;
 	// t0[gi+1] = (2.0*PI)/nv.at(ci);
 	t0[gi+1] = 0.0;
 	r[gi+1] = r[gi];
