@@ -1450,7 +1450,10 @@ void meso2D::mesoPinExtension(double Ftol, double dt0, double hmax, double dh, d
 		}
 
 		// scale particle sizes
-		scaleParticleSizes2D(1.0 - dh);
+		// scaleParticleSizes2D(1.0 - dh);
+
+		// change particle sizes to relax pressure
+		
 
 		// update new packing fraction
 		phi0 = vertexPreferredPackingFraction2D();
@@ -2135,12 +2138,6 @@ void meso2D::addVertex(int gi, double newl0){
 	cout << "vertex " << gip1 << "; (" << x[NDIM*gip1] << ", " << x[NDIM*gip1 + 1] << ")" << endl;
 	cout << "vertex " << ip1[gip1] << "; (" << x[NDIM*ip1[gip1]] << ", " << x[NDIM*ip1[gip1] + 1] << ")" << endl;
 	cout << endl;
-
-	// // print out to console
-	// for (gi=0; gi<NVTOT; gi++)
-	// 	cout << "gi=" << gi << ",  " << im1[gi] << ",  " << ip1[gi] << endl;
-	// exit(1);
-
 }
 
 
@@ -2370,26 +2367,242 @@ void meso2D::mesoBendingHessian(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb){
 
 
 // hessian for meso cells with fixed contact springs
-void meso2D::mesoSpringNetworkHessian(Eigen::MatrixXd &Hs, Eigen::MatrixXd &Ss){
+void meso2D::mesoSpringNetworkHessian(Eigen::MatrixXd &Hbnds, Eigen::MatrixXd &Sbnds){
 	// local variables
-	int gi, kxm1, kym1, kx, ky, kxp1, kyp1, kxp2, kyp2;
-	double lxim1, lyim1, lx, ly, ulx, uly, ltmp, si, ci, th;
-	double dtiim1x, dtiim1y, dtiix, dtiiy, dtiip1x, dtiip1y;
-	double dtip1ix, dtip1iy, dtip1ip2x, dtip1ip2y, dtip1ip1x, dtip1ip1y;
-	double dtim1, dti, dtip1;
+	int ci, vi, gi, cj, vj, gj, kx, ky, lx, ly, zij;
+	double sij, dx, dy, rij, kij, h, uxij, uyij;
 
 	// non-dimensionalization
-	double rho0, Kb;
-	rho0 = sqrt(a0.at(0));
+	double rho0 = sqrt(a0.at(0));
 
-	// loop over pairs of connected vertices, compute Hessian	
+	// loop over pairs of connected vertices, compute Hessian
+	for (gi=0; gi<NVTOT; gi++){
+		kx = NDIM*gi;
+		ky = kx + 1;
+		for (gj=(gi+1); gj<NVTOT; gj++){
+			lx = NDIM*gj;
+			ly = lx + 1;
+			if(gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2]){
+				// contact distance
+				sij = r[gi] + r[gj];
+
+				// get cell indices
+				cindices(ci,vi,gi);
+				cindices(cj,vj,gj);
+
+				// zij: determines strength of bond attraction
+				zij = 0.5*(zc[ci] + zc[cj])*ctcdel + 1.0;
+
+				// actual distance
+				dx = x[lx] - x[kx];
+				dy = y[ly] - y[ky];
+				if (pbc[0])
+					dx -= L[0]*round(dx/L[0]);
+				if (pbc[1])
+					dy -= L[1]*round(dy/L[1]);
+				rij = sqrt(dx*dx + dy*dy);
+
+				// if bond is extended
+				if (rij > sij) {
+					// spring constant
+					kij = (kc * rho0 * rho0) / (sij * rij * zij);
+
+					// dimensionless overlap
+					h = rij / sij;
+
+					// derivatives of distance w.r.t. coordinates
+					uxij = dx / rij;
+					uyij = dy / rij;
+
+					// compute stiffness and stress matrices (off diagonal, enforce symmetry in lower triangles)
+
+					// -- stiffness matrix
+					Hbnds(kx, lx) = -((kc * rho0 * rho0) / (sij * sij)) * (uxij * uxij);
+					Hbnds(ky, ly) = -((kc * rho0 * rho0) / (sij * sij)) * (uyij * uyij);
+					Hbnds(kx, ly) = -((kc * rho0 * rho0) / (sij * sij)) * (uxij * uyij);
+					Hbnds(ky, lx) = -((kc * rho0 * rho0) / (sij * sij)) * (uyij * uxij);
+
+					Hbnds(lx, kx) = Hbnds(kx, lx);
+					Hbnds(ly, ky) = Hbnds(ky, ly);
+					Hbnds(lx, ky) = Hbnds(ky, lx);
+					Hbnds(ly, kx) = Hbnds(kx, ly);
+
+					// -- stress matrix
+					Sbnds(kx, lx) = kij * (1.0 - h) * (uyij * uyij);
+					Sbnds(ky, ly) = kij * (1.0 - h) * (uxij * uxij);
+					Sbnds(kx, ly) = -kij * (1.0 - h) * (uxij * uyij);
+					Sbnds(ky, lx) = -kij * (1.0 - h) * (uxij * uyij);
+
+					Sbnds(lx, kx) = Sbnds(kx, lx);
+					Sbnds(ly, ky) = Sbnds(ky, ly);
+					Sbnds(lx, ky) = Sbnds(ky, lx);
+					Sbnds(ly, kx) = Sbnds(kx, ly);
+
+					// add to diagonal, using off diagonals and reciprocity
+
+					// -- stiffness matrix
+					Hbnds(kx, kx) -= Hbnds(kx, lx);
+					Hbnds(ky, ky) -= Hbnds(ky, ly);
+					Hbnds(kx, ky) -= Hbnds(kx, ly);
+					Hbnds(ky, kx) -= Hbnds(ky, lx);
+
+					Hbnds(lx, lx) -= Hbnds(kx, lx);
+					Hbnds(ly, ly) -= Hbnds(ky, ly);
+					Hbnds(lx, ly) -= Hbnds(kx, ly);
+					Hbnds(ly, lx) -= Hbnds(ky, lx);
+
+					// -- stress matrix
+					Sbnds(kx, kx) -= Sbnds(kx, lx);
+					Sbnds(ky, ky) -= Sbnds(ky, ly);
+					Sbnds(kx, ky) -= Sbnds(kx, ly);
+					Sbnds(ky, kx) -= Sbnds(ky, lx);
+
+					Sbnds(lx, lx) -= Sbnds(kx, lx);
+					Sbnds(ly, ly) -= Sbnds(ky, ly);
+					Sbnds(lx, ly) -= Sbnds(kx, ly);
+					Sbnds(ly, lx) -= Sbnds(ky, lx);
+				}
+			}
+		}
+	}
 }
 
 
+// function to compute full dynamical matrix for meso network snapshot, compute G
+void meso2D::mesoDynamicalMatrix(Eigen::MatrixXd &M, Eigen::MatrixXd &H, Eigen::MatrixXd &S){
+	// local variables
+	int k, l;
+
+	// print something to the console
+	cout << "** Computing dynamical matrix for configuration in mesoShearModulus ..." << endl;
+
+	// initialize all possible matrices
+	Eigen::MatrixXd Ha(vertDOF, vertDOF);  
+	Eigen::MatrixXd Sa(vertDOF, vertDOF);  
+	Eigen::MatrixXd Hl(vertDOF, vertDOF);  
+	Eigen::MatrixXd Sl(vertDOF, vertDOF);  
+	Eigen::MatrixXd Hb(vertDOF, vertDOF);  
+	Eigen::MatrixXd Sb(vertDOF, vertDOF);  
+	Eigen::MatrixXd Hvv(vertDOF, vertDOF); 
+	Eigen::MatrixXd Svv(vertDOF, vertDOF);
+	Eigen::MatrixXd Hbnds(vertDOF, vertDOF); 
+	Eigen::MatrixXd Sbnds(vertDOF, vertDOF);
+
+	// initialize all matrices to be 0 initially
+	for (k = 0; k < vertDOF; k++) {
+		for (l = 0; l < vertDOF; l++) {
+			Ha(k, l) = 0.0;
+			Sa(k, l) = 0.0;
+			Hl(k, l) = 0.0;
+			Sl(k, l) = 0.0;
+			Hb(k, l) = 0.0;
+			Sb(k, l) = 0.0;
+			Hvv(k, l) = 0.0;
+			Svv(k, l) = 0.0;
+			Hbnds(k, l) = 0.0;
+			Sbnds(k, l) = 0.0;
+		}
+	}
+
+	// compute all contributions
+	dpmAreaHessian2D(Ha,Sa);
+	dpmPerimeterHessian2D(Hl,Sl);
+	mesoBendingHessian(Hb,Sb);
+	dpmRepulsiveHarmonicSprings2D(Hvv,Svv);
+	mesoSpringNetworkHessian(Hbnds,Sbnds);
+
+	// construct full dynamical matrix
+	for (k = 0; k < vertDOF; k++) {
+		for (l = 0; l < vertDOF; l++) {
+			H(k,l) = Ha(k,l) + Hl(k,l) + Hb(k,l) + Hvv(k,l) + Hbnds(k,l);
+			S(k,l) = -Sa(k,l) - Sl(k,l) - Sb(k,l) - Svv(k,l) - Sbnds(k,l);
+			M(k,l) = H(k,l) - S(k,l);
+		}
+	}
+}
 
 
+// function to use dynamical matrix to compute shear modulus, and prints w/ eigenvalues
+// NOTES:
+// 2. Need to check against numerically computing both contributions using Lees-Edwards + FIRE
+// 3. Incorporate into specific function to simulation, write new main file, put on cluster
+void meso2D::mesoPrintLinearResponse(){
+	// local variables
+	int ci, cj, vi, vj, gi, gj, kx, ky;
+	double zij, sij, dx, dy, rij, uy;
 
+	// print to console
+	cout << "** In mesoPrintShearModulus, computing and printing G and eigenvales... " << endl;
 
+	// components of dynamical matrix
+	Eigen::MatrixXd M(vertDOF, vertDOF);  
+	Eigen::MatrixXd H(vertDOF, vertDOF);  
+	Eigen::MatrixXd S(vertDOF, vertDOF);
+
+	// compute
+	mesoDynamicalMatrix(M,H,S);
+
+	// compute eigenvalues from matrix, plot
+	Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> meig(M);
+	Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> heig(H);
+	Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> seig(S);
+
+	// define eigenvector matrix
+	Eigen::MatrixXd evecs = meig.eigenvectors();
+
+	// First compute affine contribution to shear modulus
+	double Gaff, Gnonaff;
+	Gaff = 0.0;
+	for (ci=0; ci<NCELLS; ci++){
+		for (cj=(ci+1); cj<NCELLS; cj++){
+			// contact scaler
+			zij = 0.5*(zc[ci] + zc[cj])*ctcdel + 1.0;
+
+			// only add if cells are in contact
+			if (cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2] > 0){
+				// loop over pairs of vertices
+				for (vi=0; vi<nv[ci]; vi++){
+					gi = gindex(gi,vi);
+					for (vj=0; vj<nv[cj]; vj++){
+						gj = gindex(cj,vj);
+
+						// contact distance
+						sij = r[gi] + r[gj];
+
+						// true distance
+						dx = x[NDIM*gj] - x[NDIM*gi];
+						dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
+						if (pbc[0])
+							dx -= L[0]*round(dx/L[0]);
+						if (pbc[1])
+							dy -= L[1]*round(dy/L[1]);
+						rij = sqrt(dx*dx + dy*dy);
+
+						// uy for shear modulus
+						uy = dy/rij;
+
+						// check whether bonded or overlapping
+						if (rij > sij && gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2])
+							Gaff -= ((kc*dy)/(zij*sij))*((uy*uy*uy) - (dy/sij));
+						else if (rij < sij)
+							Gaff -= ((kc*dy)/sij)*((uy*uy*uy) - (dy/sij));
+					}
+				}
+			}
+		}
+	}
+
+	// // Next, compute nonaffine contribution
+	// vector<double> Fa(vertDOF,0.0);
+	// for (gi=0; gi<NVTOT; gi++){
+	// 	// d.o.f. indices
+	// 	kx = NDIM*gi;
+	// 	ky = kx + 1;
+
+	// 	// loop over pairs
+	// 	for (gj=0; )
+	// }
+}
 
 
 

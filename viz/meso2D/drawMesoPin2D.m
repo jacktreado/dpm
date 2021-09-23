@@ -143,7 +143,7 @@ elseif colorShape == 3
 elseif colorShape == 4
     faceColor = 'w';
     NCLR = 100;
-    t0All = cell2mat(t0(:));
+    t0All = -cell2mat(t0(:));
     mint0 = min(t0All);
     maxt0 = max(t0All);
     t0Bins = linspace(mint0 - 0.001*abs(mint0),maxt0 + 0.001*abs(maxt0),NCLR+1);
@@ -173,14 +173,14 @@ if showverts == 0
 else
     FSTART = 1;
     FSTEP = 1;
-    FEND = NFRAMES;
-%     FEND = FSTART;
+%     FEND = NFRAMES;
+    FEND = FSTART;
 end
 
 % make a movie
 makeAMovie = 1;
 if makeAMovie == 1
-    moviestr = 'mesoPin2D_patch2.mp4';
+    moviestr = 'mesoPin2D_patch.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -242,7 +242,7 @@ for ff = FSTART:FSTEP:FEND
                 CData(zvtmp==-1,:) = repmat(clrNew,sum(zvtmp==-1),1);
                 patch('Faces',finfo,'vertices',vpos,CData,'FaceColor','c','EdgeColor','interp');
             elseif colorShape == 4
-                t0tmp = t0{ff,nn};
+                t0tmp = -t0{ff,nn};
                 CData = zeros(nvtmp(nn),3);
                 for vv = 1:nvtmp(nn)
                     t0bin = t0tmp(vv) > t0Bins(1:end-1) & t0tmp(vv) < t0Bins(2:end);
@@ -311,7 +311,7 @@ end
 %% Draw center particle "growth"
 
 NPLOTS = 5;
-NMAX = round(0.3*NFRAMES);
+NMAX = round(0.5*NFRAMES);
 fplots = round(linspace(1,NMAX,NPLOTS));
 figure(2), clf, hold on, box on;
 for ii = 1:NPLOTS
@@ -330,7 +330,7 @@ for ii = 1:NPLOTS
     ry = yf - cy;
     
     % scale
-    ascale = (1 + h(ff))./sqrt(a0(ff,1));
+    ascale = (1 + 2.0*h(ff))./sqrt(a0(ff,1));
     
     rx = rx.*ascale;
     ry = ry.*ascale;

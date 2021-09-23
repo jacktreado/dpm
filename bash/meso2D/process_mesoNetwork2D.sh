@@ -22,11 +22,11 @@ mkdir -p out
 NCELLS=$1
 n1=$2
 calA0=$3
-betaEff=$4
-cL=$5
-aL=$6
-cB=$7
-cKb=$8
+kb0=$4
+betaEff=$5
+cL=$6
+aL=$7
+cB=$8
 partition=$9
 time="${10}"
 numRuns="${11}"
@@ -35,7 +35,7 @@ startSeed="${12}"
 let endSeed=$startSeed+$numRuns-1
 
 # name strings
-basestr=meso2D_N"$NCELLS"_n"$n1"_ca"$calA0"_be"$betaEff"_cL"$cL"_aL"$aL"_cB"$cB"_cKb"$cKb"
+basestr=meso2D_N"$NCELLS"_n"$n1"_ca"$calA0"_kb0"$kb0"_be"$betaEff"_cL"$cL"_aL"$aL"_cB"$cB"
 runstr="$basestr"_PROCESS_startseed"$startSeed"_endseed"$endSeed"
 searchstr="$basestr"_seed
 
@@ -85,15 +85,15 @@ sbatch -t $time $slurmf
 # ====================
 # 1. NCELLS
 # 2. n
-# 4. calA0
+# 3. calA0
+# 4. kb0
 # 5. betaEff
 # 6. cL (perimeter aging)
 # 7. aL (either age contact (0) or void (1) perimeter)
 # 8. cB (bending angle aging)
-# 9. cKb (bending energy stiffening)
-# 10. partition
-# 11. time
-# 12. number of runs (number of array entries, i.e. arraynum)
-# 13. start seed (end seed determined by number of runs)
+# 9. partition
+# 10. time
+# 11. number of runs (number of array entries, i.e. arraynum)
+# 12. start seed (end seed determined by number of runs)
 
 

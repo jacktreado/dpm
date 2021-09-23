@@ -32,10 +32,8 @@ SxxList = cell(NSIMS,1);
 SyyList = cell(NSIMS,1);
 SxyList = cell(NSIMS,1);
 zList = cell(NSIMS,1);
-% t0List = cell(NSIMS,1);
-% kbList = cell(NSIMS,1);
-% shapeLambdaList = cell(NSIMS,1);
-% shapeVList = cell(NSIMS,1);
+t0List = cell(NSIMS,1);
+kbList = cell(NSIMS,1);
 cxList = cell(NSIMS,1);
 cyList = cell(NSIMS,1);
 
@@ -68,8 +66,8 @@ for ss = 1:NSIMS
     zc = mesoData.zc;
     a0 = mesoData.a0;
     l0 = mesoData.l0;
-%     t0 = mesoData.t0;
-%     kb = mesoData.kb;
+    t0 = mesoData.t0;
+    kb = mesoData.kb;
     
     % cell vertices
     nvList(ss,:) = nv;
@@ -108,6 +106,10 @@ for ss = 1:NSIMS
     
     % connections
     zList{ss} = zc;
+    
+    % bending
+    t0List{ss} = t0;
+    kbList{ss} = kb;
     
     % stress
     S = mesoData.S;

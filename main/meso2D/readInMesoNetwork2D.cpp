@@ -4,7 +4,7 @@
 
 // Compilation command:
 // g++ -O3 --std=c++11 -I src main/meso2D/readInMesoNetwork2D.cpp src/*.cpp -o meso.o
-// ./meso.o input.test 1e-4 5.0 1.0 5 1 1 1 pos.test
+// ./meso.o input.test 1e-4 2.0 1.0 2 1 1 1 pos.test
 //
 //
 // Parameter input list
@@ -38,8 +38,8 @@ const double Ftol = 1e-12; 			// force tolerance
 const double phiMin = 0.4;			// minimum packing fraction in decompression algorithm
 
 // set parameters
-const double ctch = 1.0;
-const double cKb = 1e-6;
+const double ctch = 0.5;
+const double cKb = 0;
 
 
 int main(int argc, char const *argv[])

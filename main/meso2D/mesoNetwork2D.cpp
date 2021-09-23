@@ -43,7 +43,7 @@ const double phi0 = 0.5;		   	// initial packing fraction
 const double dt0 = 1e-2;		   	// initial magnitude of time step in units of MD time
 const double Ptol = 1e-6;		   	// target pressure in initial compression
 const double Ftol = 1e-10; 			// force tolerance
-const double phiMin = 0.4;			// minimum packing fraction in decompression algorithm
+const double phiMin = 0.3;			// minimum packing fraction in decompression algorithm
 const double T0 = 1e-2; 			// temperature for jamming preparation protocol
 const double trun = 100.0; 			// amount of time to run annealing
 
