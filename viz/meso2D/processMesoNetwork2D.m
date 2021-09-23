@@ -44,7 +44,7 @@ for ss = 1:NSIMS
     fname = flist(ss).name;
     fstr = [floc '/' fname];
     finfo = dir(fstr);
-    if finfo.size == 0
+    if finfo.bytes == 0
         fprintf('** %s is empty, skipping...\n',fname);
         fskip(ss) = true;
     end
