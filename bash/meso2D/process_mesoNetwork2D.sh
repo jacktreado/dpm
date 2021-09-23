@@ -29,14 +29,10 @@ aL=$7
 cB=$8
 partition=$9
 time="${10}"
-numRuns="${11}"
-startSeed="${12}"
-
-let endSeed=$startSeed+$numRuns-1
 
 # name strings
 basestr=meso2D_N"$NCELLS"_n"$n1"_ca"$calA0"_kb0"$kb0"_be"$betaEff"_cL"$cL"_aL"$aL"_cB"$cB"
-runstr="$basestr"_PROCESS_startseed"$startSeed"_endseed"$endSeed"
+runstr="$basestr"_PROCESS
 searchstr="$basestr"_seed
 
 # access directory specific for this simulation
@@ -93,7 +89,5 @@ sbatch -t $time $slurmf
 # 8. cB (bending angle aging)
 # 9. partition
 # 10. time
-# 11. number of runs (number of array entries, i.e. arraynum)
-# 12. start seed (end seed determined by number of runs)
 
 
