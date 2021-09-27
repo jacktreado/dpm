@@ -91,7 +91,7 @@ end
 % get frames to plot
 if showverts == 0
     FSTART = 1;
-    FSTEP = 10;
+    FSTEP = 1;
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
@@ -101,9 +101,9 @@ else
 end
 
 % make a movie
-makeAMovie = 0;
+makeAMovie = 1;
 if makeAMovie == 1
-    moviestr = 'mesoPin.mp4';
+    moviestr = 'constP_invasion.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);

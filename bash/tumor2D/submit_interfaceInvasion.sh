@@ -17,7 +17,7 @@ if [[ ! -d $inputdir ]]; then
 fi
 
 # parent directory for simulation output
-outputdir=$dpmdir/intInvade
+outputdir=$tumordir/intInvade
 
 # make directories, unless they already exist
 mkdir -p $outputdir
