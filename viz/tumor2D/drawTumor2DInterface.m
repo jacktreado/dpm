@@ -18,9 +18,7 @@ NFRAMES = tumorConfigData.NFRAMES;
 NCELLS = tumorConfigData.NCELLS;
 tN = tumorConfigData.tN;
 nv = tumorConfigData.nv(1,:);
-L = tumorConfigData.L(1,:);
-Lx = L(1);
-Ly = L(2);
+L = tumorConfigData.L;
 x = tumorConfigData.x;
 y = tumorConfigData.y;
 r = tumorConfigData.r;
@@ -31,6 +29,7 @@ zv = tumorConfigData.zv;
 a0 = tumorConfigData.a0;
 l0 = tumorConfigData.l0;
 t0 = tumorConfigData.t0;
+t = tumorConfigData.t;
 
 % get preferred shape
 calA0 = zeros(NFRAMES,NCELLS);
@@ -47,6 +46,13 @@ end
 p = tumorConfigData.p;
 a = tumorConfigData.a;
 calA = p.^2./(4.0*pi*a);
+
+% plot wall data
+figure(10), plot(t,L(:,1),'k-','linewidth',2);
+xlabel('$t$','Interpreter','latex','LineWidth',2);
+ylabel('$L_x$','Interpreter','latex','LineWidth',2);
+ax = gca;
+ax.FontSize = 18;
 
 %% Draw cells
 
@@ -70,7 +76,7 @@ end
 % get frames to plot
 if showverts == 0
     FSTART = 1;
-    FSTEP = 1;
+    FSTEP = 10;
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
@@ -100,6 +106,8 @@ for ff = FSTART:FSTEP:FEND
     yf = y(ff,:);
     rf = r(ff,:);
     zctmp = zc(ff,:);
+    Lx = L(ff,1);
+    Ly = L(ff,2);
     for nn = 1:NCELLS
         xtmp = xf{nn};
         ytmp = yf{nn};

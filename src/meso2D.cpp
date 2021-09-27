@@ -2395,7 +2395,7 @@ void meso2D::mesoSpringNetworkHessian(Eigen::MatrixXd &Hbnds, Eigen::MatrixXd &S
 
 				// actual distance
 				dx = x[lx] - x[kx];
-				dy = y[ly] - y[ky];
+				dy = x[ly] - x [ky];
 				if (pbc[0])
 					dx -= L[0]*round(dx/L[0]);
 				if (pbc[1])

@@ -6,7 +6,7 @@
 // g++ -O3 --std=c++11 -I src main/tumor2D/interfaceInvasion.cpp src/*.cpp -o tumor.o
 // 
 // Example execution:
-// ./tumor.o input.test 1e5 1e1 0.005 0.05 0.05 0.1 0.2 0.5 0.1 0 0.01 1e-4 1 pos.test
+// ./tumor.o tumor_input.test 1e5 1e3 0.01 0.02 0.1 0.1 0.2 0.5 0.1 0.9 0.01 1e-3 1 pos.test
 // 
 // 
 
@@ -23,11 +23,11 @@ using namespace std;
 
 // global constants
 const double ka = 1.0;					// area force spring constant (should be unit)
-const double kl = 1.0; 					// contractility spring constant
-const double kb = 0.0;					// bending energy
-const double kc = 1.0;					// interaction force spring constant (should be unit)
+const double kl = 0.05; 				// contractility spring constant
+const double kb = 1e-4;					// bending energy
+const double kc = 0.1;					// interaction force spring constant (should be unit)
 const double gamtt = 0.0; 				// surface tension
-const double boxLengthScale = 2.0;		// neighbor list box size in units of initial l0
+const double boxLengthScale = 3.0;		// neighbor list box size in units of initial l0
 const double dt0 = 2e-2;				// initial magnitude of time step in units of MD time
 
 int main(int argc, char const *argv[])
@@ -124,7 +124,8 @@ int main(int argc, char const *argv[])
 
 	// invasion
 	cout << "Running invasion protocol..." << endl;
-	tumor2Dobj.invasion(invasionForceUpdate,dDr,dPsi,Drmin,NT,NPRINTSKIP);
+	// tumor2Dobj.invasion(invasionForceUpdate,dDr,dPsi,Drmin,NT,NPRINTSKIP);
+	tumor2Dobj.invasionConstP(invasionForceUpdate,dDr,dPsi,Drmin,NT,NPRINTSKIP);
 
 	// say goodbye
 	cout << "\n** Finished interfaceInvasion.cpp, ending. " << endl;

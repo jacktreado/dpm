@@ -1,4 +1,5 @@
 %% Draw dpm config files
+% NOTE: need to get configs with contact info
 
 clear;
 close all;
@@ -11,14 +12,14 @@ Nstr = '64';
 nstr = '32';
 castr = '1.12';
 kb0str = '1e-4';
-bestr = '4';
-cLstr = '1.0';
+bestr = '6';
+cLstr = '0.5';
 aLstr = '1';
-cBstr = '2';
+cBstr = '1';
 cKbstr = '1';
 
 % seed
-seed = 5;
+seed = 1;
 seedstr = num2str(seed);
 
 % file name str
@@ -204,7 +205,7 @@ else
 end
 
 % make a movie
-makeAMovie = 0;
+makeAMovie = 1;
 if makeAMovie == 1
     moviestr = [fpattern '.mp4'];
     vobj = VideoWriter(moviestr,'MPEG-4');
@@ -301,7 +302,7 @@ for ff = FSTART:FSTEP:FEND
     
     % if making a movie, save frame
     if makeAMovie == 1
-        currframe = getframe(gcf);
+        currframe = getframe(gca);
         writeVideo(vobj,currframe);
     end
 end

@@ -2497,11 +2497,15 @@ void tumor2D::invasionConstP(tumor2DMemFn forceCall, double dDr, double dPsi, do
 	setupCheck();
 
 	// local variables
-	int k, i, ci, cj;
-	double t = 0.0, zta, Drtmp;
+	int k, i, ci, cj, gi, d;
+	double t = 0.0, zta, Drtmp, Lold, Lnew, gam, Pwall;
 
 	// attach pins
 	updateECMAttachments(1);
+
+	// initial pressure
+	CALL_MEMBER_FN(*this, forceCall)();
+	double P0 = wpress[0];
 
 	// loop over time, have active brownian crawlers invade adipocytes
 	for (k=0; k<NT; k++){
@@ -2547,8 +2551,23 @@ void tumor2D::invasionConstP(tumor2DMemFn forceCall, double dDr, double dPsi, do
 		// update psi based on persistence
 		psiDiffusion();
 
-		// update box lengths based on 
-		L[0] += dt*wpress[0];
+		// update box lengths based on difference to fixed pressure
+		Lold = L[0];
+		// Pwall = 0.5*(wpress[0] + wpress[1]);
+		Pwall = wpress[0];
+		Lnew = Lold - dt*(P0 - Pwall)*L[1];
+		L[0] = Lnew;
+
+		// affine transformation (move boundary from right)
+		gam = Lnew/Lold;
+		for (gi=0; gi<NVTOT; gi++)
+			x[NDIM*gi] *= gam;
+		for (ci=tN; ci<NCELLS; ci++)
+			pinpos.at(NDIM*(ci-tN)) *= gam;
+
+		// update linked list cell geometry
+		for (d=0; d<NDIM; d++)
+			lb[d] = L[d]/sb[d];
 
 		// update time
 		t += dt;
@@ -2563,6 +2582,10 @@ void tumor2D::invasionConstP(tumor2DMemFn forceCall, double dDr, double dPsi, do
 			cout << "	** k 			= " << k << endl;
 			cout << "	** p 			= " << 0.5*(stress[0] + stress[1]) << endl;
 			cout << "	** phi 			= " << vertexPackingFraction2D() << endl;
+			cout << "	** P wall 		= " << Pwall << endl;
+			cout << "	** P0 wall 		= " << P0 << endl;
+			cout << "	** Lold 		= " << Lold << endl;
+			cout << "	** Lnew 		= " << Lnew << endl;
 
 			// print vertex positions to check placement
 			cout << "\t** PRINTING POSITIONS TO FILE... " << endl;
