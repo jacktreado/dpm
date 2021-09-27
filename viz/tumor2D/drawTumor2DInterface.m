@@ -30,6 +30,9 @@ a0 = tumorConfigData.a0;
 l0 = tumorConfigData.l0;
 t0 = tumorConfigData.t0;
 t = tumorConfigData.t;
+WP = tumorConfigData.WP;
+S = tumorConfigData.S;
+P = 0.5*(S(:,1) + S(:,2));
 
 % get preferred shape
 calA0 = zeros(NFRAMES,NCELLS);
@@ -51,6 +54,18 @@ calA = p.^2./(4.0*pi*a);
 figure(10), plot(t,L(:,1),'k-','linewidth',2);
 xlabel('$t$','Interpreter','latex','LineWidth',2);
 ylabel('$L_x$','Interpreter','latex','LineWidth',2);
+ax = gca;
+ax.FontSize = 18;
+
+figure(11), plot(t,WP(:,1),'k-','linewidth',2);
+xlabel('$t$','Interpreter','latex','LineWidth',2);
+ylabel('$P_{\rm wall}$','Interpreter','latex','LineWidth',2);
+ax = gca;
+ax.FontSize = 18;
+
+figure(12), plot(t,P,'k-','linewidth',2);
+xlabel('$t$','Interpreter','latex','LineWidth',2);
+ylabel('$P$','Interpreter','latex','LineWidth',2);
 ax = gca;
 ax.FontSize = 18;
 
@@ -145,8 +160,8 @@ for ff = FSTART:FSTEP:FEND
     ax = gca;
     ax.XTick = [];
     ax.YTick = [];
-    ax.XLim = [-0.25 1.25]*Lx;
-    ax.YLim = [-0.25 1.25]*Ly;
+    ax.XLim = [-0.25 1.25]*L(1,1);
+    ax.YLim = [-0.25 1.25]*L(1,2);
     
     % if making a movie, save frame
     if makeAMovie == 1

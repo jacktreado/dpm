@@ -24,8 +24,8 @@ using namespace std;
 // global constants
 const double ka = 1.0;					// area force spring constant (should be unit)
 const double kl = 0.05; 				// contractility spring constant
-const double kb = 1e-4;					// bending energy
-const double kc = 0.1;					// interaction force spring constant (should be unit)
+const double kb = 1e-3;					// bending energy
+const double kc = 0.1;					// interaction force spring constant
 const double gamtt = 0.0; 				// surface tension
 const double boxLengthScale = 3.0;		// neighbor list box size in units of initial l0
 const double dt0 = 2e-2;				// initial magnitude of time step in units of MD time

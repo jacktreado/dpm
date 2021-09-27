@@ -60,6 +60,7 @@ public:
 	void setkecm(double val) { kecm = val; };
 	void setecmbreak(double val) { ecmbreak = val; };
 	void setl0_init();
+	void setAdiposeKb(double val);
 
 	// initialization
 	void initializeSingleTumorCell();
@@ -80,6 +81,7 @@ public:
 	// force updates
 	void resetForcesAndEnergy();
 
+	void tumorShapeForces();
 	void repulsiveTumorForces();
 	void stickyTumorForces();
 	void repulsiveTumorInterfaceForces();

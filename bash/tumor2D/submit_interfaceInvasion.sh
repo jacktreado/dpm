@@ -211,23 +211,25 @@ sbatch -t $time $slurmf
 #       INPUTS
 # ====================
 # 1. aN
-# 2. aNV
-# 4. tNV
-# 5. aDisp
-# 5. tDisp
-# 6. aCalA0
-# 7. tCalA0
-# 8. areaRatio
-# 9. prt
-# 10. partition
-# 11. time
-# 12. number of runs (number of array entries, i.e. arraynum)
-# 13. start seed (end seed determined by number of runs)
-
-
-
-
-
+# 2. aCalA0
+# 4. tCalA0
+# 5. areaRatio
+# 5. l1
+# 6. l2
+# 7. v0
+# 8. Dr
+# 9. Ds
+# 10. kecm
+# 11. ecmbreak
+# 12. dDr
+# 13. dPsi
+# 14. Drmin
+# 15. NT
+# 16. NPRINTSKIP
+# 17. partition
+# 18. time
+# 19. number of runs (number of array entries, i.e. arraynum)
+# 20. start seed (end seed determined by number of runs)
 
 
 
