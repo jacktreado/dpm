@@ -84,6 +84,7 @@ echo partition=$partition >> $paramf
 echo time=$time >> $paramf
 echo startSeed=$startSeed >> $paramf
 echo endSeed=$endSeed >> $paramf
+echo Parameter file:
 cat $paramf
 
 
@@ -133,7 +134,7 @@ rm -f $taskf
 let fcount=0
 
 # LOOP OVER FILES. 
-for f in flist; do
+for f in $flist; do
     # parse file name
     file=${f##*/}
     baseid=${file%%.pos}
