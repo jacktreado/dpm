@@ -187,7 +187,7 @@ then
 fi
 
 # get number of jobs to submit to each array
-let arraynum=$fcount
+let arraynum=$fcount-1
 echo -- total number of array runs = $arraynum
 
 # setup slurm files
