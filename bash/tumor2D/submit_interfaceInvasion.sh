@@ -136,7 +136,7 @@ taskf=tasks/"$runstr".task
 rm -f $taskf
 
 # loop over files
-let fcount=0
+let fcount=1
 
 # LOOP OVER FILES. 
 for f in $flist; do
