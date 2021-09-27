@@ -111,7 +111,7 @@ then
 fi
 
 # get list of files
-flist="$inputdir"/"$inputstr"_seed*.pos
+flist="$inputdir"/"$inputstr"/"$inputstr"_seed*.pos
 let arrsz=0
 for f in $flist; do
     let arrsz=$arrsz+1
