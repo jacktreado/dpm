@@ -84,12 +84,9 @@ echo partition=$partition >> $paramf
 echo time=$time >> $paramf
 echo startSeed=$startSeed >> $paramf
 echo endSeed=$endSeed >> $paramf
-echo Parameter file:
-cat $paramf
 
-
-
-
+# echo Parameter file:
+# cat $paramf
 
 
 
