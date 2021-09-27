@@ -50,7 +50,10 @@ NPRINTSKIP="${16}"
 partition="${17}"
 time="${18}"
 startSeed="${19}"
-endSeed="${20}"
+numSeeds="${20}"
+
+# compute number of seeds
+let endSeed=$startSeed+$numSeeds-1
 
 # name strings
 inputstr=intInit_aN"$aN"_ac"$aCalA0"_tc"$tCalA0"_aR"$areaRatio"
@@ -63,6 +66,11 @@ mkdir -p $simdatadir
 
 # create paramf
 paramf="$simdatadir"/"$basestr".params
+if [[ -f $paramf ]]
+then
+    rm $paramf
+fi
+
 echo inputstr=$inputstr >> $paramf
 echo NT=$NT >> $paramf
 echo aN=$aN >> $paramf
@@ -85,8 +93,8 @@ echo time=$time >> $paramf
 echo startSeed=$startSeed >> $paramf
 echo endSeed=$endSeed >> $paramf
 
-# echo Parameter file:
-# cat $paramf
+echo Parameter file:
+cat $paramf
 
 
 
@@ -143,6 +151,11 @@ for f in $flist; do
     then
         echo seed = $seed too small, skipping...
         continue
+    elif [[ $fcount -gt $numSeeds ]]
+    then
+        echo fcount = $fcount, which is greater than numSeeds = $numSeeds. 
+        echo Enough array entries found, ending addition to task file. 
+        break
     else
         # check if file is empty
         if [[ ! -s $f ]]
@@ -226,8 +239,8 @@ sbatch -t $time $slurmf
 # 16. NPRINTSKIP
 # 17. partition
 # 18. time
-# 19. number of runs (number of array entries, i.e. arraynum)
-# 20. start seed (end seed determined by number of runs)
+# 19. start seed (end seed determined by number of runs)
+# 20. number of seeds to use
 
 
 
