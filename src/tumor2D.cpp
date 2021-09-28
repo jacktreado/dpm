@@ -2356,7 +2356,7 @@ void tumor2D::tumorFIRE(tumor2DMemFn forceCall, double Ftol, double dt0) {
 	fill(v.begin(), v.end(), 0.0);
 
 	// relax forces using FIRE
-	while (fcheck > Ftol && fireit < itmax) {
+	while ((fcheck > Ftol || fireit < NDELAY) && fireit < itmax) {
 		// compute P
 		P = 0.0;
 		for (i = 0; i < vertDOF; i++)
@@ -2683,11 +2683,6 @@ void tumor2D::invasion(tumor2DMemFn forceCall, double dDr, double dPsi, double D
 
 
 // invasion at constant pressure
-// To-do:
-// -- implement box change in response to change in instantaneous pressure
-// 		** should it be base pressure, or instantaneous pressure?
-// 		** be sure to include affine deformation
-// -- add variable box length to matlab read in file
 void tumor2D::invasionConstP(tumor2DMemFn forceCall, double dDr, double dPsi, double Drmin, int NT, int NPRINTSKIP){
 	// check correct setup
 	setupCheck();
@@ -2750,9 +2745,9 @@ void tumor2D::invasionConstP(tumor2DMemFn forceCall, double dDr, double dPsi, do
 		psiDiffusion();
 
 		// update box lengths based on difference to fixed pressure
-		if (t > 500.0){
+		if (t > 10.0){
 			Lold = L[0];
-			Lnew = Lold - 0.01*dt*(P0 - wpress[0])*L[1];
+			Lnew = Lold - 0.1*dt*(P0 - wpress[0])*L[1];
 			L[0] = Lnew;
 		}
 		else

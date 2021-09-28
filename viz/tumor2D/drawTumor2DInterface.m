@@ -6,7 +6,7 @@ clc;
 
 % file name string
 % fstr = '~/Jamming/CellSim/dpm/pos.test';
-fstr = 'local/pos/intInvade_NT5e6_aN8_ac1.05_tc1.20_aR30_l10.02_l20.05_v00.02_Dr0.01_seed100.pos';
+fstr = 'local/pos/intInit_aN12_ac1.02_tc1.2_aR30_seed24.pos';
 
 % read in data
 tumorConfigData = readTumor2DInterface(fstr);
@@ -73,7 +73,7 @@ ax.FontSize = 18;
 %% Draw cells
 
 % show vertices or not
-showverts = 0;
+showverts = 1;
 
 % color by shape or size
 colorShape = 0;
