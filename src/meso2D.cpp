@@ -162,6 +162,93 @@ meso2D::meso2D(string &inputFileStr,int seed) : dpm(2) {
 
 
 
+// overloaded equal operator (copy everything except outputs) (for Lees-Edwards shear test)
+void meso2D::operator=(const meso2D &rhs){
+	// -- DPM 2D VARIABLES
+
+	// dpm int scalars
+	NCELLS = rhs.NCELLS;
+	NDIM = rhs.NDIM;
+	NNN = rhs.NNN;
+	NVTOT = rhs.NVTOT;
+	vertDOF = rhs.vertDOF;
+
+	// time step size
+	dt = rhs.dt;
+
+	// copy energetic info
+	U = rhs.U;
+	ka = rhs.ka;
+	kl = rhs.kl;
+	kb = rhs.kb;
+	kc = rhs.kc;
+	l1 = rhs.l1;
+	l2 = rhs.l2;
+
+	// boundary parameters
+	L = rhs.L;
+	pbc = rhs.pbc;
+
+	// particle shape parameters
+	a0 = rhs.a0;
+	l0 = rhs.l0;
+	t0 = rhs.t0;
+	r = rhs.r;
+
+	// indexing variables
+	nv = rhs.nv;
+	szList = rhs.szList;
+	im1 = rhs.im1;
+	ip1 = rhs.ip1;
+
+	// dynamical variables
+	x = rhs.x;
+	v = rhs.v;
+	F = rhs.F;
+
+	// stress
+	stress = rhs.stress;
+
+	// cell-cell contact network
+	cij = rhs.cij;
+
+	// box linked-list variables
+	NBX = rhs.NBX;
+	sb = rhs.sb;
+	lb = rhs.lb;
+	nn = rhs.nn;
+	head = rhs.head;
+	last = rhs.last;
+	list = rhs.list;
+
+	// -- MESO 2D VARIABLES
+
+	// max number of vertices
+	NVMAX = rhs.NVMAX;
+
+	// bending energy per vertex
+	kbi = rhs.kbi;
+
+	// vertex-vertex bond network
+	gij = rhs.gij;
+
+	// vv contacts per cell
+	zc = rhs.zc;
+	zv = rhs.zv;
+
+	// adhesion parameters
+	betaEff = rhs.betaEff;
+	ctcdel = rhs.ctcdel;
+	ctch = rhs.ctch;
+
+	// aging during development
+	cL = rhs.cL;
+	aL = rhs.aL;
+	cB = rhs.cB;
+	cKb = rhs.cKb;
+}
+
+
 
 
 
@@ -455,6 +542,11 @@ void meso2D::initializeMesophyllBondNetwork(){
 	}
 }
 
+// add for Lees-Edwards
+// * area
+// * all distances in shape forces
+// * all distances in interaction forces
+
 
 // mesophyll specific shape forces
 void meso2D::mesoShapeForces(){
@@ -663,6 +755,230 @@ void meso2D::mesoShapeForces(){
 	}
 }
 
+// mesophyll specific shape forces WITH APPLIED SHEAR STRAIN GAMMA (assume pbcs)
+void meso2D::mesoShapeForces(double gamma){
+	// local variables
+	int ci, gi, vi, nvtmp, im;
+	double fa, fli, flim1, fbi, fbim1, cx, cy, xi, yi;
+	double rho0, l0im1, l0i, a0tmp, atmp;
+	double dx, dy, da, dli, dlim1, dtim1, dti, dtip1;
+	double lim2x, lim2y, lim1x, lim1y, lix, liy, lip1x, lip1y, li, lim1;
+	double rim2x, rim2y, rim1x, rim1y, rix, riy, rip1x, rip1y, rip2x, rip2y;
+	double nim1x, nim1y, nix, niy, sinim1, sini, sinip1, cosim1, cosi, cosip1;
+	double ddtim1, ddti;
+
+	// loop over vertices, add to force
+	rho0 = sqrt(a0.at(0));
+	ci = 0;
+	for (gi=0; gi<NVTOT; gi++){
+
+		// -- Area force (and get cell index ci)
+		if (ci < NCELLS){
+			if (gi == szList[ci]){
+				// shape information
+				nvtmp = nv[ci];
+				a0tmp = a0[ci];
+
+				// preferred segment length of last segment
+				l0im1 = l0[im1[gi]];
+
+				// compute area deviation
+				atmp = area(ci,gamma);
+				da = (atmp/a0tmp) - 1.0;
+
+				// update potential energy
+				U += 0.5 * ka * (da * da);
+
+				// shape force parameters
+				fa = ka * da * (rho0 / a0tmp);
+
+				// compute cell center of mass
+				xi = x[NDIM*gi];
+				yi = x[NDIM*gi + 1];
+				cx = xi; 
+				cy = yi;
+				for (vi=1; vi<nvtmp; vi++){
+					// get distances between vim1 and vi
+					dy = x[NDIM*(gi+vi) + 1] - yi;
+					im = round(dy/L[1]);
+					dy -= L[1]*im;
+
+					dx = x[NDIM*(gi+vi)] - xi;
+					dx -= L[1]*im*gamma;
+					dx -= L[0]*round(dx/L[0]);
+
+					// add to centers
+					xi += dx;
+					yi += dy;
+
+					cx += xi;
+					cy += yi;
+				}
+				cx /= nvtmp;
+				cy /= nvtmp;
+
+				// get coordinates relative to center of mass
+				riy = x[NDIM*gi + 1] - cy;
+				im = round(riy/L[1]);
+				riy -= L[1]*im;
+
+				rix = x[NDIM*gi] - cx;
+				rix -= L[1]*im*gamma;
+				rix -= L[0]*round(rix/L[0]);
+
+
+
+				// get prior adjacent vertices
+				rim2y = x[NDIM*im1[im1[gi]] + 1] - cy;
+				im = round(rim2y/L[1]);
+				rim2y -= L[1]*im;
+
+				rim2x = x[NDIM*im1[im1[gi]]] - cx;
+				rim2x -= L[1]*im*gamma;
+				rim2x -= L[0]*round(rim2x/L[0]);
+
+
+
+
+				rim1y = x[NDIM*im1[gi] + 1] - cy;
+				im = round(rim1y/L[1]);
+				rim1y -= L[1]*im;
+
+				rim1x = x[NDIM*im1[gi]] - cx;
+				rim1x -= L[1]*im*gamma;
+				rim1x -= L[0]*round(rim1x/L[0]);
+
+
+
+				// get prior segment vectors
+				lim2x = rim1x - rim2x;
+				lim2y = rim1y - rim2y;
+
+				lim1x = rix - rim1x;	
+				lim1y = riy - rim1y;
+
+				// increment cell index
+				ci++;
+			}
+		}
+
+		// preferred segment length
+		l0i = l0[gi];
+
+		// get next adjacent vertices
+		rip1y = x[NDIM*ip1[gi] + 1] - cy;
+		im = round(rip1y/L[1]);
+		rip1y -= L[1]*im;
+
+		rip1x = x[NDIM*ip1[gi]] - cx;
+		rip1x -= L[1]*im*gamma;
+		rip1x -= L[0]*round(rip1x/L[0]);
+
+		// -- Area force
+		F[NDIM*gi] 		+= 0.5*fa*(rim1y - rip1y);
+		F[NDIM*gi + 1] 	+= 0.5*fa*(rip1x - rim1x);
+
+
+		// -- Perimeter force
+		lix 	= rip1x - rix;
+		liy 	= rip1y - riy;
+
+		// segment lengths
+		lim1 	= sqrt(lim1x*lim1x + lim1y*lim1y);
+		li 		= sqrt(lix*lix + liy*liy);
+
+		// segment deviations
+		dlim1  	= (lim1/l0im1) - 1.0;
+		dli 	= (li/l0i) - 1.0;
+
+		// segment forces
+		flim1 	= kl*(rho0/l0im1);
+		fli 	= kl*(rho0/l0i);
+
+		// add to forces
+		F[NDIM*gi] 		+= (fli*dli*lix/li) - (flim1*dlim1*lim1x/lim1);
+		F[NDIM*gi + 1] 	+= (fli*dli*liy/li) - (flim1*dlim1*lim1y/lim1);
+		
+		// update potential energy
+		U += 0.5 * kl *(dli * dli);
+
+		// -- Bending force
+		fbi = kbi[gi] * rho0;
+		fbim1 = kbi[im1[gi]] * rho0;
+
+		if (fbi > 0 || fbim1 > 0){
+			// get ip2 for third angle
+			rip2y = x[NDIM*ip1[ip1[gi]] + 1] - cy;
+			im = round(rip2y/L[1]);
+			rip2y -= L[1]*im;
+
+			rip2x = x[NDIM*ip1[ip1[gi]]] - cx;
+			rip2x -= L[1]*im*gamma;
+			rip2x -= L[0]*round(rip2x/L[0]);
+
+
+			// get last segment length
+			lip1x = rip2x - rip1x;
+			lip1y = rip2y - rip1y;
+
+			// get angles
+			sinim1 = lim1x*lim2y - lim1y*lim2x;
+			cosim1 = lim1x*lim2x + lim1y*lim2y;
+
+			sini = lix*lim1y - liy*lim1x;
+			cosi = lix*lim1x + liy*lim1y;
+
+			sinip1 = lip1x*liy - lip1y*lix;
+			cosip1 = lip1x*lix + lip1y*liy;
+
+			// get normal vectors
+			nim1x = lim1y;
+			nim1y = -lim1x;
+
+			nix = liy;
+			niy = -lix;
+
+			// get change in angles
+			dtim1 = atan2(sinim1,cosim1) - t0[im1[gi]];
+			dti = atan2(sini,cosi) - t0[gi];
+			dtip1 = atan2(sinip1,cosip1) - t0[ip1[gi]];
+
+			// get delta delta theta's
+			ddtim1 = (dti - dtim1)/(lim1*lim1);
+			ddti = (dti - dtip1)/(li*li);
+
+			// add to force
+			F[NDIM*gi] 		+= fbim1*ddtim1*nim1x + fbi*ddti*nix;
+			F[NDIM*gi + 1] 	+= fbim1*ddtim1*nim1y + fbi*ddti*niy;
+
+			// update potential energy
+			U += 0.5 * kbi[gi] * (dti * dti);
+		}
+		
+		
+		
+
+		// update old coordinates
+		rim2x = rim1x;
+		rim1x = rix;
+		rix = rip1x;
+
+		rim2y = rim1y;
+		rim1y = riy;
+		riy = rip1y;
+
+		// update old segment vectors
+		lim2x = lim1x;
+		lim2y = lim1y;
+
+		lim1x = lix;
+		lim1y = liy;
+
+		// update old preferred segment length
+		l0im1 = l0i;
+	}
+}
+
 
 // update forces for bonded mesophyll cells
 // * Shape forces of individual cells
@@ -695,6 +1011,78 @@ void meso2D::mesoNetworkForceUpdate(){
 				dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
 				if (pbc[1])
 					dy -= L[1]*round(dy/L[1]);
+
+				rij = sqrt(dx*dx + dy*dy);
+
+				// only compute force if spring is extended
+				if (rij > sij){
+					// get cell indices
+					cindices(ci,vi,gi);
+					cindices(cj,vj,gj);
+
+					// zij: determines strength of bond attraction
+					zij = 0.5*(zc[ci] + zc[cj])*ctcdel + 1.0;
+
+					// force scale
+					ftmp 				= (kc/zij)*(1 - (rij/sij))*(rho0/sij);
+					fx 					= ftmp*(dx/rij);
+					fy 					= ftmp*(dy/rij);
+
+					// add to forces
+					F[NDIM*gi] 			-= fx;
+					F[NDIM*gi + 1] 		-= fy;
+
+					F[NDIM*gj] 			+= fx;
+					F[NDIM*gj + 1] 		+= fy;
+
+					// add to cell-cell contacts
+					if (ci > cj)
+						cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2]++;
+					else if (ci < cj)
+						cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]++; 
+
+					// increae potential energy
+					U += 0.5*(kc/zij)*pow((1 - (rij/sij)),2.0);
+
+					// add to virial stress tensor
+					stress[0] += (dx*fx*rho0)/(L[0]*L[1]);
+					stress[1] += (dy*fy*rho0)/(L[0]*L[1]);
+					stress[2] += (0.5*(dx*fy + dy*fx)*rho0)/(L[0]*L[1]);
+				}
+			}
+		}
+	}
+}
+
+
+// update forces AT FIXED SHEAR STRAIN (assume Lees-Edwards boundary conditions)
+void meso2D::mesoNetworkForceUpdate(double gamma){
+	// local variables
+	int gi, gj, ci, cj, vi, vj, im;
+	double rij, sij, zij, dx, dy, fx, fy, ftmp, rho0;
+
+	// normal update (shape + repulsive forces) from base class
+	resetForcesAndEnergy();
+	mesoShapeForces(gamma);
+	vertexRepulsiveForces2D(gamma);
+
+	// update bonded forces
+	rho0 = sqrt(a0[0]);
+	for (gi=0; gi<NVTOT; gi++){
+		for (gj=gi+1; gj<NVTOT; gj++){
+			if (gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2]){
+
+				// contact distance
+				sij = r[gi] + r[gj];
+
+				// get vertex-vertex distance
+				dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
+				im = round(dy/L[1]);
+				dy -= L[1]*im;
+
+				dx = x[NDIM*gj] - x[NDIM*gi];
+				dx -= L[1]*im*gamma;
+				dx -= L[0]*round(dx/L[0]);
 
 				rij = sqrt(dx*dx + dy*dy);
 
@@ -838,7 +1226,7 @@ void meso2D::mesoFIRE(meso2DMemFn forceCall, double Ftol, double dt0){
 	rho0 = sqrt(a0.at(0));
 
 	// relax forces using FIRE
-	while (fcheck > Ftol && fireit < itmax){
+	while ((fcheck > Ftol || fireit < NDELAY) && fireit < itmax){
 		// compute P
 		P = 0.0;
 		for (i=0; i<vertDOF; i++)
@@ -982,6 +1370,199 @@ void meso2D::mesoFIRE(meso2DMemFn forceCall, double Ftol, double dt0){
 }
 
 
+// FIRE minimization at fixed strain
+void meso2D::mesoShearStrainFIRE(double gamma, double Ftol, double dt0){
+	// local variables
+	int i;
+	double rho0;
+
+	// FIRE variables
+	double P, fnorm, fcheck, vnorm, alpha, dtmax, dtmin;
+	int npPos, npNeg, fireit;
+
+	// set dt based on geometric parameters
+	setdt(dt0);
+
+	// Initialize FIRE variables
+	P  			= 0;	
+	fnorm 		= 0;
+	vnorm 		= 0;
+	alpha   	= alpha0;
+
+	dtmax   	= 10.0*dt;
+	dtmin   	= 1e-2*dt;
+
+	npPos      	= 0;
+	npNeg      	= 0;
+
+	fireit    	= 0;
+	fcheck  	= 10*Ftol;
+
+	// reset forces and velocities
+	resetForcesAndEnergy();
+	fill(v.begin(), v.end(), 0.0);
+
+	// length scale
+	rho0 = sqrt(a0.at(0));
+
+	// relax forces using FIRE
+	while ((fcheck > Ftol || fireit < NDELAY) && fireit < itmax){
+		// compute P
+		P = 0.0;
+		for (i=0; i<vertDOF; i++)
+			P += v[i]*F[i];
+
+		// print to console
+		if (fireit % NSKIP == 0){
+			cout << endl << endl;
+			cout << "===========================================" << endl;
+			cout << "	M E S O P H Y L L 						" << endl;
+			cout << " 	F I R E 								" << endl;
+			cout << "	M I N I M I Z A T I O N 				" << endl;
+			cout << "	W I T H   								" << endl;
+			cout << "   L E E S  E D W A R D S      			" << endl;
+			cout << "===========================================" << endl;
+			cout << endl;
+			cout << "	** fireit 	= " << fireit << endl;
+			cout << "	** fcheck 	= " << fcheck << endl;
+			cout << "	** U 		= " << U << endl;
+			cout << "	** dt 		= " << dt << endl;
+			cout << "	** P 		= " << P << endl;
+			cout << "	** alpha 	= " << alpha << endl;
+			cout << "	** npPos 	= " << npPos << endl;
+			cout << "	** npNeg 	= " << npNeg << endl;
+		}
+
+		// Adjust simulation based on net motion of degrees of freedom
+		if (P > 0){
+			// increase positive counter
+			npPos++;
+
+			// reset negative counter
+			npNeg = 0;
+
+			// alter simulation if enough positive steps have been taken
+			if (npPos > NDELAY){
+				// change time step
+				if (dt*finc < dtmax)
+					dt *= finc;
+
+				// decrease alpha
+				alpha *= falpha;
+			}
+		}
+		else{
+			// reset positive counter
+			npPos = 0;
+
+			// increase negative counter
+			npNeg++;
+
+			// check if simulation is stuck
+			if (npNeg > NNEGMAX){
+				cerr << "	** ERROR: During initial FIRE minimization, P < 0 for too long, so ending." << endl;
+				exit(1);
+			}
+
+			// take half step backwards, reset velocities
+			for (i=0; i<vertDOF; i++){
+				// take half step backwards
+				x[i] -= 0.5*dt*v[i];
+
+				// reset vertex velocities
+				v[i] = 0.0;
+			}
+
+			// decrease time step if past initial delay
+			if (fireit > NDELAY){
+				// decrease time step 
+				if (dt*fdec > dtmin)
+					dt *= fdec;
+
+				// reset alpha
+				alpha = alpha0;
+			}
+		}
+
+		// VV VELOCITY UPDATE #1
+		for (i=0; i<vertDOF; i++)
+			v[i] += 0.5*dt*F[i];
+
+		// compute fnorm, vnorm and P
+		fnorm = 0.0;
+		vnorm = 0.0;
+		for (i=0; i<vertDOF; i++){
+			fnorm 	+= F[i]*F[i];
+			vnorm 	+= v[i]*v[i];
+		}
+		fnorm = sqrt(fnorm);
+		vnorm = sqrt(vnorm);
+
+		// update velocities (s.d. vs inertial dynamics) only if forces are acting
+		if (fnorm > 0){
+			for (i=0; i<vertDOF; i++)
+				v[i] = (1 - alpha)*v[i] + alpha*(F[i]/fnorm)*vnorm;
+		}
+
+		// VV POSITION UPDATE
+		for (i=0; i<vertDOF; i++){
+			// update position
+			x[i] += dt*v[i];
+
+			// box replacement because of Lees Edwards
+			x[i] -= L[i % NDIM]*floor(x[i]/L[i % NDIM]);
+
+			// Lees-Edwards
+			if (i % NDIM == 0)
+				x[i] -= floor(x[i+1]/L[1])*gamma*L[0];
+		}
+
+		// update forces at fixed shear strain
+		mesoNetworkForceUpdate(gamma);
+
+		// VV VELOCITY UPDATE #2
+		for (i=0; i<vertDOF; i++)
+			v[i] += 0.5*F[i]*dt;
+
+		// update fcheck based on fnorm (= force per degree of freedom)
+		fcheck = 0.0;
+		for (i=0; i<vertDOF; i++)
+			fcheck += F[i]*F[i];
+		fcheck = sqrt(fcheck/vertDOF);
+
+		// update iterator
+		fireit++;
+	}
+	// check if FIRE converged
+	if (fireit == itmax){
+		cout << "	** FIRE minimization did not converge, fireit = " << fireit << ", itmax = " << itmax << "; ending." << endl;
+		exit(1);
+	}
+	else{
+		cout << endl;
+		cout << "===========================================" << endl;
+		cout << "	M E S O P H Y L L 						" << endl;
+		cout << " 	F I R E 								" << endl;
+		cout << "	M I N I M I Z A T I O N 				" << endl;
+		cout << "	W I T H   								" << endl;
+		cout << "   L E E S  E D W A R D S      			" << endl;
+		cout << "	C O N V E R G E D! 						" << endl;
+		cout << "===========================================" << endl;
+		cout << endl;
+		cout << "	** fireit 	= " << fireit << endl;
+		cout << "	** fcheck 	= " << fcheck << endl;
+		cout << "	** U 		= " << U << endl;
+
+		cout << "	** fnorm	= " << fnorm << endl;
+		cout << "	** vnorm 	= " << vnorm << endl;
+		cout << "	** dt 		= " << dt << endl;
+		cout << "	** P 		= " << P << endl;
+		cout << "	** alpha 	= " << alpha << endl;
+		cout << endl << endl;
+	}
+}
+
+
 // use FIRE to minimize potential energy in mesophyll cells sinking toward center of box
 void meso2D::mesoPinFIRE(vector<double> &xpin, double Ftol, double dt0, double kcspring){
 	// local variables
@@ -1028,7 +1609,7 @@ void meso2D::mesoPinFIRE(vector<double> &xpin, double Ftol, double dt0, double k
 	fill(v.begin(), v.end(), 0.0);
 
 	// relax forces using FIRE
-	while (fcheck > Ftol && fireit < itmax){
+	while ((fcheck > Ftol || fireit < NDELAY) && fireit < itmax){
 		// compute P
 		P = 0.0;
 		for (i=0; i<vertDOF; i++)
@@ -2369,8 +2950,8 @@ void meso2D::mesoBendingHessian(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb){
 // hessian for meso cells with fixed contact springs
 void meso2D::mesoSpringNetworkHessian(Eigen::MatrixXd &Hbnds, Eigen::MatrixXd &Sbnds){
 	// local variables
-	int ci, vi, gi, cj, vj, gj, kx, ky, lx, ly, zij;
-	double sij, dx, dy, rij, kij, h, uxij, uyij;
+	int ci, vi, gi, cj, vj, gj, kx, ky, lx, ly;
+	double sij, dx, dy, rij, kij, h, uxij, uyij, zij;
 
 	// non-dimensionalization
 	double rho0 = sqrt(a0.at(0));
@@ -2395,7 +2976,7 @@ void meso2D::mesoSpringNetworkHessian(Eigen::MatrixXd &Hbnds, Eigen::MatrixXd &S
 
 				// actual distance
 				dx = x[lx] - x[kx];
-				dy = x[ly] - x [ky];
+				dy = x[ly] - x[ky];
 				if (pbc[0])
 					dx -= L[0]*round(dx/L[0]);
 				if (pbc[1])
@@ -2417,10 +2998,10 @@ void meso2D::mesoSpringNetworkHessian(Eigen::MatrixXd &Hbnds, Eigen::MatrixXd &S
 					// compute stiffness and stress matrices (off diagonal, enforce symmetry in lower triangles)
 
 					// -- stiffness matrix
-					Hbnds(kx, lx) = -((kc * rho0 * rho0) / (sij * sij)) * (uxij * uxij);
-					Hbnds(ky, ly) = -((kc * rho0 * rho0) / (sij * sij)) * (uyij * uyij);
-					Hbnds(kx, ly) = -((kc * rho0 * rho0) / (sij * sij)) * (uxij * uyij);
-					Hbnds(ky, lx) = -((kc * rho0 * rho0) / (sij * sij)) * (uyij * uxij);
+					Hbnds(kx, lx) = -((kc * rho0 * rho0) / (sij * sij * zij)) * (uxij * uxij);
+					Hbnds(ky, ly) = -((kc * rho0 * rho0) / (sij * sij * zij)) * (uyij * uyij);
+					Hbnds(kx, ly) = -((kc * rho0 * rho0) / (sij * sij * zij)) * (uxij * uyij);
+					Hbnds(ky, lx) = -((kc * rho0 * rho0) / (sij * sij * zij)) * (uyij * uxij);
 
 					Hbnds(lx, kx) = Hbnds(kx, lx);
 					Hbnds(ly, ky) = Hbnds(ky, ly);
@@ -2474,7 +3055,7 @@ void meso2D::mesoDynamicalMatrix(Eigen::MatrixXd &M, Eigen::MatrixXd &H, Eigen::
 	int k, l;
 
 	// print something to the console
-	cout << "** Computing dynamical matrix for configuration in mesoShearModulus ..." << endl;
+	cout << "** Computing dynamical matrix for meso configuration ..." << endl;
 
 	// initialize all possible matrices
 	Eigen::MatrixXd Ha(vertDOF, vertDOF);  
@@ -2505,13 +3086,23 @@ void meso2D::mesoDynamicalMatrix(Eigen::MatrixXd &M, Eigen::MatrixXd &H, Eigen::
 	}
 
 	// compute all contributions
+	cout << "** ** area DM " << endl;
 	dpmAreaHessian2D(Ha,Sa);
+
+	cout << "** ** perimeter DM " << endl;
 	dpmPerimeterHessian2D(Hl,Sl);
+
+	cout << "** ** bending DM " << endl;
 	mesoBendingHessian(Hb,Sb);
+
+	cout << "** ** repulsive springs DM " << endl;
 	dpmRepulsiveHarmonicSprings2D(Hvv,Svv);
+
+	cout << "** ** bonds DM " << endl;
 	mesoSpringNetworkHessian(Hbnds,Sbnds);
 
 	// construct full dynamical matrix
+	cout << "** ** adding together " << endl;
 	for (k = 0; k < vertDOF; k++) {
 		for (l = 0; l < vertDOF; l++) {
 			H(k,l) = Ha(k,l) + Hl(k,l) + Hb(k,l) + Hvv(k,l) + Hbnds(k,l);
@@ -2526,13 +3117,19 @@ void meso2D::mesoDynamicalMatrix(Eigen::MatrixXd &M, Eigen::MatrixXd &H, Eigen::
 // NOTES:
 // 2. Need to check against numerically computing both contributions using Lees-Edwards + FIRE
 // 3. Incorporate into specific function to simulation, write new main file, put on cluster
-void meso2D::mesoPrintLinearResponse(){
+double meso2D::mesoPrintLinearResponse(){
 	// local variables
-	int ci, cj, vi, vj, gi, gj, kx, ky;
+	int ci, cj, vi, vj, gi, gj, k, l, kx, ky, lx, ly;
 	double zij, sij, dx, dy, rij, uy;
+	double Gaff, Gnonaff, evproj, rho0;
 
-	// print to console
-	cout << "** In mesoPrintShearModulus, computing and printing G and eigenvales... " << endl;
+	// check that hess object is open
+	if (!hessout.is_open()){
+		cout << "** ERROR: In mesoPrintShearModulus, hessout object not yet open. Ending. " << endl;
+		exit(1);
+	}
+	else
+		cout << "** In mesoPrintShearModulus, computing and printing G and eigenvales... " << endl;
 
 	// components of dynamical matrix
 	Eigen::MatrixXd M(vertDOF, vertDOF);  
@@ -2547,12 +3144,15 @@ void meso2D::mesoPrintLinearResponse(){
 	Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> heig(H);
 	Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> seig(S);
 
-	// define eigenvector matrix
+	// eigenvalues
+	Eigen::VectorXd evals = meig.eigenvalues();
+
+	// eigenvector matrix
 	Eigen::MatrixXd evecs = meig.eigenvectors();
 
 	// First compute affine contribution to shear modulus
-	double Gaff, Gnonaff;
 	Gaff = 0.0;
+	rho0 = sqrt(a0[0]);
 	for (ci=0; ci<NCELLS; ci++){
 		for (cj=(ci+1); cj<NCELLS; cj++){
 			// contact scaler
@@ -2562,7 +3162,7 @@ void meso2D::mesoPrintLinearResponse(){
 			if (cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2] > 0){
 				// loop over pairs of vertices
 				for (vi=0; vi<nv[ci]; vi++){
-					gi = gindex(gi,vi);
+					gi = gindex(ci,vi);
 					for (vj=0; vj<nv[cj]; vj++){
 						gj = gindex(cj,vj);
 
@@ -2591,22 +3191,91 @@ void meso2D::mesoPrintLinearResponse(){
 			}
 		}
 	}
+	cerr << "Gaffine = " << Gaff << endl;
 
-	// // Next, compute nonaffine contribution
-	// vector<double> Fa(vertDOF,0.0);
-	// for (gi=0; gi<NVTOT; gi++){
-	// 	// d.o.f. indices
-	// 	kx = NDIM*gi;
-	// 	ky = kx + 1;
+	// Next, compute nonaffine contribution
+	cerr << "Faffine" << endl;
+	vector<double> Fa(vertDOF,0.0);
+	for (gi=0; gi<NVTOT; gi++){
+		// d.o.f. indices
+		kx = NDIM*gi;
+		ky = kx + 1;
 
-	// 	// loop over pairs
-	// 	for (gj=0; )
-	// }
+		// loop over pairs
+		for (gj=0; gj<NVTOT; gj++){
+			// d.o.f. indices
+			lx = NDIM*gj;
+			ly = lx + 1;
+
+			// get distance in y direction
+			dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
+			if (pbc[1])
+				dy -= L[1]*round(dy/L[1]);
+
+			// add to affine force
+			Fa[kx] -= M(kx,lx)*(dy/rho0);
+			Fa[ky] -= M(ky,lx)*(dy/rho0);
+		}
+	}
+
+	// project affine force onto eigenvectors for non-affine G contribution
+	Gnonaff = 0.0;
+	cerr << "G non affine" << endl;
+	for (k=3; k<vertDOF; k++){
+		// prject eigenvector k onto affine forces
+		evproj = 0.0;
+		for (l=0; l<vertDOF; l++)
+			evproj += evecs(l,k)*Fa[l];
+
+		// add to non-affine G
+		Gnonaff -= (evproj*evproj)/evals(k);
+	}
+	cerr << "Gnonaff = " << Gnonaff << endl;
+
+	// save shear modulus
+	double G = Gaff + Gnonaff;
+
+	// print eigenvectors
+	hessout << setw(w) << left << "NEWFR" << " " << endl;
+	hessout << setw(w) << left << "PACKF" << setw(wnum) << setprecision(pnum) << left << vertexPackingFraction2D() << endl;
+
+	// print box sizes
+	hessout << setw(w) << left << "BOXSZ";
+	hessout << setw(wnum) << setprecision(pnum) << left << L[0];
+	hessout << setw(wnum) << setprecision(pnum) << left << L[1];
+	hessout << endl;
+
+	// print shear modulus
+	hessout << setw(w) << left << "SHRMD";
+	hessout << setw(wnum) << setprecision(pnum) << left << G;
+	hessout << endl;
+
+	// print dynamical matrix eigenvalues
+	hessout << setw(w) << left << "MEVAL";
+	for (k=0; k<vertDOF; k++)
+		hessout << evals(k) << " ";
+	hessout << endl;
+
+	// print stiffness matrix eigenvalues
+	evals = heig.eigenvalues();
+	hessout << setw(w) << left << "HEVAL";
+	for (k=0; k<vertDOF; k++)
+		hessout << evals(k) << " ";
+	hessout << endl;
+
+	// print stiffness matrix eigenvalues
+	evals = seig.eigenvalues();
+	hessout << setw(w) << left << "SEVAL";
+	for (k=0; k<vertDOF; k++)
+		hessout << evals(k) << " ";
+	hessout << endl;
+
+	// print end frame
+	hessout << setw(w) << left << "ENDFR" << " " << endl;
+
+	// return sum as full shear modulus
+	return G;
 }
-
-
-
-
 
 
 
@@ -2625,7 +3294,7 @@ void meso2D::mesoPrintLinearResponse(){
 void meso2D::printMesoNetwork2D(){
 	// local variables
 	bool gtmp;
-	int ci, cj, vi, gi, gj, ctmp, zctmp, zvtmp, zg;
+	int ci, cj, vi, gi, gj, ctmp, zcc, zctmp, zvtmp, zg;
 	double xi, yi, dx, dy, Lx, Ly;
 
 	// check if pos object is open
@@ -2660,10 +3329,24 @@ void meso2D::printMesoNetwork2D(){
 
 	// print coordinate for rest of the cells
 	for (ci=0; ci<NCELLS; ci++){
+		// compute number of contacts with other cells
+		zctmp = 0;
+		for (cj=0; cj<NCELLS; cj++){
+			// compute # of cell contacts
+			ctmp = 0;
+			if (ci > cj)
+				ctmp = cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2];
+			else if (ci < cj)
+				ctmp = cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2];
+
+			if (ctmp > 0)
+				zctmp++;
+		}
+
 		// cell information
 		posout << setw(w) << left << "CINFO";
 		posout << setw(w) << left << nv.at(ci);
-		posout << setw(w) << left << zc.at(ci);
+		posout << setw(w) << left << zctmp;
 		posout << setw(wnum) << left << a0.at(ci);
 		posout << setw(wnum) << left << area(ci);
 		posout << setw(wnum) << left << perimeter(ci);
@@ -2722,7 +3405,7 @@ void meso2D::printMesoNetwork2D(){
 	}
 
 	// print end frame
-	posout << setw(w) << left << "ENDFR" << " " << endl;
+	posout << setw(w) << left << "ENDFR" << endl;
 }
 
 

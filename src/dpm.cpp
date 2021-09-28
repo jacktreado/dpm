@@ -208,6 +208,48 @@ double dpm::area(int ci) {
 	return abs(areaVal);
 }
 
+
+// get cell area with Lees-Edwards boundary conditions (ASSUMING PERIODICITY)
+double dpm::area(int ci, double gamma) {
+	// local variables
+	int vi, vip1, gi, gip1, nvtmp, im;
+	double dx, dy, xi, yi, xip1, yip1, areaVal = 0.0;
+
+	// initial position: vi = 0
+	nvtmp = nv.at(ci);
+	gi = gindex(ci, 0);
+	xi = x[NDIM * gi];
+	yi = x[NDIM * gi + 1];
+
+	// loop over vertices of cell ci, get area by shoe-string method
+	for (vi = 0; vi < nvtmp; vi++) {
+		// next vertex
+		gip1 = ip1[gi];
+		gi++;
+
+		// get positions (check minimum images)
+		dy = x[NDIM * gip1 + 1] - yi;
+		im = round(dy/L[1]);
+		dy -= L[1] * im;
+		yip1 = yi + dy;
+
+		dx = x[NDIM * gip1] - xi;
+		dx -= L[1] * im * gamma;
+		dx -= L[0] * round(dx / L[0]);
+		xip1 = xi + dx;
+
+		// increment area
+		areaVal += xi * yip1 - xip1 * yi;
+
+		// set next coordinates
+		xi = xip1;
+		yi = yip1;
+	}
+	areaVal *= 0.5;
+
+	return abs(areaVal);
+}
+
 // get cell perimeter
 double dpm::perimeter(int ci) {
 	// local variables
@@ -369,6 +411,12 @@ int dpm::ccContacts() {
 
 	return ncc;
 }
+
+
+
+
+
+
 
 /******************************
 
@@ -973,6 +1021,10 @@ void dpm::initializeNeighborLinkedList2D(double boxLengthScale) {
 	cout << ";  initially NBX = " << NBX << " ..." << endl;
 }
 
+
+
+
+
 /******************************
 
 	E D I T I N G   &
@@ -1571,6 +1623,82 @@ void dpm::vertexRepulsiveForces2D() {
 	stress[2] *= (rho0 / (L[0] * L[1]));
 }
 
+
+// forces using Lees-Edwards BCs (assume periodic boundaries, don't use box linked-list)
+void dpm::vertexRepulsiveForces2D(double gamma) {
+	// local variables
+	int ci, cj, gi, gj, vi, vj, im;
+	double sij, rij, dx, dy, rho0;
+	double ftmp, fx, fy;
+
+	// sort particles
+	sortNeighborLinkedList2D();
+
+	// get fundamental length
+	rho0 = sqrt(a0.at(0));
+
+	// reset contact network
+	fill(cij.begin(), cij.end(), 0);
+
+	// loop over boxes in neighbor linked list
+	for (gi=0; gi<NVTOT; gi++){
+		for (gj=(gi+1); gj<NVTOT; gj++){
+			if (gj != ip1[gi] && gj != im1[gi]){
+				// contact distance
+				sij = r[gi] + r[gj];
+
+				// particle distance
+				dy = x[NDIM * gj + 1] - x[NDIM * gi + 1];
+				im = round(dy/L[1]);
+				dy -= L[1]*im;
+
+				dx = x[NDIM * gj] - x[NDIM * gi];
+				dy -= L[1] * im * gamma;
+				dx -= L[0] * round(dx / L[0]);
+
+				rij = sqrt(dx * dx + dy * dy);
+
+				// check overlap
+				if (rij < sij) {
+					// force scale
+					ftmp = kc * (1 - (rij / sij)) * (rho0 / sij);
+					fx = ftmp * (dx / rij);
+					fy = ftmp * (dy / rij);
+
+					// add to forces
+					F[NDIM * gi] -= fx;
+					F[NDIM * gi + 1] -= fy;
+
+					F[NDIM * gj] += fx;
+					F[NDIM * gj + 1] += fy;
+
+					// increae potential energy
+					U += 0.5 * kc * pow((1 - (rij / sij)), 2.0);
+
+					// add to virial stress
+					stress[0] += dx * fx;
+					stress[1] += dy * fy;
+					stress[2] += 0.5 * (dx * fy + dy * fx);
+
+					// add to contacts
+					cindices(ci, vi, gi);
+					cindices(cj, vj, gj);
+
+					if (ci > cj)
+						cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2]++;
+					else if (ci < cj)
+						cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2]++;
+				}
+			}
+		}
+	}
+
+	// normalize stress by box area, make dimensionless
+	stress[0] *= (rho0 / (L[0] * L[1]));
+	stress[1] *= (rho0 / (L[0] * L[1]));
+	stress[2] *= (rho0 / (L[0] * L[1]));
+}
+
 void dpm::vertexAttractiveForces2D() {
 	// local variables
 	int ci, cj, gi, gj, vi, vj, bi, bj, pi, pj, boxid, sbtmp;
@@ -1877,7 +2005,7 @@ void dpm::vertexFIRE2D(dpmMemFn forceCall, double Ftol, double dt0) {
 	rho0 = sqrt(a0.at(0));
 
 	// relax forces using FIRE
-	while (fcheck > Ftol && fireit < itmax) {
+	while ((fcheck > Ftol || fireit < NDELAY) && fireit < itmax) {
 		// compute P
 		P = 0.0;
 		for (i = 0; i < vertDOF; i++)

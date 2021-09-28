@@ -156,6 +156,9 @@ public:
 	double getF(int gi, int d) { return F[NDIM * gi + d]; };
 	double getU() { return U; };
 
+	// get stress info
+	double getstress(int d) { return stress.at(d); };
+
 	// boundary variables
 	double getL(int d) { return L.at(d); };
 	bool getpbc(int d) { return pbc.at(d); };
@@ -164,6 +167,7 @@ public:
 	int gindex(int ci, int vi);
 	void cindices(int &ci, int &vi, int gi);
 	double area(int ci);
+	double area(int ci, double gamma);
 	double perimeter(int ci);
 	void com2D(int ci, double &cx, double &cy);
 	double vertexPackingFraction2D();
@@ -216,6 +220,7 @@ public:
 	void resetForcesAndEnergy();
 	void shapeForces2D();
 	void vertexRepulsiveForces2D();
+	void vertexRepulsiveForces2D(double gamma);
 	void vertexAttractiveForces2D();
 
 	// force updates

@@ -26,8 +26,8 @@ seedstr = num2str(seed);
 floc = '~/Jamming/CellSim/dpm/viz/meso2D/local/meso2D_data';
 % fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_cKb' cKbstr '_seed' seedstr];
 fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_kb0' kb0str '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_seed' seedstr];
-fstr = [floc '/' fpattern '.pos'];
-% fstr = '~/Jamming/CellSim/dpm/pos.test';
+% fstr = [floc '/' fpattern '.pos'];
+fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetwork2D(fstr);
@@ -205,7 +205,7 @@ else
 end
 
 % make a movie
-makeAMovie = 1;
+makeAMovie = 0;
 if makeAMovie == 1
     moviestr = [fpattern '.mp4'];
     vobj = VideoWriter(moviestr,'MPEG-4');

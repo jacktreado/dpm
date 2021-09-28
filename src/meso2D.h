@@ -59,6 +59,9 @@ public:
 	meso2D(std::string &inputFile, int seed);
 	meso2D(int n, int seed) : dpm(n,seed) { betaEff=0.0; ctcdel=1.0; ctch=0.5; cL=0.0; aL=1.0; cB=0.0; cKb=0.0; zc.resize(n); NVMAX = n; };
 
+	// overloaded operators
+	void operator=(const meso2D &rhs);
+
 	// File openers
 	void openHessObject(std::string& str) {
 		hessout.open(str.c_str());
@@ -105,11 +108,14 @@ public:
 	// mesophyll cell interactions
 	void initializeMesophyllBondNetwork();
 	void mesoShapeForces();
+	void mesoShapeForces(double gamma);
 	void mesoNetworkForceUpdate();
+	void mesoNetworkForceUpdate(double gamma);
 	void mesoPinForceUpdate(std::vector<double>& xpin, double kcspring);
 
 	// integrators
 	void mesoFIRE(meso2DMemFn forceCall, double Ftol, double dt0);
+	void mesoShearStrainFIRE(double gamma, double Ftol, double dt0);
 	void mesoPinFIRE(std::vector<double> &xpin, double Ftol, double dt0, double kcspring);
 	void mesoNetworkNVE(std::ofstream &enout, meso2DMemFn forceCall, double T, double dt0, int NT, int NPRINTSKIP);
 
@@ -130,7 +136,7 @@ public:
 	void mesoBendingHessian(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb);
 	void mesoSpringNetworkHessian(Eigen::MatrixXd &Hs, Eigen::MatrixXd &Ss);
 	void mesoDynamicalMatrix(Eigen::MatrixXd &M, Eigen::MatrixXd &H, Eigen::MatrixXd &S);
-	void mesoPrintLinearResponse();
+	double mesoPrintLinearResponse();
 
 	// printing functions
 	void printMesoNetwork2D();

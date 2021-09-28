@@ -5,8 +5,8 @@ close all;
 clc;
 
 % file name string
-fstr = '~/Jamming/CellSim/dpm/pos.test';
-% fstr = 'local/pos/intInit_aN8_ac1.05_tc1.20_aR30_seed130.pos';
+% fstr = '~/Jamming/CellSim/dpm/pos.test';
+fstr = 'local/pos/intInvade_NT5e6_aN8_ac1.05_tc1.20_aR30_l10.02_l20.05_v00.02_Dr0.01_seed100.pos';
 
 % read in data
 tumorConfigData = readTumor2DInterface(fstr);
@@ -69,6 +69,7 @@ ylabel('$P$','Interpreter','latex','LineWidth',2);
 ax = gca;
 ax.FontSize = 18;
 
+
 %% Draw cells
 
 % show vertices or not
@@ -101,9 +102,9 @@ else
 end
 
 % make a movie
-makeAMovie = 1;
+makeAMovie = 0;
 if makeAMovie == 1
-    moviestr = 'constP_invasion.mp4';
+    moviestr = 'constP_invasion_l1_0.01.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -124,8 +125,8 @@ for ff = FSTART:FSTEP:FEND
     Lx = L(ff,1);
     Ly = L(ff,2);
     for nn = 1:NCELLS
-        xtmp = xf{nn};
-        ytmp = yf{nn};
+        xtmp = Lx - xf{nn};
+        ytmp = Ly - yf{nn};
         rtmp = rf{nn};
         clr = cellCLR(nn,:);
         if showverts == 1
@@ -155,7 +156,10 @@ for ff = FSTART:FSTEP:FEND
 
 
     % plot box
-    plot([0 Lx Lx 0 0],[0 0 Ly Ly 0],'k-','linewidth',2);
+    plot([0 0],[0 Ly],'k-','Linewidth',2);
+    plot([Lx Lx],[0 Ly],'k-','Linewidth',2);
+    plot([0 Lx],[Ly Ly],'k--','Linewidth',2);
+    plot([0 Lx],[0 0],'k--','Linewidth',2);
     axis equal;
     ax = gca;
     ax.XTick = [];

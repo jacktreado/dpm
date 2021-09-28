@@ -42,10 +42,10 @@ const double boxLengthScale = 2.5; 	// neighbor list box size in units of initia
 const double phi0 = 0.5;		   	// initial packing fraction
 const double dt0 = 1e-2;		   	// initial magnitude of time step in units of MD time
 const double Ptol = 1e-6;		   	// target pressure in initial compression
-const double Ftol = 1e-10; 			// force tolerance
-const double phiMin = 0.3;			// minimum packing fraction in decompression algorithm
+const double Ftol = 1e-12; 			// force tolerance
+const double phiMin = 0.2;			// minimum packing fraction in decompression algorithm
 const double T0 = 1e-2; 			// temperature for jamming preparation protocol
-const double trun = 100.0; 			// amount of time to run annealing
+const double trun = 50.0; 			// amount of time to run annealing
 
 // set parameters
 const double ctcdel = 1.0;
