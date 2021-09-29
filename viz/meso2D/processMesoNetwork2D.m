@@ -47,6 +47,7 @@ for ss = 1:NSIMS
     if finfo.bytes == 0
         fprintf('** %s is empty, skipping...\n',fname);
         fskip(ss) = true;
+        continue;
     end
     mesoData = readMesoNetwork2D(fstr);
     

@@ -13,28 +13,28 @@ nstr = '32';
 castr = '1.12';
 kb0str = '1e-4';
 bestr = '6';
-cLstr = '0.5';
+cLstr = '5';
 aLstr = '1';
-cBstr = '1';
-cKbstr = '1';
+cBstr = '5';
+cKbstr = '0';
 
 % seed
-seed = 1;
+seed = 25;
 seedstr = num2str(seed);
 
 % file name str
 floc = '~/Jamming/CellSim/dpm/viz/meso2D/local/meso2D_data';
 % fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_cKb' cKbstr '_seed' seedstr];
 fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_kb0' kb0str '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_seed' seedstr];
-% fstr = [floc '/' fpattern '.pos'];
-fstr = '~/Jamming/CellSim/dpm/pos.test';
+fstr = [floc '/' fpattern '.pos'];
+% fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetwork2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
-idx = phi > 0.4;
+idx = phi > 0.3;
 phi = phi(idx);
 
 % number of frames
@@ -110,7 +110,7 @@ if NFRAMES > 5
     plot(phi,calA,'-','color',[0.5 0.5 0.5],'linewidth',1.2);
     errorbar(phi,mean(calA,2),std(calA,0,2),'k--','linewidth',2);
     
-    xlabel('$1-\phi$','Interpreter','latex');
+    xlabel('$\phi$','Interpreter','latex');
     ylabel('$\mathcal{A}$','Interpreter','latex');
     ax = gca;
     ax.FontSize = 22;
@@ -128,6 +128,16 @@ if NFRAMES > 5
     plot(phi,abs(sXY),'r--','linewidth',2);
     xlabel('$1-\phi$','Interpreter','latex');
     ylabel('$\hat{\tau}$','Interpreter','latex');
+    ax = gca;
+    ax.FontSize = 22;
+    
+    
+    % plot contact network
+    figure(14), clf, hold on, box on;
+    plot(phi,zc,'-','color',[0.5 0.5 0.5],'linewidth',1.2);
+    errorbar(phi,mean(zc,2),std(zc,0,2),'k--','linewidth',2);
+    xlabel('$\phi$','Interpreter','latex');
+    ylabel('$z$','Interpreter','latex');
     ax = gca;
     ax.FontSize = 22;
 end
@@ -194,10 +204,10 @@ end
 
 % get frames to plot
 if showverts == 0
-    FSTART = 1;
+    FSTART = NFRAMES;
     FSTEP = 1;
-    FEND = NFRAMES;
-%     FEND = FSTART;
+%     FEND = NFRAMES;
+    FEND = FSTART;
 else
     FSTART = 1;
     FSTEP = 1;
