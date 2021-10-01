@@ -32,7 +32,9 @@ protected:
 
 	// wall pressures
 	std::vector<double> wpress;
-
+    double wall_pos;
+    double wall_pressure;
+    
 	// motility parameters
 	double v0, Dr0, Ds, tau;
 	std::vector<double> psi;
@@ -60,7 +62,6 @@ public:
 	void setkecm(double val) { kecm = val; };
 	void setecmbreak(double val) { ecmbreak = val; };
 	void setl0_init();
-	void setAdiposeKb(double val);
 
 	// initialization
 	void initializeSingleTumorCell();
@@ -81,7 +82,7 @@ public:
 	// force updates
 	void resetForcesAndEnergy();
 
-	void tumorShapeForces();
+    void tumorShapeForces();
 	void repulsiveTumorForces();
 	void stickyTumorForces();
 	void repulsiveTumorInterfaceForces();
@@ -99,7 +100,7 @@ public:
 	void setupCheck();
 	void tumorCompression(double Ftol, double Ptol, double dt0, double dphi0);
 	void invasion(tumor2DMemFn forceCall, double dDr, double dPsi, double Drmin, int NT, int NPRINTSKIP);
-	void invasionConstP(tumor2DMemFn forceCall, double dDr, double dPsi, double Drmin, int NT, int NPRINTSKIP);
+	void invasionConstP(tumor2DMemFn forceCall, double P0, double dDr, double dPsi, double Drmin, int NT, int NPRINTSKIP);
 	void crawling(tumor2DMemFn forceCall, tumor2DMemFn psiCall, int NT, int NPRINTSKIP);
 
 	// print functions

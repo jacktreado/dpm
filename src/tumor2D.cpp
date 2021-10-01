@@ -14,6 +14,7 @@
 
 
 #include "tumor2D.h"
+
 #include "dpm.h"
 
 // namespace
@@ -43,7 +44,7 @@ tumor2D::tumor2D(string &inputFileStr,int seed) : dpm(2) {
 	}
 
 	// set variables to default
-	gamtt=0.0; v0=0.0; Dr0=0.0; Ds=0.0; tau=0.0; kecm=0.0; ecmbreak=0.0; pbc[0]=0; pbc[1]=1;
+    gamtt=0.0; v0=0.0; Dr0=0.0; Ds=0.0; tau=0.0; kecm=0.0; ecmbreak=0.0; pbc[0]=0; pbc[1]=1; wall_pos=0.0; wall_pressure=0.0;
 
 	// local variables
 	int nvtmp, ci, vi, i;
@@ -54,7 +55,6 @@ tumor2D::tumor2D(string &inputFileStr,int seed) : dpm(2) {
 	double a0tmp, l0tmp, t0tmp;
 	double xtmp, ytmp, rtmp;
 	string inputStr;
-
 	// LINE 1: should be NEWFR
 	getline(inputobj, inputStr);
 	if (inputStr.compare(0,5,"NEWFR") != 0){
@@ -1179,206 +1179,206 @@ void tumor2D::resetForcesAndEnergy(){
 	fill(stress.begin(), stress.end(), 0.0);
 	fill(wpress.begin(), wpress.end(), 0.0);
 	U = 0.0;
+    wall_pressure=0.0;
 }
 
-
 void tumor2D::tumorShapeForces(){
-	// local variables
-	int ci, gi, vi, nvtmp;
-	double fa, fli, flim1, fb, cx, cy, xi, yi;
-	double rho0, l0im1, l0i, a0tmp, atmp;
-	double dx, dy, da, dli, dlim1, dtim1, dti, dtip1;
-	double lim2x, lim2y, lim1x, lim1y, lix, liy, lip1x, lip1y, li, lim1;
-	double rim2x, rim2y, rim1x, rim1y, rix, riy, rip1x, rip1y, rip2x, rip2y;
-	double nim1x, nim1y, nix, niy, sinim1, sini, sinip1, cosim1, cosi, cosip1;
-	double ddtim1, ddti;
+    // local variables
+    int ci, gi, vi, nvtmp;
+    double fa, fli, flim1, fb, cx, cy, xi, yi;
+    double rho0, l0im1, l0i, a0tmp, atmp;
+    double dx, dy, da, dli, dlim1, dtim1, dti, dtip1;
+    double lim2x, lim2y, lim1x, lim1y, lix, liy, lip1x, lip1y, li, lim1;
+    double rim2x, rim2y, rim1x, rim1y, rix, riy, rip1x, rip1y, rip2x, rip2y;
+    double nim1x, nim1y, nix, niy, sinim1, sini, sinip1, cosim1, cosi, cosip1;
+    double ddtim1, ddti;
 
-	// loop over vertices, add to force
-	rho0 = sqrt(a0.at(0));
-	ci = 0;
-	for (gi = 0; gi < NVTOT; gi++) {
+    // loop over vertices, add to force
+    rho0 = sqrt(a0.at(0));
+    ci = 0;
+    for (gi = 0; gi < NVTOT; gi++) {
 
-		// -- Area force (and get cell index ci)
-		if (ci < NCELLS) {
-			if (gi == szList[ci]) {
-				// shape information
-				nvtmp = nv[ci];
-				a0tmp = a0[ci];
+        // -- Area force (and get cell index ci)
+        if (ci < NCELLS) {
+            if (gi == szList[ci]) {
+                // shape information
+                nvtmp = nv[ci];
+                a0tmp = a0[ci];
 
-				// preferred segment length of last segment
-				l0im1 = l0[im1[gi]];
+                // preferred segment length of last segment
+                l0im1 = l0[im1[gi]];
 
-				// compute area deviation
-				atmp = area(ci);
-				da = (atmp / a0tmp) - 1.0;
+                // compute area deviation
+                atmp = area(ci);
+                da = (atmp / a0tmp) - 1.0;
 
-				// update potential energy
-				U += 0.5 * ka * (da * da);
+                // update potential energy
+                U += 0.5 * ka * (da * da);
 
-				// shape force parameters
-				fa = ka * da * (rho0 / a0tmp);
-				fb = kb * rho0;
+                // shape force parameters
+                fa = ka * da * (rho0 / a0tmp);
+                fb = kb * rho0;
 
-				// compute cell center of mass
-				xi = x[NDIM * gi];
-				yi = x[NDIM * gi + 1];
-				cx = xi;
-				cy = yi;
-				for (vi = 1; vi < nvtmp; vi++) {
-					// get distances between vim1 and vi
-					dx = x[NDIM * (gi + vi)] - xi;
-					dy = x[NDIM * (gi + vi) + 1] - yi;
-					if (pbc[0])
-						dx -= L[0] * round(dx / L[0]);
-					if (pbc[1])
-						dy -= L[1] * round(dy / L[1]);
+                // compute cell center of mass
+                xi = x[NDIM * gi];
+                yi = x[NDIM * gi + 1];
+                cx = xi;
+                cy = yi;
+                for (vi = 1; vi < nvtmp; vi++) {
+                    // get distances between vim1 and vi
+                    dx = x[NDIM * (gi + vi)] - xi;
+                    dy = x[NDIM * (gi + vi) + 1] - yi;
+                    if (pbc[0])
+                        dx -= L[0] * round(dx / L[0]);
+                    if (pbc[1])
+                        dy -= L[1] * round(dy / L[1]);
 
-					// add to centers
-					xi += dx;
-					yi += dy;
+                    // add to centers
+                    xi += dx;
+                    yi += dy;
 
-					cx += xi;
-					cy += yi;
-				}
-				cx /= nvtmp;
-				cy /= nvtmp;
+                    cx += xi;
+                    cy += yi;
+                }
+                cx /= nvtmp;
+                cy /= nvtmp;
 
-				// get coordinates relative to center of mass
-				rix = x[NDIM * gi] - cx;
-				riy = x[NDIM * gi + 1] - cy;
+                // get coordinates relative to center of mass
+                rix = x[NDIM * gi] - cx;
+                riy = x[NDIM * gi + 1] - cy;
 
-				// get prior adjacent vertices
-				rim2x = x[NDIM * im1[im1[gi]]] - cx;
-				rim2y = x[NDIM * im1[im1[gi]] + 1] - cy;
-				if (pbc[0])
-					rim2x -= L[0] * round(rim2x / L[0]);
-				if (pbc[1])
-					rim2y -= L[1] * round(rim2y / L[1]);
+                // get prior adjacent vertices
+                rim2x = x[NDIM * im1[im1[gi]]] - cx;
+                rim2y = x[NDIM * im1[im1[gi]] + 1] - cy;
+                if (pbc[0])
+                    rim2x -= L[0] * round(rim2x / L[0]);
+                if (pbc[1])
+                    rim2y -= L[1] * round(rim2y / L[1]);
 
-				rim1x = x[NDIM * im1[gi]] - cx;
-				rim1y = x[NDIM * im1[gi] + 1] - cy;
-				if (pbc[0])
-					rim1x -= L[0] * round(rim1x / L[0]);
-				if (pbc[1])
-					rim1y -= L[1] * round(rim1y / L[1]);
+                rim1x = x[NDIM * im1[gi]] - cx;
+                rim1y = x[NDIM * im1[gi] + 1] - cy;
+                if (pbc[0])
+                    rim1x -= L[0] * round(rim1x / L[0]);
+                if (pbc[1])
+                    rim1y -= L[1] * round(rim1y / L[1]);
 
-				// get prior segment vectors
-				lim2x = rim1x - rim2x;
-				lim2y = rim1y - rim2y;
+                // get prior segment vectors
+                lim2x = rim1x - rim2x;
+                lim2y = rim1y - rim2y;
 
-				lim1x = rix - rim1x;
-				lim1y = riy - rim1y;
+                lim1x = rix - rim1x;
+                lim1y = riy - rim1y;
 
-				// increment cell index
-				ci++;
-			}
-		}
+                // increment cell index
+                ci++;
+            }
+        }
 
-		// preferred segment length
-		l0i = l0[gi];
+        // preferred segment length
+        l0i = l0[gi];
 
-		// get next adjacent vertices
-		rip1x = x[NDIM * ip1[gi]] - cx;
-		rip1y = x[NDIM * ip1[gi] + 1] - cy;
-		if (pbc[0])
-			rip1x -= L[0] * round(rip1x / L[0]);
-		if (pbc[1])
-			rip1y -= L[1] * round(rip1y / L[1]);
+        // get next adjacent vertices
+        rip1x = x[NDIM * ip1[gi]] - cx;
+        rip1y = x[NDIM * ip1[gi] + 1] - cy;
+        if (pbc[0])
+            rip1x -= L[0] * round(rip1x / L[0]);
+        if (pbc[1])
+            rip1y -= L[1] * round(rip1y / L[1]);
 
-		// -- Area force
-		F[NDIM * gi] += 0.5 * fa * (rim1y - rip1y);
-		F[NDIM * gi + 1] += 0.5 * fa * (rip1x - rim1x);
+        // -- Area force
+        F[NDIM * gi] += 0.5 * fa * (rim1y - rip1y);
+        F[NDIM * gi + 1] += 0.5 * fa * (rip1x - rim1x);
 
-		// -- Perimeter force
-		lix = rip1x - rix;
-		liy = rip1y - riy;
+        // -- Perimeter force
+        lix = rip1x - rix;
+        liy = rip1y - riy;
 
-		// segment lengths
-		lim1 = sqrt(lim1x * lim1x + lim1y * lim1y);
-		li = sqrt(lix * lix + liy * liy);
+        // segment lengths
+        lim1 = sqrt(lim1x * lim1x + lim1y * lim1y);
+        li = sqrt(lix * lix + liy * liy);
 
-		// segment deviations
-		dlim1 = (lim1 / l0im1) - 1.0;
-		dli = (li / l0i) - 1.0;
+        // segment deviations
+        dlim1 = (lim1 / l0im1) - 1.0;
+        dli = (li / l0i) - 1.0;
 
-		// segment forces
-		flim1 = kl * (rho0 / l0im1);
-		fli = kl * (rho0 / l0i);
+        // segment forces
+        flim1 = kl * (rho0 / l0im1);
+        fli = kl * (rho0 / l0i);
 
-		// add to forces
-		F[NDIM * gi] += (fli * dli * lix / li) - (flim1 * dlim1 * lim1x / lim1);
-		F[NDIM * gi + 1] += (fli * dli * liy / li) - (flim1 * dlim1 * lim1y / lim1);
+        // add to forces
+        F[NDIM * gi] += (fli * dli * lix / li) - (flim1 * dlim1 * lim1x / lim1);
+        F[NDIM * gi + 1] += (fli * dli * liy / li) - (flim1 * dlim1 * lim1y / lim1);
 
-		// update potential energy
-		U += 0.5 * kl * (dli * dli);
+        // update potential energy
+        U += 0.5 * kl * (dli * dli);
 
-		// -- Bending force
-		if (kb > 0 && ci - 1 > tN) {
-			// get ip2 for third angle
-			rip2x = x[NDIM * ip1[ip1[gi]]] - cx;
-			rip2y = x[NDIM * ip1[ip1[gi]] + 1] - cy;
-			if (pbc[0])
-				rip2x -= L[0] * round(rip2x / L[0]);
-			if (pbc[1])
-				rip2y -= L[1] * round(rip2y / L[1]);
+        // -- Bending force
+        if (kb > 0 && ci - 1 > tN) {
+            // get ip2 for third angle
+            rip2x = x[NDIM * ip1[ip1[gi]]] - cx;
+            rip2y = x[NDIM * ip1[ip1[gi]] + 1] - cy;
+            if (pbc[0])
+                rip2x -= L[0] * round(rip2x / L[0]);
+            if (pbc[1])
+                rip2y -= L[1] * round(rip2y / L[1]);
 
-			// get last segment length
-			lip1x = rip2x - rip1x;
-			lip1y = rip2y - rip1y;
+            // get last segment length
+            lip1x = rip2x - rip1x;
+            lip1y = rip2y - rip1y;
 
-			// get angles
-			sinim1 = lim1x * lim2y - lim1y * lim2x;
-			cosim1 = lim1x * lim2x + lim1y * lim2y;
+            // get angles
+            sinim1 = lim1x * lim2y - lim1y * lim2x;
+            cosim1 = lim1x * lim2x + lim1y * lim2y;
 
-			sini = lix * lim1y - liy * lim1x;
-			cosi = lix * lim1x + liy * lim1y;
+            sini = lix * lim1y - liy * lim1x;
+            cosi = lix * lim1x + liy * lim1y;
 
-			sinip1 = lip1x * liy - lip1y * lix;
-			cosip1 = lip1x * lix + lip1y * liy;
+            sinip1 = lip1x * liy - lip1y * lix;
+            cosip1 = lip1x * lix + lip1y * liy;
 
-			// get normal vectors
-			nim1x = lim1y;
-			nim1y = -lim1x;
+            // get normal vectors
+            nim1x = lim1y;
+            nim1y = -lim1x;
 
-			nix = liy;
-			niy = -lix;
+            nix = liy;
+            niy = -lix;
 
-			// get change in angles
-			dtim1 = atan2(sinim1, cosim1) - t0[im1[gi]];
-			dti = atan2(sini, cosi) - t0[gi];
-			dtip1 = atan2(sinip1, cosip1) - t0[ip1[gi]];
+            // get change in angles
+            dtim1 = atan2(sinim1, cosim1) - t0[im1[gi]];
+            dti = atan2(sini, cosi) - t0[gi];
+            dtip1 = atan2(sinip1, cosip1) - t0[ip1[gi]];
 
-			// get delta delta theta's
-			ddtim1 = (dti - dtim1) / (lim1 * lim1);
-			ddti = (dti - dtip1) / (li * li);
+            // get delta delta theta's
+            ddtim1 = (dti - dtim1) / (lim1 * lim1);
+            ddti = (dti - dtip1) / (li * li);
 
-			// add to force
-			F[NDIM * gi] += fb * (ddtim1 * nim1x + ddti * nix);
-			F[NDIM * gi + 1] += fb * (ddtim1 * nim1y + ddti * niy);
+            // add to force
+            F[NDIM * gi] += fb * (ddtim1 * nim1x + ddti * nix);
+            F[NDIM * gi + 1] += fb * (ddtim1 * nim1y + ddti * niy);
 
-			// update potential energy
-			U += 0.5 * kb * (dti * dti);
-		}
+            // update potential energy
+            U += 0.5 * kb * (dti * dti);
+        }
 
-		// update old coordinates
-		rim2x = rim1x;
-		rim1x = rix;
-		rix = rip1x;
+        // update old coordinates
+        rim2x = rim1x;
+        rim1x = rix;
+        rix = rip1x;
 
-		rim2y = rim1y;
-		rim1y = riy;
-		riy = rip1y;
+        rim2y = rim1y;
+        rim1y = riy;
+        riy = rip1y;
 
-		// update old segment vectors
-		lim2x = lim1x;
-		lim2y = lim1y;
+        // update old segment vectors
+        lim2x = lim1x;
+        lim2y = lim1y;
 
-		lim1x = lix;
-		lim1y = liy;
+        lim1x = lix;
+        lim1y = liy;
 
-		// update old preferred segment length
-		l0im1 = l0i;
-	}
+        // update old preferred segment length
+        l0im1 = l0i;
+    }
 }
 
 void tumor2D::repulsiveTumorForces() {
@@ -1838,14 +1838,18 @@ void tumor2D::repulsiveTumorInterfaceForces() {
 			// check boundary forces
 			xi = x[NDIM*gi];
 			ri = r[gi];
-			if (xi < ri){
+			if ((xi-wall_pos) < ri){
 				// update forces
-				fx = kc*(1.0 - (xi/ri))/ri;
+				fx = kc*(1.0 - ((xi-wall_pos)/ri))/ri;
 				F[NDIM*gi] += fx;
 
 				// update wall stress
 				wpress[0] += fx/L[1];
 			}
+            
+            //
+            
+            //
 			else if (xi > L[0] - ri){
 				// update forces
 				fx = -kc*(1.0 - ((L[0] - xi)/ri))/ri;
@@ -2044,13 +2048,15 @@ void tumor2D::stickyTumorInterfaceForces(){
 			// check boundary forces
 			xi = x[NDIM*gi];
 			ri = r[gi];
-			if (xi < ri){
+			if ((xi-wall_pos) < ri){
 				// update forces
-				fx = kc*(1.0 - (xi/ri))/ri;
+				fx = kc*(1.0 - ((xi-wall_pos)/ri))/ri;
 				F[NDIM*gi] += fx;
-
+                
 				// update wall stress
 				wpress[0] += fx/L[1];
+                wall_pressure += fx;
+                
 			}
 			else if (xi > L[0] - ri){
 				// update forces
@@ -2282,6 +2288,8 @@ void tumor2D::stickyTumorInterfaceForces(){
 
 
 
+
+
 void tumor2D::repulsiveTumorForceUpdate() {
 	resetForcesAndEnergy();
 	repulsiveTumorForces();
@@ -2291,7 +2299,7 @@ void tumor2D::repulsiveTumorForceUpdate() {
 void tumor2D::stickyTumorForceUpdate() {
 	resetForcesAndEnergy();
 	stickyTumorForces();
-	shapeForces2D();
+    shapeForces2D();
 }
 
 void tumor2D::repulsiveTumorInterfaceForceUpdate() {
@@ -2682,23 +2690,19 @@ void tumor2D::invasion(tumor2DMemFn forceCall, double dDr, double dPsi, double D
 }
 
 
-// invasion at constant pressure
-void tumor2D::invasionConstP(tumor2DMemFn forceCall, double dDr, double dPsi, double Drmin, int NT, int NPRINTSKIP){
+void tumor2D::invasionConstP(tumor2DMemFn forceCall, double P0, double dDr, double dPsi, double Drmin, int NT, int NPRINTSKIP){
 	// check correct setup
 	setupCheck();
 
 	// local variables
-	int k, i, ci, cj, gi, d;
-	double t = 0.0, zta, Drtmp, Lold, Lnew, gam, P0;
-
+	int k, i, ci, cj;
+	double t = 0.0, zta, Drtmp;
+    double wall_mass = 300;
+    double wall_v = 0;
+    double wall_pressure_0 = P0;
+    double wall_acceleration = 0;
 	// attach pins
 	updateECMAttachments(1);
-
-	// initial pressure
-	CALL_MEMBER_FN(*this, forceCall)();
-	P0 = wpress[0];
-	Lold = L[0];
-	Lnew = Lold;
 
 	// loop over time, have active brownian crawlers invade adipocytes
 	for (k=0; k<NT; k++){
@@ -2744,27 +2748,10 @@ void tumor2D::invasionConstP(tumor2DMemFn forceCall, double dDr, double dPsi, do
 		// update psi based on persistence
 		psiDiffusion();
 
-		// update box lengths based on difference to fixed pressure
-		if (t > 10.0){
-			Lold = L[0];
-			Lnew = Lold - 0.1*dt*(P0 - wpress[0])*L[1];
-			L[0] = Lnew;
-		}
-		else
-			P0 = (k*P0 + wpress[0])/(k+1);
-
-		
-		// affine transformation (move boundary from right)
-		gam = Lnew/Lold;
-		for (gi=0; gi<NVTOT; gi++)
-			x[NDIM*gi] *= gam;
-		for (ci=tN; ci<NCELLS; ci++)
-			pinpos.at(NDIM*(ci-tN)) *= gam;
-
-		// update linked list cell geometry
-		for (d=0; d<NDIM; d++)
-			lb[d] = L[d]/sb[d];
-
+		// update box lengths based on
+        wall_acceleration = (wall_pressure_0-wall_pressure)/wall_mass;
+        wall_v += wall_acceleration*dt;
+        wall_pos += dt*wall_v;
 		// update time
 		t += dt;
 
@@ -2776,13 +2763,11 @@ void tumor2D::invasionConstP(tumor2DMemFn forceCall, double dDr, double dPsi, do
 			cout << "===========================================" << endl;
 			cout << endl;
 			cout << "	** k 			= " << k << endl;
-			cout << "	** t 			= " << t << endl;
 			cout << "	** p 			= " << 0.5*(stress[0] + stress[1]) << endl;
 			cout << "	** phi 			= " << vertexPackingFraction2D() << endl;
-			cout << "	** P wall 		= " << wpress[0] << endl;
-			cout << "	** P0 wall 		= " << P0 << endl;
-			cout << "	** Lold 		= " << Lold << endl;
-			cout << "	** Lnew 		= " << Lnew << endl;
+            cout << "   ** wall_pressure= " << wall_pressure << endl;
+            cout << "   ** wall_pos     = " << wall_pos << endl;
+            
 
 			// print vertex positions to check placement
 			cout << "\t** PRINTING POSITIONS TO FILE... " << endl;
@@ -2899,8 +2884,10 @@ void tumor2D::printTumorInterface(double t){
 
 	// print wall stress info
 	posout << setw(w) << left << "WPRSS";
-	posout << setw(wnum) << setprecision(pnum) << left << wpress.at(0);
-	posout << setw(wnum) << setprecision(pnum) << left << wpress.at(1);
+	//posout << setw(wnum) << setprecision(pnum) << left << wpress[0];
+	//posout << setw(wnum) << setprecision(pnum) << left << wpress[1];
+    posout << setw(wnum) << setprecision(pnum) << left << wall_pressure;
+    posout << setw(wnum) << setprecision(pnum) << left << wall_pos;
 	posout << endl;
 
 	// print coordinate for rest of the cells
