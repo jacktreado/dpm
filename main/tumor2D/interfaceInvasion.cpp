@@ -3,12 +3,18 @@
 // Reads in configuration, sets constants, invades
 // 
 // Compilation command:
-// g++ -O3 --std=c++11 -I src main/tumor2D/interfaceInvasion.cpp src/*.cpp -o tumor.o
+// g++ -O3 --std=c++11 -I src main/tumor2D/constP.cpp src/*.cpp -o tumor.o
 // 
 // Example execution:
-// ./tumor.o tumor_input.test 1e5 1e3 0.01 0.02 0.1 0.1 0.2 0.5 0.1 0.9 0.01 1e-3 1 pos.test
+// ./tumor.o input_1.05.test 1e5 1e3 0.005 0.05 0.05 0.1 0.2 0.5 0.1 0 0.01 1e-4 1 pos.test 1.0
 // 
-// 
+//
+/*
+ Added a piston to make constant pressure
+ 
+
+ Yitong Zheng
+ */
 
 
 // header files
@@ -23,13 +29,12 @@ using namespace std;
 
 // global constants
 const double ka = 1.0;					// area force spring constant (should be unit)
-const double kl = 0.05; 				// contractility spring constant
-const double kb = 1e-3;					// bending energy
-const double kc = 0.1;					// interaction force spring constant
+const double kl = 1.0; 					// contractility spring constant
+const double kb = 0.01;					// bending energy
+const double kc = 1.0;					// interaction force spring constant (should be unit)
 const double gamtt = 0.0; 				// surface tension
-const double boxLengthScale = 3.0;		// neighbor list box size in units of initial l0
+const double boxLengthScale = 2.0;		// neighbor list box size in units of initial l0
 const double dt0 = 2e-2;				// initial magnitude of time step in units of MD time
-const double Ftol = 1e-12;
 
 int main(int argc, char const *argv[])
 {
@@ -39,7 +44,7 @@ int main(int argc, char const *argv[])
 
 	// local variables to be read in
 	int NT, NPRINTSKIP, seed;
-	double NTdbl, NPRINTSKIPdbl, l1, l2, v0, Dr0, Ds, kecm, ecmbreak, dDr, dPsi, Drmin;
+	double NTdbl, NPRINTSKIPdbl, l1, l2, v0, Dr0, Ds, kecm, ecmbreak, dDr, dPsi, Drmin, P0;
 
 	// read in parameters from command line input
 	string inputFile 		= argv[1];				// input file with initial configuration
@@ -57,7 +62,8 @@ int main(int argc, char const *argv[])
 	string Drmin_str 		= argv[13];				// minimum angular diffusion
 	string seed_str 		= argv[14];				// seed for rng
 	string positionFile 	= argv[15];				// output file string
-
+    string P0_str           = argv[16];             // constant pressure
+    
 	// using sstreams to get parameters
 	stringstream NTss(NT_str);
 	stringstream NPRINTSKIPss(NPRINTSKIP_str);
@@ -72,6 +78,7 @@ int main(int argc, char const *argv[])
 	stringstream dPsiss(dPsi_str);
 	stringstream Drminss(Drmin_str);
 	stringstream seedss(seed_str);
+    stringstream P0ss(P0_str);
 
 	// read into data
 	NTss 			>> NTdbl;
@@ -87,7 +94,9 @@ int main(int argc, char const *argv[])
 	dPsiss 			>> dPsi;
 	Drminss  		>> Drmin;
 	seedss 			>> seed;
+    P0ss            >> P0;
 
+    
 	// cast step dbls to ints
 	NT = (int)NTdbl;
 	NPRINTSKIP = (int)NPRINTSKIPdbl;
@@ -121,14 +130,11 @@ int main(int argc, char const *argv[])
 
 	// initialize neighbor linked list
 	tumor2Dobj.initializeNeighborLinkedList2D(boxLengthScale);
-
-	// run FIRE to relax forces fully
-	tumor2Dobj.tumorFIRE(invasionForceUpdate,Ftol,0.2*dt0);
+	tumor2Dobj.printNeighborList();
 
 	// invasion
 	cout << "Running invasion protocol..." << endl;
-	// tumor2Dobj.invasion(invasionForceUpdate,dDr,dPsi,Drmin,NT,NPRINTSKIP);
-	tumor2Dobj.invasionConstP(invasionForceUpdate,dDr,dPsi,Drmin,NT,NPRINTSKIP);
+	tumor2Dobj.invasionConstP(invasionForceUpdate,P0,dDr,dPsi,Drmin,NT,NPRINTSKIP);
 
 	// say goodbye
 	cout << "\n** Finished interfaceInvasion.cpp, ending. " << endl;
