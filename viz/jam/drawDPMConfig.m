@@ -42,7 +42,7 @@ end
 vizdir = pwd;
 fname = [fpattern '.pos'];
 fstr = [vizdir '/' datadir '/' fname];
-% fstr = '../../pos.test';
+fstr = '../../pos.test';
 
 % read in data
 dpmData = readDPMConfig(fstr);
@@ -74,7 +74,7 @@ phi = dpmData.phi;
 %% Draw cells
 
 % show vertices or not
-showverts = 1;
+showverts = 0;
 
 % get cell colors
 [nvUQ, ~, IC] = unique(nv);
@@ -94,9 +94,9 @@ else
 end
 
 % make a movie
-makeAMovie = 0;
+makeAMovie = 1;
 if makeAMovie == 1
-    moviestr = 'a2j.mp4';
+    moviestr = 'compress2jamming.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -170,7 +170,7 @@ for ff = FSTART:FSTEP:FEND
     
     % if making a movie, save frame
     if makeAMovie == 1
-        currframe = getframe(ax);
+        currframe = getframe(gcf);
         writeVideo(vobj,currframe);
     end
 end

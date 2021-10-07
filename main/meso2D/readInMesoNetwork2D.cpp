@@ -4,7 +4,7 @@
 
 // Compilation command:
 // g++ -O3 --std=c++11 -I src main/meso2D/readInMesoNetwork2D.cpp src/*.cpp -o meso.o
-// ./meso.o input.test 1e-4 2.0 1.0 2 1 1 1 pos.test
+// ./meso.o meso_input.test 3 1 1 1 0 1 pos.test
 //
 //
 // Parameter input list
@@ -33,12 +33,12 @@ const double delShrink = 1e-3;		// fractional change in effective box length dur
 const double dphiPrint = 0.01;	   	// packing fractions to skip between print steps
 const double boxLengthScale = 2.5; 	// neighbor list box size in units of initial l0
 const double phi0 = 0.5;		   	// initial packing fraction
-const double dt0 = 2e-2;		   	// initial magnitude of time step in units of MD time
-const double Ftol = 1e-12; 			// force tolerance
-const double phiMin = 0.4;			// minimum packing fraction in decompression algorithm
+const double dt0 = 1e-2;		   	// initial magnitude of time step in units of MD time
+const double Ftol = 1e-10; 			// force tolerance
+const double phiMin = 0.2;			// minimum packing fraction in decompression algorithm
 
 // set parameters
-const double ctch = 0.5;
+const double ctch = 1.0;
 const double cKb = 0;
 
 

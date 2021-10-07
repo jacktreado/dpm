@@ -294,6 +294,7 @@ double dpm::perimeter(int ci) {
 	return perimVal;
 }
 
+
 // get cell center of mass position
 void dpm::com2D(int ci, double &cx, double &cy) {
 	// local variables

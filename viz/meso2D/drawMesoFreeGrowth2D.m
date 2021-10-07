@@ -1,33 +1,11 @@
-%% Draw dpm config files
-% NOTE: need to get configs with contact info
+%% DRAW free meso growth
 
-clear;
+clear
 close all;
 clc;
 
-% create file name
-
-% parameters
-Nstr = '64';
-nstr = '32';
-castr = '1.12';
-kb0str = '1e-2';
-bestr = '3';
-cLstr = '2';
-aLstr = '1';
-cBstr = '0';
-cKbstr = '0';
-
-% seed
-seed = 20;
-seedstr = num2str(seed);
-
-% file name str
-floc = '~/Jamming/CellSim/dpm/viz/meso2D/local/meso2D_data';
-% fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_cKb' cKbstr '_seed' seedstr];
-fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_kb0' kb0str '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_seed' seedstr];
-fstr = [floc '/' fpattern '.pos'];
 fstr = '~/Jamming/CellSim/dpm/pos.test';
+bondstr = '~/Jamming/CellSim/dpm/bond.test';
 
 % read in data
 mesoData = readMesoNetwork2D(fstr);
@@ -76,6 +54,37 @@ calA = p.^2./(4.0*pi*a);
 % stress data
 S = mesoData.S(idx,:);
 P = 0.5*(S(:,1) + S(:,2));
+
+% draw cell cell contacts
+if ~isempty(who('bondstr')) && exist(bondstr,'file')
+    % can choose to draw contacts
+    drawBonds = 1;
+
+    % load in ctc data
+    if drawBonds == 1
+        gijList = cell(NFRAMES,1);
+        fid = fopen(bondstr);
+        for ff = 1:NFRAMES
+            NVTOT = sum(nv(ff,:));
+            NVVCTCS = 0.5*NVTOT*(NVTOT-1);
+            gijtmp = textscan(fid,repmat('%f',1,NVVCTCS),1);
+            gijtmp = cell2mat(gijtmp);
+            gg = 1;
+            gij = zeros(NVTOT);
+            for gi = 1:NVTOT
+                for gj = (gi+1):NVTOT
+                    gij(gi,gj) = gijtmp(gg);
+                    gij(gj,gi) = gij(gi,gj);
+                    gg = gg + 1;
+                end
+            end
+            gijList{ff} = gij;
+        end
+        fclose(fid);
+    end
+else
+    drawBonds = 0;
+end
 
 % print if multiple frames
 if NFRAMES > 5
@@ -142,6 +151,7 @@ if NFRAMES > 5
     ax.FontSize = 22;
 end
 
+
 %% Draw cells
 
 % information for ellipses
@@ -155,24 +165,45 @@ ey = sin(th);
 showverts = 0;
 
 % color by shape or size
-colorOpt = 0;
+colorShape = 4;
 
-if colorOpt == 1
+if colorShape == 1
     % color by real shape
     NCLR = 100;
     calABins = linspace(0.999*min(calA(:)),1.001*max(calA(:)),NCLR+1);
     cellCLR = jet(NCLR);
-elseif colorOpt == 2
+elseif colorShape == 2
     % color by preferred shape
     NCLR = 100;
     calA0Bins = linspace(0.999*min(calA0(:)),1.001*max(calA0(:)),NCLR+1);
     cellCLR = jet(NCLR);
+elseif colorShape == 3
+    clrOrig = [0 0 1];
+    clrNew = [1 1 1];
+elseif colorShape == 4
+    faceColor = 'w';
+    NCLR = 100;
+    t0All = -cell2mat(t0(:));
+    mint0 = min(t0All);
+    maxt0 = max(t0All);
+    t0Bins = linspace(mint0 - 0.001*abs(mint0),maxt0 + 0.001*abs(maxt0),NCLR+1);
+    t0clr = jet(NCLR);
+    NCBTICKS = 5;
+    t0ticks = linspace(0,1,NCBTICKS);
+    t0tickLabels = cell(length(t0ticks),1);
+    for cc = 1:NCBTICKS
+        t0tickLabels{cc} = ['$' sprintf('%0.3g',t0Bins(round(t0ticks(cc)*(NCLR-1)) + 1)) '$'];
+    end    
 else
     [nvUQ, ~, IC] = unique(nv);
-    IC = reshape(IC,NFRAMES,NCELLS);
     NUQ = length(nvUQ);
-    cellCLR = winter(NUQ);
+    cellCLROpts = summer(NUQ);
+    cellCLR = zeros(NCELLS,3);
+    for cc = 1:NCELLS
+        cellCLR(cc,:) = cellCLROpts(IC(cc),:);
+    end
 end
+
 
 % draw cell cell contacts
 if ~isempty(who('ctcstr'))
@@ -211,7 +242,7 @@ if showverts == 0
 else
     FSTART = 1;
     FSTEP = 1;
-    FEND = FSTART;
+    FEND = NFRAMES;
 end
 
 % make a movie
@@ -230,41 +261,32 @@ for ff = FSTART:FSTEP:FEND
     figure(fnum), clf, hold on, box on;
     fprintf('printing frame ff = %d/%d, phi=%0.3g, phi0=%0.3g\n',ff,FEND,phi(ff),phi0(ff));
     
-    % get geometric info
+     % get geometric info
     xf = x(ff,:);
     yf = y(ff,:);
     rf = r(ff,:);
-    zctmp = zc(ff,:);
+    zvf = zv(ff,:);
+    nvtmp = nv(ff,:);
+    gi = 1;
     for nn = 1:NCELLS
         xtmp = xf{nn};
         ytmp = yf{nn};
         rtmp = rf{nn};
-        nvtmp = nv(ff,nn);
-        if colorOpt == 2
-            cbin = calA0(ff,nn) > calA0Bins(1:end-1) & calA0(ff,nn) < calA0Bins(2:end);
-            clr = cellCLR(cbin,:);
-        elseif colorOpt == 1
-            cbin = calA(ff,nn) > calABins(1:end-1) & calA(ff,nn) < calABins(2:end);
-            clr = cellCLR(cbin,:);
-        else
-            clr = cellCLR(IC(ff,nn),:);
-        end
+        zvtmp = zvf{nn};
         if showverts == 1
-            for vv = 1:nvtmp
+            for vv = 1:nvtmp(nn)
                 rv = rtmp(vv);
                 xplot = xtmp(vv) - rv;
                 yplot = ytmp(vv) - rv;
-                for xx = -1:1
-                    for yy = -1:1
-                        if zctmp(nn) > 0
-                            rectangle('Position',[xplot + xx*Lx, yplot + yy*Ly, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',0.2);
-                        else
-                            rectangle('Position',[xplot + xx*Lx, yplot + yy*Ly, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor',clr,'FaceColor','none');
-                        end
-                    end
+                if zvtmp(vv) < 0
+                    rectangle('Position',[xplot, yplot, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','w','LineWidth',0.2);
+                else
+                    rectangle('Position',[xplot, yplot, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','b','LineWidth',0.2);
                 end
+                gi = gi + 1;
             end
         else
+            % geometric data
             cx = mean(xtmp);
             cy = mean(ytmp);
             rx = xtmp - cx;
@@ -272,43 +294,71 @@ for ff = FSTART:FSTEP:FEND
             rads = sqrt(rx.^2 + ry.^2);
             xtmp = xtmp + 0.8*rtmp.*(rx./rads);
             ytmp = ytmp + 0.8*rtmp.*(ry./rads);
-            for xx = -1:1
-                for yy = -1:1
-                    vpos = [xtmp + xx*Lx, ytmp + yy*Ly];
-                    finfo = [1:nvtmp 1];
-                    patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k');
+            vpos = [xtmp, ytmp];
+            finfo = [1:nvtmp(nn) 1];
+            
+            % draw based on color
+            if colorShape == 1
+                cbin = calA(ff,nn) > calABins(1:end-1) & calA(ff,nn) < calABins(2:end);
+                clr = cellCLR(cbin,:);
+                patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k');
+            elseif colorShape == 2
+                cbin = calA0(ff,nn) > calA0Bins(1:end-1) & calA0(ff,nn) < calA0Bins(2:end);
+                clr = cellCLR(cbin,:);
+                patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k');
+            elseif colorShape == 3
+                CData = repmat(clrOrig,nvtmp(nn),1);
+                CData(zvtmp==-1,:) = repmat(clrNew,sum(zvtmp==-1),1);
+                patch('Faces',finfo,'vertices',vpos,CData,'FaceColor','c','EdgeColor','interp');
+            elseif colorShape == 4
+                t0tmp = -t0{ff,nn};
+                CData = zeros(nvtmp(nn),3);
+                for vv = 1:nvtmp(nn)
+                    t0bin = t0tmp(vv) > t0Bins(1:end-1) & t0tmp(vv) < t0Bins(2:end);
+                    CData(vv,:) = t0clr(t0bin,:);
                 end
+                patch('Faces',finfo,'vertices',vpos,'FaceVertexCData',CData,'FaceColor',faceColor,'EdgeColor','interp','linewidth',2.5);
+                colormap('jet');
+                cb = colorbar;
+                cb.Ticks = t0ticks;
+                cb.TickLabels = t0tickLabels;
+                cb.TickLabelInterpreter = 'latex';
+                cb.FontSize = 18;
+            else
+                patch('Faces',finfo,'vertices',vpos,'FaceColor','b','EdgeColor','k');
             end
         end
-%         plot(mean(xtmp),mean(ytmp),'wo','markersize',8,'markerfacecolor','w');
-        
-%         % get shape tensor
-%         cx = mean(xtmp);
-%         cy = mean(ytmp);
-%         rx = xtmp - cx;
-%         ry = ytmp - cy;
-%         rn = sqrt(rx.^2 + ry.^2);
-%         urx = rx./rn;
-%         ury = ry./rn;
-%         Gxx = sum(rx.*urx)/nvtmp;
-%         Gyy = sum(ry.*ury)/nvtmp;
-%         Gxy = sum(rx.*ury)/nvtmp;
-%         [V,D] = eig([Gxx, Gxy; Gxy, Gyy]);
-%         lambda = diag(D);
-%         cx = mod(cx,Lx);
-%         cy = mod(cy,Ly);
-%         quiver(cx,cy,lambda(1)*V(1,1),lambda(1)*V(2,1),'-w','linewidth',2);
-%         quiver(cx,cy,lambda(2)*V(1,2),lambda(2)*V(2,2),'-w','linewidth',2);
     end
-        
+    
     % plot box
-    plot([0 Lx Lx 0 0], [0 0 Ly Ly 0], 'k-', 'linewidth', 1.5);
+    plot([0 Lx Lx 0 0],[0 0 Ly Ly 0],'k-','linewidth',1.5);
     axis equal;
     ax = gca;
     ax.XTick = [];
     ax.YTick = [];
     ax.XLim = [-0.25 1.25]*Lx;
     ax.YLim = [-0.25 1.25]*Ly;
+    
+    % draw bonds if available
+    if drawBonds == 1
+        NVTOT = sum(nv(ff,:));
+        gij = gijList{ff};
+        xall = cell2mat(xf');
+        yall = cell2mat(yf');
+        for gi = 1:NVTOT
+            for gj = (gi+1):NVTOT
+                if (gij(gi,gj) == 1)
+                    xi = xall(gi);
+                    yi = yall(gi);
+                    
+                    xj = xall(gj);
+                    yj = yall(gj);
+                    
+                    plot([xi xj],[yi yj],'k-','linewidth',2);
+                end
+            end
+        end
+    end
     
     % if making a movie, save frame
     if makeAMovie == 1
@@ -321,4 +371,37 @@ end
 % close video object
 if makeAMovie == 1
     close(vobj);
+end
+
+
+%% Draw center particle "growth"
+
+NPLOTS = 10;
+NMAX = NFRAMES;
+fplots = round(linspace(1,NMAX,NPLOTS));
+figure(2), clf, hold on, box on;
+for ii = 1:NPLOTS
+    ff = fplots(ii);
+    xf = x{ff,1};
+    yf = y{ff,1};
+    rf = r{ff,1};
+    zvf = zv{ff,1};
+    nvtmp = nv(ff,1);
+    
+    % plot
+    ip1 = [2:nvtmp 1];
+    for vv = 1:nvtmp
+        rv = rf(vv);
+        if zvf(vv) <= 0
+            plot([xf(vv) xf(ip1(vv))],[yf(vv) yf(ip1(vv))],'-','linewidth',3,'color','b');
+        else
+            plot([xf(vv) xf(ip1(vv))],[yf(vv) yf(ip1(vv))],'-','linewidth',1.5,'color','k');
+        end
+    end
+    
+    % plot box
+    axis equal;
+    ax = gca;
+    ax.XTick = [];
+    ax.YTick = [];
 end
