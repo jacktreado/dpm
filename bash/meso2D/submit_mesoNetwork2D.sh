@@ -25,13 +25,15 @@ n1=$2
 calA0=$3
 kb0=$4
 betaEff=$5
-cL=$6
-aL=$7
-cB=$8
-partition=$9
-time="${10}"
-numRuns="${11}"
-startSeed="${12}"
+ctch=$6
+cL=$7
+aL=$8
+cB=$9
+cKb="${10}"
+partition="${11}"
+time="${12}"
+numRuns="${13}"
+startSeed="${14}"
 
 # other variables
 disp=0.1
@@ -41,7 +43,7 @@ let numSeeds=$numSeedsPerRun*$numRuns
 let endSeed=$startSeed+$numSeeds-1
 
 # name strings
-basestr=meso2D_N"$NCELLS"_n"$n1"_ca"$calA0"_kb0"$kb0"_be"$betaEff"_cL"$cL"_aL"$aL"_cB"$cB"
+basestr=meso2D_N"$NCELLS"_n"$n1"_ca"$calA0"_kb0"$kb0"_be"$betaEff"_h"$ctch"_cL"$cL"_aL"$aL"_cB"$cB"_cKb"$cKb"
 runstr="$basestr"_startseed"$startSeed"_endseed"$endSeed"
 
 # make directory specific for this simulation
@@ -57,9 +59,11 @@ echo n1 = "$n1"
 echo calA0 = "$calA0"
 echo kb0 = "$kb0"
 echo betaEff = "$betaEff"
+echo ctch = "$ctch"
 echo cL = "$cL"
 echo aL = "$aL"
 echo cB = "$cB"
+echo cKb = "$cKb"
 
 # run compiler
 rm -f $binf
@@ -105,7 +109,7 @@ for seed in `seq $startSeed $numSeedsPerRun $endSeed`; do
         posf=$simdatadir/$filestr.pos
 
         # append to runString
-        runString="$runString ; ./$binf $NCELLS $n1 $disp $calA0 $kb0 $betaEff $cL $aL $cB $runseed $posf"
+        runString="$runString ; ./$binf $NCELLS $n1 $disp $calA0 $kb0 $betaEff $ctch $cL $aL $cB $cKb $runseed $posf"
     done
 
     # finish off run string
@@ -161,13 +165,15 @@ sbatch -t $time $slurmf
 # 3. calA0
 # 4. kb0
 # 5. betaEff
-# 6. cL (perimeter aging)
-# 7. aL (either age contact (0) or void (1) perimeter)
-# 8. cB (bending angle aging)
-# 9. partition
-# 10. time
-# 11. number of runs (number of array entries, i.e. arraynum)
-# 12. start seed (end seed determined by number of runs)
+# 6. ctch
+# 7. cL (perimeter aging)
+# 8. aL (either age contact (0) or void (1) perimeter)
+# 9. cB (bending angle aging)
+# 10. cKb
+# 11. partition
+# 12. time
+# 13. number of runs (number of array entries, i.e. arraynum)
+# 14. start seed (end seed determined by number of runs)
 
 
 

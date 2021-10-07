@@ -217,7 +217,8 @@ end
 % make a movie
 makeAMovie = 0;
 if makeAMovie == 1
-    moviestr = [fpattern '.mp4'];
+%     moviestr = [fpattern '.mp4'];
+    moviestr = 'meso2D_Ftol1e-10_minctc_fixedscale.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
