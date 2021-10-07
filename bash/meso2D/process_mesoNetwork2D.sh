@@ -24,14 +24,16 @@ n1=$2
 calA0=$3
 kb0=$4
 betaEff=$5
-cL=$6
-aL=$7
-cB=$8
-partition=$9
-time="${10}"
+ctch=$6
+cL=$7
+aL=$8
+cB=$9
+cKb="${10}"
+partition="${11}"
+time="${12}"
 
 # name strings
-basestr=meso2D_N"$NCELLS"_n"$n1"_ca"$calA0"_kb0"$kb0"_be"$betaEff"_cL"$cL"_aL"$aL"_cB"$cB"
+basestr=meso2D_N"$NCELLS"_n"$n1"_ca"$calA0"_kb0"$kb0"_be"$betaEff"_h"$ctch"_cL"$cL"_aL"$aL"_cB"$cB"_cKb"$cKb"
 runstr="$basestr"_PROCESS
 searchstr="$basestr"_seed
 
@@ -83,11 +85,13 @@ sbatch -t $time $slurmf
 # 2. n
 # 3. calA0
 # 4. kb0
-# 5. betaEff
-# 6. cL (perimeter aging)
-# 7. aL (either age contact (0) or void (1) perimeter)
-# 8. cB (bending angle aging)
-# 9. partition
-# 10. time
+# 5. ctch
+# 6. betaEff
+# 7. cL (perimeter aging)
+# 8. aL (either age contact (0) or void (1) perimeter)
+# 9. cB (bending angle aging)
+# 10. cKb
+# 11. partition
+# 12. time
 
 

@@ -13,21 +13,24 @@ nstr = '32';
 castr = '1.12';
 kb0str = '1e-2';
 bestr = '3';
-cLstr = '2';
+hstr = '1';
+cLstr = '1';
 aLstr = '1';
 cBstr = '0';
-cKbstr = '0';
+cKbstr = '1e-6';
+
 
 % seed
-seed = 20;
+seed = 3;
 seedstr = num2str(seed);
 
 % file name str
 floc = '~/Jamming/CellSim/dpm/viz/meso2D/local/meso2D_data';
 % fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_cKb' cKbstr '_seed' seedstr];
-fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_kb0' kb0str '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_seed' seedstr];
+% fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_kb0' kb0str '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_seed' seedstr];
+fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_kb0' kb0str '_be' bestr '_h' hstr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_cKb' cKbstr '_seed' seedstr];
 fstr = [floc '/' fpattern '.pos'];
-fstr = '~/Jamming/CellSim/dpm/pos.test';
+% fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetwork2D(fstr);
