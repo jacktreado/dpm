@@ -85,8 +85,8 @@ sbatch -t $time $slurmf
 # 2. n
 # 3. calA0
 # 4. kb0
-# 5. ctch
-# 6. betaEff
+# 5. betaEff
+# 6. ctch
 # 7. cL (perimeter aging)
 # 8. aL (either age contact (0) or void (1) perimeter)
 # 9. cB (bending angle aging)

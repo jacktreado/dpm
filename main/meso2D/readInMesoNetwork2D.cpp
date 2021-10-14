@@ -4,7 +4,7 @@
 
 // Compilation command:
 // g++ -O3 --std=c++11 -I src main/meso2D/readInMesoNetwork2D.cpp src/*.cpp -o meso.o
-// ./meso.o meso_input.test 3 1 1 1 0 1 pos.test
+// ./meso.o meso_input.test 1e-4 3 1 1 1 0 1 pos.test
 //
 //
 // Parameter input list
@@ -107,10 +107,15 @@ int main(int argc, char const *argv[])
 	meso2Dobj.printMesoNetwork2D();
 
 	// run stretching simulation to create network
-	meso2Dobj.mesoNetworkExtension(&meso2D::mesoNetworkForceUpdate, Ftol, dt0, delShrink, dphiPrint, phiMin);
+	// meso2Dobj.mesoNetworkExtension(&meso2D::mesoNetworkForceUpdate, Ftol, dt0, delShrink, dphiPrint, phiMin);
+	double dPtol = 1e-10;
+	double dl0 = 0.1;
+	double phiMin = 0.4;
+	int NMINSKIP = 10;
+	meso2Dobj.mesoNetworkEnthalpyMin(&meso2D::mesoNetworkForceUpdate, Ftol, dPtol, dt0, dl0, phiMin, NMINSKIP);
 
 	// say goodbye
-	cout << "\n** Finished mesoNetwork2D.cpp, ending. " << endl;
+	cout << "\n** Finished readInMesoNetwork2D.cpp, ending. " << endl;
 
 	return 0;
 }

@@ -116,7 +116,7 @@ public:
 
 	// integrators
 	void mesoFIRE(meso2DMemFn forceCall, double Ftol, double dt0);
-	void mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dt0);
+	void mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, double P0, double dt0);
 	void mesoShearStrainFIRE(double gamma, double Ftol, double dt0);
 	void mesoPinFIRE(std::vector<double> &xpin, double Ftol, double dt0, double kcspring);
 	void mesoNetworkNVE(std::ofstream &enout, meso2DMemFn forceCall, double T, double dt0, int NT, int NPRINTSKIP);
@@ -125,10 +125,10 @@ public:
 	void mesoNetworkExtension(meso2DMemFn forceCall, double Ftol, double dt0, double delShrink, double dphiPrint, double phiMin);
 	void mesoPinExtension(double Ftol, double dt0, double hmax, double dh, double dhprint, double kcspring, int cellskip);
 	void mesoFreeGrowth(meso2DMemFn forceCall, double Ftol, double dt0, double dl0, double da0, double dphiPrint, double a0max);
+	void mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double dPtol, double dt0, double dl0, double phiMin, int NMINSKIP);
 
 	// protocol helpers
-	void updateMesophyllBondNetwork();
-	void updateMesophyllBondsNoMin();
+	void updateMesophyllBondNetwork(int CTCMIN, int PAIRMIN);
 	void ageMesophyllShapeParameters();
 	void relaxByAdding();
 	void addMesophyllCellMaterial(double dl0);

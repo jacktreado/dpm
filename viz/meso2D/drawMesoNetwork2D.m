@@ -13,11 +13,11 @@ nstr = '32';
 castr = '1.12';
 kb0str = '1e-2';
 bestr = '3';
-hstr = '1';
+hstr = '0.5';
 cLstr = '1';
 aLstr = '1';
 cBstr = '0';
-cKbstr = '1e-6';
+cKbstr = '1e-4';
 
 
 % seed
@@ -212,7 +212,7 @@ if showverts == 0
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
-    FSTART = 1;
+    FSTART = NFRAMES;
     FSTEP = 1;
     FEND = FSTART;
 end
@@ -242,6 +242,8 @@ for ff = FSTART:FSTEP:FEND
     for nn = 1:NCELLS
         xtmp = xf{nn};
         ytmp = yf{nn};
+        cx = mean(xtmp);
+        cy = mean(ytmp);
         rtmp = rf{nn};
         nvtmp = nv(ff,nn);
         if colorOpt == 2
@@ -269,8 +271,6 @@ for ff = FSTART:FSTEP:FEND
                 end
             end
         else
-            cx = mean(xtmp);
-            cy = mean(ytmp);
             rx = xtmp - cx;
             ry = ytmp - cy;
             rads = sqrt(rx.^2 + ry.^2);
@@ -284,6 +284,7 @@ for ff = FSTART:FSTEP:FEND
                 end
             end
         end
+%         text(cx,cy,num2str(nn));
 %         plot(mean(xtmp),mean(ytmp),'wo','markersize',8,'markerfacecolor','w');
         
 %         % get shape tensor

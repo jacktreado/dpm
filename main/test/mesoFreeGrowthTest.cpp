@@ -54,7 +54,7 @@ int main(int argc, char const *argv[])
 	// parameters
 	n1 = 32;
 	ctcdel = 1.0;
-	ctch = 0.5;
+	ctch = 0.25;
 	aL = 1.0;
 	cB = 1.0;
 	cKb = 0.0;
