@@ -4,7 +4,7 @@
 
 // Compilation command:
 // g++ -O3 --std=c++11 -I src main/meso2D/readInMesoNetwork2D.cpp src/*.cpp -o meso.o
-// ./meso.o meso_input.test 1e-4 3 1 1 1 0 1 pos.test
+// ./meso.o meso_input.test 1e-3 3 1 1 1 0 1 pos.test
 //
 //
 // Parameter input list
@@ -36,9 +36,11 @@ const double phi0 = 0.5;		   	// initial packing fraction
 const double dt0 = 1e-2;		   	// initial magnitude of time step in units of MD time
 const double Ftol = 1e-12; 			// force tolerance
 const double phiMin = 0.2;			// minimum packing fraction in decompression algorithm
+const double kl = 0.01; 			// perimeter spring constant
+const double kc = 0.001; 			// interaction spring constant
 
 // set parameters
-const double ctch = 1.0;
+const double ctch = 0.25;
 const double cKb = 0;
 
 
@@ -99,6 +101,8 @@ int main(int argc, char const *argv[])
 	meso2Dobj.setcB(cB);
 	meso2Dobj.setcKb(cKb);
 	meso2Dobj.setkbi(kb0);
+	meso2Dobj.setkl(kl);
+	meso2Dobj.setkc(kc);
 
 	// relax configuration using network + bending
 	meso2Dobj.initializeMesophyllBondNetwork();
@@ -107,12 +111,12 @@ int main(int argc, char const *argv[])
 	meso2Dobj.printMesoNetwork2D();
 
 	// run stretching simulation to create network
-	// meso2Dobj.mesoNetworkExtension(&meso2D::mesoNetworkForceUpdate, Ftol, dt0, delShrink, dphiPrint, phiMin);
-	double dPtol = 1e-10;
-	double dl0 = 0.1;
-	double phiMin = 0.4;
-	int NMINSKIP = 10;
-	meso2Dobj.mesoNetworkEnthalpyMin(&meso2D::mesoNetworkForceUpdate, Ftol, dPtol, dt0, dl0, phiMin, NMINSKIP);
+	meso2Dobj.mesoNetworkExtension(&meso2D::mesoNetworkForceUpdate, Ftol, dt0, delShrink, dphiPrint, phiMin);
+	// double dPtol = 1e-10;
+	// double dl0 = 0.1;
+	// double phiMin = 0.4;
+	// int NMINSKIP = 10;
+	// meso2Dobj.mesoNetworkEnthalpyMin(&meso2D::mesoNetworkForceUpdate, Ftol, dPtol, dt0, dl0, phiMin, NMINSKIP);
 
 	// say goodbye
 	cout << "\n** Finished readInMesoNetwork2D.cpp, ending. " << endl;

@@ -8,16 +8,16 @@ clc;
 % create file name
 
 % parameters
-Nstr = '64';
+Nstr = '32';
 nstr = '32';
-castr = '1.12';
-kb0str = '1e-2';
+castr = '1.08';
+kb0str = '1e-3';
 bestr = '3';
-hstr = '0.5';
+hstr = '0.25';
 cLstr = '1';
 aLstr = '1';
 cBstr = '0';
-cKbstr = '1e-4';
+cKbstr = '1e-6';
 
 
 % seed
@@ -30,7 +30,7 @@ floc = '~/Jamming/CellSim/dpm/viz/meso2D/local/meso2D_data';
 % fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_kb0' kb0str '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_seed' seedstr];
 fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_kb0' kb0str '_be' bestr '_h' hstr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_cKb' cKbstr '_seed' seedstr];
 fstr = [floc '/' fpattern '.pos'];
-% fstr = '~/Jamming/CellSim/dpm/pos.test';
+fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetwork2D(fstr);
@@ -143,6 +143,27 @@ if NFRAMES > 5
     ylabel('$z$','Interpreter','latex');
     ax = gca;
     ax.FontSize = 22;
+    
+    % plot area deviations
+    ea = 0.5*(a./a0 - 1).^2;
+    figure(15), clf, hold on, box on;
+    plot(phi,ea,'-','color',[0.5 0.5 0.5],'linewidth',1.2);
+    errorbar(phi,mean(ea,2),std(ea,0,2),'k--','linewidth',2);
+    xlabel('$\phi$','Interpreter','latex');
+    ylabel('$U_a$','Interpreter','latex');
+    ax = gca;
+    ax.FontSize = 22;
+    ax.YScale = 'log';
+    
+     % plot packing fractions
+    figure(16), clf, hold on, box on;
+    plot(phi,phi0,'ko','markersize',10);
+    xlabel('$\phi$','Interpreter','latex');
+    ylabel('$\phi_0$','Interpreter','latex');
+    ax = gca;
+    ax.FontSize = 22;
+    xl = ax.XLim;
+    plot(xl,xl,'k-','linewidth',2);
 end
 
 %% Draw cells

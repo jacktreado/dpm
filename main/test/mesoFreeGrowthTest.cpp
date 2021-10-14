@@ -1,6 +1,8 @@
 // FILE to create mini-network with 6 cells in free boundaries
 // compilation:
+// 
 // g++ --std=c++11 -O3 -I src main/test/mesoFreeGrowthTest.cpp src/*.cpp -o test.o
+// ./test.o 1.08 1e-6 3 1 1e-4 0.1
 
 // header files
 #include "meso2D.h"
@@ -18,7 +20,7 @@ const double phi0 				= 0.1;		// initial packing fraction, for viz
 const double hmax 				= 1.25;		// max step length
 const double dhprint 			= 0.01;		// dh before print step
 const double boxLengthScale 	= 4.0;		// neighbor list box size in units of initial l0
-const double dt0 				= 2e-2;		// initial magnitude of time step in units of MD time
+const double dt0 				= 1e-2;		// initial magnitude of time step in units of MD time
 const double Ftol 				= 1e-12; 	// force tolerance
 const double kcspring 			= 1.0; 		// spring connecting to centers
 const double kl 				= 0.1; 		// perimeter spring constant
@@ -78,7 +80,7 @@ int main(int argc, char const *argv[])
 
 	// SET PBC -> 0, NO NEED FOR TRIPLET CELLS
 	meso2Dobj.setpbc(0,false);
-	meso2Dobj.setpbc(1,false);
+	meso2Dobj.setpbc(0,false);
 	meso2Dobj.setkl(kl);
 	meso2Dobj.setkc(kc);
 

@@ -2159,6 +2159,8 @@ void meso2D::mesoNetworkExtension(meso2DMemFn forceCall, double Ftol, double dt0
 		cout << endl;
 		cout << "	* k 			= " << k << endl;
 		cout << "	* phi0 			= " << phi0 << endl;
+		cout << "	* phi 			= " << vertexPackingFraction2D() << endl;
+		cout << "	* phi0 w/ verts = " << vertexPreferredPackingFraction2D() << endl;
 		cout << "	* lastPrintPhi 	= " << lastPrintPhi << endl;
 		cout << "	* P 			= " << 0.5*(stress[0] + stress[1]) << endl;
 		cout << "	* U 		 	= " << U << endl << endl;
@@ -2857,72 +2859,72 @@ void meso2D::addMesophyllCellMaterial(double dl0){
 			}
 		}
 
-		// add if lone vertex between two connected vertices, connected to different cells
-		else if (zv[gim1] > 0 && zv[gip1] > 0 && zv[gi] == 0){
-			// check min contact to gim1
-			dmin = 1e6;
-			for (gj=0; gj<NVTOT; gj++){
-				if (gj < gim1)
-					gtmp = gij[NVTOT*gj + gim1 - (gj+1)*(gj+2)/2];
-				else if (gj > gim1)
-					gtmp = gij[NVTOT*gim1 + gj - (gim1+1)*(gim1+2)/2];
+		// // add if lone vertex between two connected vertices, connected to different cells
+		// else if (zv[gim1] > 0 && zv[gip1] > 0 && zv[gi] == 0){
+		// 	// check min contact to gim1
+		// 	dmin = 1e6;
+		// 	for (gj=0; gj<NVTOT; gj++){
+		// 		if (gj < gim1)
+		// 			gtmp = gij[NVTOT*gj + gim1 - (gj+1)*(gj+2)/2];
+		// 		else if (gj > gim1)
+		// 			gtmp = gij[NVTOT*gim1 + gj - (gim1+1)*(gim1+2)/2];
 
-				if (gtmp && gim1 != gj){
-					// distance between j and i in x
-					dx = x[NDIM*gj] - x[NDIM*gim1];
-					if (pbc[0])
-						dx -= L[0]*round(dx/L[0]);
+		// 		if (gtmp && gim1 != gj){
+		// 			// distance between j and i in x
+		// 			dx = x[NDIM*gj] - x[NDIM*gim1];
+		// 			if (pbc[0])
+		// 				dx -= L[0]*round(dx/L[0]);
 
-					// distance between j and i in y
-					dy = x[NDIM*gj + 1] - x[NDIM*gim1 + 1];
-					if (pbc[1])
-						dy -= L[1]*round(dy/L[1]);
+		// 			// distance between j and i in y
+		// 			dy = x[NDIM*gj + 1] - x[NDIM*gim1 + 1];
+		// 			if (pbc[1])
+		// 				dy -= L[1]*round(dy/L[1]);
 
-					// full distance
-					di = dx*dx + dy*dy;
-					if (di < dmin){
-						dmin = di;
-						ctc_im_jn = gj;
-					}
-				}
-			}
+		// 			// full distance
+		// 			di = dx*dx + dy*dy;
+		// 			if (di < dmin){
+		// 				dmin = di;
+		// 				ctc_im_jn = gj;
+		// 			}
+		// 		}
+		// 	}
 
-			// check min contact to gip1
-			dmin = 1e6;
-			for (gj=0; gj<NVTOT; gj++){
-				if (gj < gip1)
-					gtmp = gij[NVTOT*gj + gip1 - (gj+1)*(gj+2)/2];
-				else if (gj > gip1)
-					gtmp = gij[NVTOT*gip1 + gj - (gip1+1)*(gip1+2)/2]; 
+		// 	// check min contact to gip1
+		// 	dmin = 1e6;
+		// 	for (gj=0; gj<NVTOT; gj++){
+		// 		if (gj < gip1)
+		// 			gtmp = gij[NVTOT*gj + gip1 - (gj+1)*(gj+2)/2];
+		// 		else if (gj > gip1)
+		// 			gtmp = gij[NVTOT*gip1 + gj - (gip1+1)*(gip1+2)/2]; 
 
-				if (gtmp && gip1 != gj){
-					// distance between j and i in x
-					dx = x[NDIM*gj] - x[NDIM*gip1];
-					if (pbc[0])
-						dx -= L[0]*round(dx/L[0]);
+		// 		if (gtmp && gip1 != gj){
+		// 			// distance between j and i in x
+		// 			dx = x[NDIM*gj] - x[NDIM*gip1];
+		// 			if (pbc[0])
+		// 				dx -= L[0]*round(dx/L[0]);
 
-					// distance between j and i in y
-					dy = x[NDIM*gj + 1] - x[NDIM*gip1 + 1];
-					if (pbc[1])
-						dy -= L[1]*round(dy/L[1]);
+		// 			// distance between j and i in y
+		// 			dy = x[NDIM*gj + 1] - x[NDIM*gip1 + 1];
+		// 			if (pbc[1])
+		// 				dy -= L[1]*round(dy/L[1]);
 
-					// full distance
-					di = dx*dx + dy*dy;
-					if (di < dmin){
-						dmin = di;
-						ctc_ip1m_kp = gj;
-					}
-				}
-			}
+		// 			// full distance
+		// 			di = dx*dx + dy*dy;
+		// 			if (di < dmin){
+		// 				dmin = di;
+		// 				ctc_ip1m_kp = gj;
+		// 			}
+		// 		}
+		// 	}
 
-			// if contacts are on different cells, add vertex between contacts
-			cindices(cin,vin,ctc_im_jn);
-			cindices(cip1p,vip1p,ctc_ip1m_kp);
-			if (cin != cip1p){
-				growthVerts.push_back(gim1);
-				growthVerts.push_back(gi);
-			}
-		}
+		// 	// if contacts are on different cells, add vertex between contacts
+		// 	cindices(cin,vin,ctc_im_jn);
+		// 	cindices(cip1p,vip1p,ctc_ip1m_kp);
+		// 	if (cin != cip1p){
+		// 		growthVerts.push_back(gim1);
+		// 		growthVerts.push_back(gi);
+		// 	}
+		// }
 
 		// add vertices between neighbors of new vertices
 		else if (zv[gi] == -1){
@@ -2944,7 +2946,8 @@ void meso2D::addMesophyllCellMaterial(double dl0){
 	if (growthVerts.size() > 0){
 		for (gi=0; gi<growthVerts.size(); gi++){
 			cout << "adding vertex between gi=" << growthVerts.at(gi)+gi << " and gip1=" << ip1[growthVerts.at(gi)+gi] << endl;
-			addVertex(growthVerts.at(gi)+gi,(1+(dt*dl0/growthVerts.size()))*l0.at(growthVerts.at(gi)+gi));
+			// addVertex(growthVerts.at(gi)+gi,(1+(dt*dl0/growthVerts.size()))*l0.at(growthVerts.at(gi)+gi));
+			addVertex(growthVerts.at(gi)+gi,l0.at(growthVerts.at(gi)+gi));
 		}
 	}
 	growthVerts.clear();
@@ -3169,10 +3172,10 @@ void meso2D::addVertex(int gi, double newl0){
 	v[NDIM*(gi+1) + 1] = 0.0;
 	F[NDIM*(gi+1)] = 0.0;
 	F[NDIM*(gi+1) + 1] = 0.0;
-	l0[gi+1] = 0.6*newl0;
-	l0[gi] = 0.6*newl0;
+	l0[gi+1] = 0.5*newl0;
+	l0[gi] = 0.5*newl0;
 	// t0[gi+1] = (2.0*PI)/nv.at(ci);
-	t0[gi+1] = 0.0;
+	t0[gi+1] = t0[gi];
 	r[gi+1] = r[gi];
 	kbi[gi+1] = kbi[gi];
 	zv[gi+1] = -1;
