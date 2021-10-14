@@ -31,17 +31,17 @@ using namespace std;
 // global constants
 const double delShrink = 1e-3;		// fractional change in effective box length during extension
 const double dphiPrint = 0.01;	   	// packing fractions to skip between print steps
-const double boxLengthScale = 2.5; 	// neighbor list box size in units of initial l0
+const double boxLengthScale = 2.1; 	// neighbor list box size in units of initial l0
 const double phi0 = 0.5;		   	// initial packing fraction
 const double dt0 = 1e-2;		   	// initial magnitude of time step in units of MD time
-const double Ftol = 1e-12; 			// force tolerance
+const double Ftol = 1e-10; 			// force tolerance
 const double phiMin = 0.2;			// minimum packing fraction in decompression algorithm
-const double kl = 0.01; 			// perimeter spring constant
-const double kc = 0.001; 			// interaction spring constant
+const double kl = 0.1; 			// perimeter spring constant
+const double kc = 0.5; 			// interaction spring constant
 
 // set parameters
-const double ctch = 0.25;
-const double cKb = 0;
+const double ctch = 0.5;
+const double cKb = 1e-6;
 
 
 int main(int argc, char const *argv[])

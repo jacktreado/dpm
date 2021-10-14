@@ -46,6 +46,8 @@ const double Ftol = 1e-10; 			// force tolerance
 const double phiMin = 0.2;			// minimum packing fraction in decompression algorithm
 const double T0 = 1e-2; 			// temperature for jamming preparation protocol
 const double trun = 50.0; 			// amount of time to run annealing
+const double kl = 0.1; 				// perimeter spring constant
+const double kc = 0.5; 				// interaction spring constant
 
 // set parameters
 const double ctcdel = 1.0;
@@ -133,6 +135,8 @@ int main(int argc, char const *argv[])
 	meso2Dobj.setcB(cB);
 	meso2Dobj.setcKb(cKb);
 	meso2Dobj.setkbi(kb0);
+	meso2Dobj.setkl(kl);
+	meso2Dobj.setkc(kc);
 
 	// relax configuration using network + bending
 	meso2Dobj.initializeMesophyllBondNetwork();
