@@ -10,14 +10,14 @@ clc;
 % parameters
 Nstr = '32';
 nstr = '32';
-castr = '1.08';
-kb0str = '1e-3';
-bestr = '3';
-hstr = '0.25';
-cLstr = '1';
+castr = '1.06';
+kb0str = '1e-4';
+bestr = '5';
+hstr = '0.5';
+cLstr = '2';
 aLstr = '1';
 cBstr = '0';
-cKbstr = '1e-6';
+cKbstr = '0';
 
 
 % seed
@@ -46,9 +46,7 @@ NFRAMES = sum(idx);
 % sim info
 NCELLS = mesoData.NCELLS;
 nv = mesoData.nv(idx,:);
-L = mesoData.L(1,:);
-Lx = L(1);
-Ly = L(2);
+LList = mesoData.L;
 x = mesoData.x(idx,:);
 y = mesoData.y(idx,:);
 r = mesoData.r(idx,:);
@@ -58,15 +56,17 @@ a0 = mesoData.a0(idx,:);
 l0 = mesoData.l0(idx,:);
 t0 = mesoData.t0(idx,:);
 kb = mesoData.kb(idx,:);
-phi0 = sum(a0,2)/(Lx*Ly);
+phi0 = sum(a0,2)./(LList(:,1).*LList(:,2));
 
 % get preferred shape
 calA0 = zeros(NFRAMES,NCELLS);
+p0 = zeros(NFRAMES,NCELLS);
 for ff = 1:NFRAMES
     a0tmp = a0(ff,:);
     l0tmp = l0(ff,:);
     for cc = 1:NCELLS
         p0tmp = sum(l0tmp{cc});
+        p0(ff,cc) = p0tmp;
         calA0(ff,cc) = p0tmp^2/(4.0*pi*a0tmp(cc));
     end
 end
@@ -157,13 +157,19 @@ if NFRAMES > 5
     
      % plot packing fractions
     figure(16), clf, hold on, box on;
-    plot(phi,phi0,'ko','markersize',10);
-    xlabel('$\phi$','Interpreter','latex');
+    plot(1:NFRAMES,phi,'ko','markersize',10);
+    xlabel('frame','Interpreter','latex');
     ylabel('$\phi_0$','Interpreter','latex');
     ax = gca;
     ax.FontSize = 22;
-    xl = ax.XLim;
-    plot(xl,xl,'k-','linewidth',2);
+    
+     % plot p0 vs phi0
+    figure(17), clf, hold on, box on;
+    plot(mean(calA0,2),phi,'ko','markersize',10);
+    xlabel('$\mathcal{A}_0$','Interpreter','latex');
+    ylabel('$\phi_0$','Interpreter','latex');
+    ax = gca;
+    ax.FontSize = 22;
 end
 
 %% Draw cells
@@ -242,7 +248,7 @@ end
 makeAMovie = 0;
 if makeAMovie == 1
 %     moviestr = [fpattern '.mp4'];
-    moviestr = 'meso2D_Ftol1e-10_minctc_fixedscale.mp4';
+    moviestr = 'meso2D_enthalpy.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -260,6 +266,7 @@ for ff = FSTART:FSTEP:FEND
     yf = y(ff,:);
     rf = r(ff,:);
     zctmp = zc(ff,:);
+    L = LList(ff,1);
     for nn = 1:NCELLS
         xtmp = xf{nn};
         ytmp = yf{nn};
@@ -284,9 +291,9 @@ for ff = FSTART:FSTEP:FEND
                 for xx = -1:1
                     for yy = -1:1
                         if zctmp(nn) > 0
-                            rectangle('Position',[xplot + xx*Lx, yplot + yy*Ly, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',0.2);
+                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',0.2);
                         else
-                            rectangle('Position',[xplot + xx*Lx, yplot + yy*Ly, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor',clr,'FaceColor','none');
+                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor',clr,'FaceColor','none');
                         end
                     end
                 end
@@ -299,7 +306,7 @@ for ff = FSTART:FSTEP:FEND
             ytmp = ytmp + 0.8*rtmp.*(ry./rads);
             for xx = -1:1
                 for yy = -1:1
-                    vpos = [xtmp + xx*Lx, ytmp + yy*Ly];
+                    vpos = [xtmp + xx*L, ytmp + yy*L];
                     finfo = [1:nvtmp 1];
                     patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k');
                 end
@@ -328,17 +335,17 @@ for ff = FSTART:FSTEP:FEND
     end
         
     % plot box
-    plot([0 Lx Lx 0 0], [0 0 Ly Ly 0], 'k-', 'linewidth', 1.5);
+    plot([0 L L 0 0], [0 0 L L 0], 'k-', 'linewidth', 1.5);
     axis equal;
     ax = gca;
     ax.XTick = [];
     ax.YTick = [];
-    ax.XLim = [-0.25 1.25]*Lx;
-    ax.YLim = [-0.25 1.25]*Ly;
+    ax.XLim = [-0.25 1.25]*L;
+    ax.YLim = [-0.25 1.25]*L;
     
     % if making a movie, save frame
     if makeAMovie == 1
-        currframe = getframe(gca);
+        currframe = getframe(gcf);
         writeVideo(vobj,currframe);
     end
 end

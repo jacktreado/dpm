@@ -40,8 +40,8 @@ const double kl = 0.1; 			// perimeter spring constant
 const double kc = 0.5; 			// interaction spring constant
 
 // set parameters
-const double ctch = 0.5;
-const double cKb = 1e-6;
+const double ctch = 0.25;
+const double cKb = 0;
 
 
 int main(int argc, char const *argv[])
@@ -113,7 +113,7 @@ int main(int argc, char const *argv[])
 	// run stretching simulation to create network
 	meso2Dobj.mesoNetworkExtension(&meso2D::mesoNetworkForceUpdate, Ftol, dt0, delShrink, dphiPrint, phiMin);
 	// double dPtol = 1e-10;
-	// double dl0 = 0.1;
+	// double dl0 = 5.0;
 	// double phiMin = 0.4;
 	// int NMINSKIP = 10;
 	// meso2Dobj.mesoNetworkEnthalpyMin(&meso2D::mesoNetworkForceUpdate, Ftol, dPtol, dt0, dl0, phiMin, NMINSKIP);

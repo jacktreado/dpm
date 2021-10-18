@@ -2,7 +2,7 @@
 // 
 // 	Will create bidisperse DPM particles, set constants,
 // 	place particle centers, relax shapes + positions, compress to target phi, print configuration
-//  g++ -O3 -std=c++11 -I src main/test/compresstest.cpp src/*.cpp -o compresstest.o 
+//  g++ -O3 --std=c++11 -I src main/test/compresstest.cpp src/*.cpp -o compresstest.o 
 
 
 
@@ -16,13 +16,14 @@ using namespace std;
 
 int main(){
 	// local variables
-	int NCELLS = 32, nsmall = 32, seed = 1;
-	double phi0 = 0.35, calA0 = 1.17, smallfrac = 0.5, sizefrac = 1.4, disp = 0.1, Ftol = 1e-8, dt0 = 2e-2;
-	double ka = 1.0, kl = 1.0, kb = 0.0, kc = 1.0, thA = 0.0, thK = 0.0, boxLengthScale = 3.0;
-	double phi0Target = 1.1, dphi0 = 0.01;
+	int NCELLS = 16, nsmall = 32, seed = 1;
+	double phi0 = 0.35, calA0 = 1.17, smallfrac = 0.5, sizefrac = 1.4, disp = 0.1, Ftol = 1e-12, dPtol = 1e-12, dt0 = 1e-2;
+	double ka = 1.0, kl = 1.0, kb = 0.0, kc = 1.0, thA = 0.0, thK = 0.0, boxLengthScale = 3.5;
+	double P0 = 1e-6, dphi0 = 0.01;
+	bool plotCompression = 1;
 
 	// name of output file
-	string posf = "pos_dp_calA1.17.test";
+	string posf = "pos.test";
 
 	// instantiate object
 	dpm configobj2D(NCELLS, NDIM, seed);
@@ -50,7 +51,8 @@ int main(){
 	configobj2D.initializeNeighborLinkedList2D(boxLengthScale);
 
 	// compress to target packing fraction
-	configobj2D.vertexCompress2Target2D(&dpm::repulsiveForceUpdate,Ftol,dt0,phi0Target,dphi0);
+	// configobj2D.vertexCompress2Target2D(&dpm::repulsiveForceUpdate,Ftol,dt0,phi0Target,dphi0);
+	configobj2D.vertexEnthalpyMin(&dpm::repulsiveForceUpdate,Ftol,dPtol,P0,dt0,plotCompression);
 
 	// say goodbye
 	cout << "\n\n** Finished compresstest.cpp, ending. " << endl;
