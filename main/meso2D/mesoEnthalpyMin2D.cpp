@@ -62,7 +62,7 @@ int main(int argc, char const *argv[])
 {
 	// local variables to be read in
 	int NCELLS, n1, seed;
-	double dispersion, calA0, kb0, betaEff, P0, da0, dl0, ctch, cL, cB, NVMAX;
+	double calA0, kb0, betaEff, P0, da0, dl0, ctch, cL, cB, NVMAX;
 
 	// read in parameters from command line input
 	string NCELLS_str 		= argv[1];
