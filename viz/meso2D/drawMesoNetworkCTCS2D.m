@@ -33,7 +33,7 @@ fstr = [floc '/' fpattern '.pos'];
 fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
-mesoData = readMesoNetwork2D(fstr);
+mesoData = readMesoNetworkCTCS2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
@@ -47,6 +47,7 @@ NFRAMES = sum(idx);
 NCELLS = mesoData.NCELLS;
 nv = mesoData.nv(idx,:);
 LList = mesoData.L;
+ctcList = mesoData.ctcs;
 x = mesoData.x(idx,:);
 y = mesoData.y(idx,:);
 r = mesoData.r(idx,:);
@@ -183,7 +184,6 @@ NTHE = length(th);
 ex = cos(th);
 ey = sin(th);
 
-
 % show vertices or not
 showverts = 0;
 
@@ -207,38 +207,37 @@ else
     cellCLR = winter(NUQ);
 end
 
-% draw cell cell contacts
-if ~isempty(who('ctcstr'))
-    % can choose to draw contacts
-    drawCTCS = 1;
-
-    % load in ctc data
-    if drawCTCS == 1
-        cijList = cell(NFRAMES,1);
-        zc = zeros(NFRAMES,NCELLS);
-        NCTCS = 0.5*NCELLS*(NCELLS-1);
-        ltInds =  find(tril(ones(NCELLS),-1));
-        frmt = repmat('%f ',1,NCTCS);
-        fid = fopen(ctcstr);
-        for ff = 1:NFRAMES
-            cijtmp = zeros(NCELLS);
-            ctmp = textscan(fid,frmt,1);
-            ctmp = cell2mat(ctmp);
-            cijtmp(ltInds) = ctmp;
-            cijtmp = cijtmp + cijtmp';
-            cijList{ff} = cijtmp;
-            zc(ff,:) = sum(cijtmp > 0,1);
+% construct list of contacts
+gijList = cell(NFRAMES,1);
+for ff = 1:NFRAMES
+    nvtmp = sum(nv(ff,:));
+    ctctmp = ctcList{ff};
+    gijtmp = zeros(nvtmp);
+    gi = 1;
+    ctchit = 1;
+    for ii = 1:nvtmp
+        for jj = (ii+1):nvtmp
+            if gi == (ctctmp(ctchit)+1)
+                gijtmp(ii,jj) = 1;
+                gijtmp(jj,ii) = 1;
+                ctchit = ctchit + 1;
+                if ctchit > length(ctctmp)
+                    break;
+                end
+            end
+            gi = gi+1;
         end
-        fclose(fid);
+        if ctchit > length(ctctmp)
+            break;
+        end
     end
-else
-    drawCTCS = 0;
+    gijList{ff} = gijtmp;
 end
 
 % get frames to plot
 if showverts == 0
     FSTART = 1;
-    FSTEP = 10;
+    FSTEP = 1;
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
@@ -315,8 +314,6 @@ for ff = FSTART:FSTEP:FEND
                 end
             end
         end
-%         text(cx,cy,num2str(nn));
-%         plot(mean(xtmp),mean(ytmp),'wo','markersize',8,'markerfacecolor','w');
         
 %         % get shape tensor
 %         cx = mean(xtmp);
@@ -335,6 +332,25 @@ for ff = FSTART:FSTEP:FEND
 %         cy = mod(cy,Ly);
 %         quiver(cx,cy,lambda(1)*V(1,1),lambda(1)*V(2,1),'-w','linewidth',2);
 %         quiver(cx,cy,lambda(2)*V(1,2),lambda(2)*V(2,2),'-w','linewidth',2);
+    end
+    
+    % plot vv contacts
+    gijtmp = gijList{ff};
+    xa = cell2mat(xf');
+    ya = cell2mat(yf');
+    NVTOT = sum(nv(ff,:));
+    for gi = 1:NVTOT
+        xi = xa(gi);
+        yi = ya(gi);
+        for gj = (gi+1):NVTOT
+            if (gijtmp(gi,gj) == 1)
+                dx = xa(gj) - xi;
+                dx = dx - L*round(dx/L);
+                dy = ya(gj) - yi;
+                dy = dy - L*round(dy/L);
+                plot([xi, xi + dx],[yi, yi + dy],'k-','linewidth',2);
+            end
+        end
     end
         
     % plot box
@@ -359,6 +375,9 @@ if makeAMovie == 1
     close(vobj);
 end
 
+
+
+return;
 
 %% Draw state with lowest coordination closest to z = 3
 

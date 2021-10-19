@@ -1475,14 +1475,16 @@ void meso2D::mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, 
 	resetForcesAndEnergy();
 	fill(v.begin(), v.end(), 0.0);
 
-	// vector of change in perimeter segment lengths
-	vector<double> lambda0i(NVTOT,0.0);
-
 	// initial length scale
 	rho0 = sqrt(a0.at(0));
 
 	// relax forces using FIRE
 	while ((fcheck > Ftol || dPcheck > dPtol || fireit < NDELAY) && fireit < itmax){
+		// VV VELOCITY UPDATE #1
+		for (i=0; i<vertDOF; i++)
+			v[i] += 0.5*dt*(F[i] - 0.5*v[i]*(Pi/V));
+		Pi += 0.5*dt*(P-P0);
+
 		// compute PFIRE
 		PFIRE = 0.0;
 		for (i=0; i<vertDOF; i++)
@@ -1546,7 +1548,7 @@ void meso2D::mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, 
 			// take half step backwards, reset velocities
 			for (i=0; i<vertDOF; i++){
 				// take half step backwards
-				x[i] -= 0.5*dt*v[i] + 0.25*x[i]*(Pi/V);
+				x[i] -= 0.5*dt*(v[i] + 0.5*x[i]*(Pi/V));
 
 				// reset vertex velocities
 				v[i] = 0.0;
@@ -1563,11 +1565,6 @@ void meso2D::mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, 
 				alpha = alpha0;
 			}
 		}
-
-		// VV VELOCITY UPDATE #1
-		for (i=0; i<vertDOF; i++)
-			v[i] += 0.5*dt*(F[i] - 0.5*v[i]*(Pi/V));
-		Pi += 0.5*dt*(P - P0);
 
 		// compute fnorm, vnorm and P
 		fnorm = 0.0;
@@ -2441,20 +2438,21 @@ void meso2D::mesoFreeGrowth(meso2DMemFn forceCall, double Ftol, double dt0, doub
 }
 
 // simulate network *formation* using *enthalpy minimization*
-void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double dPtol, double dt0, double dl0, double phiMin, int NMINSKIP){
+void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double dPtol, double dt0, double da0, double dl0, double P0, double phiMin, int NMINSKIP){
 	// local variables
-	int ci, d, k = 0;
-	double phi0 = vertexPreferredPackingFraction2D();
+	int i, ci, gi, d, k = 0;
+	double Lold, phi, phi0;
 
-	// P0
-	double P0 = 0.5*(stress[0] + stress[1]);
+	// initialize packing fraction definitions
+	phi0 = vertexPreferredPackingFraction2D();
+	phi = vertexPackingFraction2D();
 
 	// minimum contacts
-	int CTCMIN = 2;
-	int PAIRMIN = 2;
+	int CTCMIN = 0;
+	int PAIRMIN = 0;
 
 	// loop until phi0 < phiMin
-	while (phi0 > phiMin && k < itmax){
+	while (phi > phiMin && k < itmax){
 		// relax current configuration
 		mesoEnthalpyFIRE(forceCall, Ftol, dPtol, P0, dt0);
 
@@ -2462,11 +2460,18 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 		updateMesophyllBondNetwork(CTCMIN,PAIRMIN);
 
 		// age particle shapes
+		dt = da0;
 		ageMesophyllShapeParameters();
 
 		// add vertices
 		if (NVTOT < NVMAX)
-			addMesophyllCellMaterial(dl0);
+			addMesophyllCellMaterial(0.0);
+
+		// increase lengths of void segments
+		for (gi=0; gi<NVTOT; gi++){
+			if (zv[gi] <= 0 && zv[im1[gi]] <= 0)
+				l0[gi] *= (1.0 + da0*dl0);
+		}
 
 		// output to console
 		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
@@ -2483,6 +2488,8 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 		cout << endl;
 		cout << "	* k 			= " << k << endl;
 		cout << "	* phi0 			= " << phi0 << endl;
+		cout << "	* phi 			= " << vertexPackingFraction2D() << endl;
+		cout << "	* phi0 w/ verts = " << vertexPreferredPackingFraction2D() << endl;
 		cout << "	* P 			= " << 0.5*(stress[0] + stress[1]) << endl;
 		cout << "	* U 		 	= " << U << endl << endl;
 		cout << "	* Contacts:" << endl;
@@ -2497,16 +2504,22 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 
 		// print positions if change in packing fraction is large enough
 		if (k % NMINSKIP == 0)
-			printMesoNetwork2D();
+			printMesoNetworkCTCS2D();
+
+		// increase particle size
+		for (ci=0; ci<NCELLS; ci++)
+			a0[ci] *= (1.0 + da0*da0);
 
 		// increase box size
-		L[0] *= 1.01;
-		L[1] *= 1.01;
-		for (d = 0; d < NDIM; d++)
-			lb[d] = L[d] / sb[d];
+		// Lold = L[0];
+		// L[0] *= (1 + da0);
+		// L[1] *= (1 + da0);
+		// for (d = 0; d < NDIM; d++)
+		// 	lb[d] = L[d] / sb[d];
 
 		// update packing fraction
 		phi0 = vertexPreferredPackingFraction2D();
+		phi = vertexPackingFraction2D();
 
 		// update iterate
 		k++;
@@ -2686,11 +2699,10 @@ void meso2D::ageMesophyllShapeParameters(){
 		ti = atan2(sini,cosi);
 
 		// update t0
-		// if (zv[gi] > 0 && zv[ip1[gi]] > 0)
-		// 	t0[gi] -= dt*cB*t0[gi];
-		// else
-		// 	t0[gi] += dt*cB*(ti - t0[gi]);
-		t0[gi] = 0.0;
+		if (zv[gi] > 0 && zv[ip1[gi]] > 0)
+			t0[gi] += dt*cB*(ti - t0[gi]);
+		else
+			t0[gi] -= dt*cB*t0[gi];
 
 
 		// age bending mechanical constant
@@ -2948,18 +2960,16 @@ void meso2D::addMesophyllCellMaterial(double dl0){
 		// add vertices between neighbors of new vertices
 		else if (zv[gi] == -1){
 			// // relax new vertex toward mean segment length of cell
+			l0[gim1] += dl0*dt*(meanl - l0[gim1]);
+			l0[gi] += dl0*dt*(meanl - l0[gi]);
 
 			// birth if bwd neighbor is connected
-			if (zv[gim1] > 0 && dlim1 > testl){
-				l0[gim1] += dl0*dt*(meanl - l0[gim1]);
+			if (zv[gim1] > 0 && dlim1 > testl)
 				growthVerts.push_back(gim1);
-			}
 
 			// birth vertex if fwd neighbor is connected
-			if (zv[gip1] > 0 && dli > testl){
-				l0[gi] += dl0*dt*(meanl - l0[gi]);
+			if (zv[gip1] > 0 && dli > testl)
 				growthVerts.push_back(gi);
-			}
 		}
 	}
 
@@ -3781,7 +3791,7 @@ double meso2D::mesoPrintLinearResponse(){
 void meso2D::printMesoNetwork2D(){
 	// local variables
 	bool gtmp;
-	int ci, cj, vi, gi, gj, ctmp, zcc, zctmp, zvtmp, zg;
+	int ci, cj, vi, gi, gj, gijtmp, ctmp, zcc, zctmp, zvtmp, zg;
 	double xi, yi, dx, dy, Lx, Ly;
 
 	// check if pos object is open
@@ -3800,6 +3810,145 @@ void meso2D::printMesoNetwork2D(){
 	posout << setw(w) << left << "NEWFR" << " " << endl;
 	posout << setw(w) << left << "NUMCL" << setw(w) << left << NCELLS << endl;
 	posout << setw(w) << left << "PACKF" << setw(wnum) << setprecision(pnum) << left << vertexPackingFraction2D() << endl;
+
+	// // print contact info
+	// posout << setw(w) << left << "CTCTS";
+	// posout << setw(w) << left;
+	// for (gi=0; gi<NVTOT; gi++){
+	// 	for (gj=(gi+1); gj<NVTOT; gj++){
+	// 		gijtmp = NVTOT*gi + gj - (gi+1)*(gi+2)/2;
+	// 		if (gij[gijtmp])
+	// 			posout << gijtmp << "  ";
+	// 	}
+	// }
+
+	// print box sizes
+	posout << setw(w) << left << "BOXSZ";
+	posout << setw(wnum) << setprecision(pnum) << left << Lx;
+	posout << setw(wnum) << setprecision(pnum) << left << Ly;
+	posout << endl;
+
+	// print stress info
+	posout << setw(w) << left << "STRSS";
+	posout << setw(wnum) << setprecision(pnum) << left << stress.at(0);
+	posout << setw(wnum) << setprecision(pnum) << left << stress.at(1);
+	posout << setw(wnum) << setprecision(pnum) << left << stress.at(2);
+	posout << endl;
+
+	// print coordinate for rest of the cells
+	for (ci=0; ci<NCELLS; ci++){
+		// compute number of contacts with other cells
+		zctmp = 0;
+		for (cj=0; cj<NCELLS; cj++){
+			// compute # of cell contacts
+			ctmp = 0;
+			if (ci > cj)
+				ctmp = cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2];
+			else if (ci < cj)
+				ctmp = cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2];
+
+			if (ctmp > 0)
+				zctmp++;
+		}
+
+		// cell information
+		posout << setw(w) << left << "CINFO";
+		posout << setw(w) << left << nv.at(ci);
+		posout << setw(w) << left << zctmp;
+		posout << setw(wnum) << left << a0.at(ci);
+		posout << setw(wnum) << left << area(ci);
+		posout << setw(wnum) << left << perimeter(ci);
+		posout << endl;
+
+		// get initial vertex positions
+		gi = gindex(ci,0);
+		xi = x.at(NDIM*gi);
+		yi = x.at(NDIM*gi + 1);
+
+		posout << setw(w) << left << "VINFO";
+		posout << setw(w) << left << ci;
+		posout << setw(w) << left << 0;
+
+		// output initial vertex information
+		posout << setw(wnum) << setprecision(pnum) << right << xi;
+		posout << setw(wnum) << setprecision(pnum) << right << yi;
+		posout << setw(wnum) << setprecision(pnum) << right << r.at(gi);
+		posout << setw(wnum) << setprecision(pnum) << right << l0.at(gi);
+		posout << setw(wnum) << setprecision(pnum) << right << t0.at(gi);
+		posout << setw(wnum) << setprecision(pnum) << right << kbi.at(gi);
+		posout << setw(wnum) << setprecision(pnum) << right << zv.at(gi);
+		posout << endl;
+
+		// vertex information for next vertices
+		for (vi=1; vi<nv.at(ci); vi++){
+			// get global vertex index for next vertex
+			gi++;
+
+			// get next vertex positions
+			dx = x.at(NDIM*gi) - xi;
+			if (pbc[0])
+				dx -= Lx*round(dx/Lx);
+			xi += dx;
+
+			dy = x.at(NDIM*gi + 1) - yi;
+			if (pbc[1])
+				dy -= Ly*round(dy/Ly);
+			yi += dy;
+
+			// Print indexing information
+			posout << setw(w) << left << "VINFO";
+			posout << setw(w) << left << ci;
+			posout << setw(w) << left << vi;
+
+			// output vertex information
+			posout << setw(wnum) << setprecision(pnum) << right << xi;
+			posout << setw(wnum) << setprecision(pnum) << right << yi;
+			posout << setw(wnum) << setprecision(pnum) << right << r.at(gi);
+			posout << setw(wnum) << setprecision(pnum) << right << l0.at(gi);
+			posout << setw(wnum) << setprecision(pnum) << right << t0.at(gi);
+			posout << setw(wnum) << setprecision(pnum) << right << kbi.at(gi);
+			posout << setw(wnum) << setprecision(pnum) << right << zv.at(gi);
+			posout << endl;
+		}
+	}
+
+	// print end frame
+	posout << setw(w) << left << "ENDFR" << endl;
+}
+
+void meso2D::printMesoNetworkCTCS2D(){
+	// local variables
+	bool gtmp;
+	int ci, cj, vi, gi, gj, gijtmp, ctmp, zcc, zctmp, zvtmp, zg;
+	double xi, yi, dx, dy, Lx, Ly;
+
+	// check if pos object is open
+	if (!posout.is_open()){
+		cerr << "** ERROR: in printMesoNetwork2D, posout is not open, but function call will try to use. Ending here." << endl;
+		exit(1);
+	}
+	else
+		cout << "** In printMesoNetwork2D, printing particle positions to file..." << endl;
+
+	// save box sizes
+	Lx = L.at(0);
+	Ly = L.at(1);
+
+	// print information starting information
+	posout << setw(w) << left << "NEWFR" << " " << endl;
+	posout << setw(w) << left << "NUMCL" << setw(w) << left << NCELLS << endl;
+	posout << setw(w) << left << "PACKF" << setw(wnum) << setprecision(pnum) << left << vertexPackingFraction2D() << endl;
+
+	// print contact info
+	posout << setw(w) << left << "CTCTS";
+	for (gi=0; gi<NVTOT; gi++){
+		for (gj=(gi+1); gj<NVTOT; gj++){
+			gijtmp = NVTOT*gi + gj - (gi+1)*(gi+2)/2;
+			if (gij[gijtmp])
+				posout << gijtmp << "  ";
+		}
+	}
+	posout << endl;
 
 	// print box sizes
 	posout << setw(w) << left << "BOXSZ";

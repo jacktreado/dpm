@@ -125,7 +125,7 @@ public:
 	void mesoNetworkExtension(meso2DMemFn forceCall, double Ftol, double dt0, double delShrink, double dphiPrint, double phiMin);
 	void mesoPinExtension(double Ftol, double dt0, double hmax, double dh, double dhprint, double kcspring, int cellskip);
 	void mesoFreeGrowth(meso2DMemFn forceCall, double Ftol, double dt0, double dl0, double da0, double dphiPrint, double a0max);
-	void mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double dPtol, double dt0, double dl0, double phiMin, int NMINSKIP);
+	void mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double dPtol, double dt0, double da0, double dl0, double P0, double phiMin, int NMINSKIP);
 
 	// protocol helpers
 	void updateMesophyllBondNetwork(int CTCMIN, int PAIRMIN);
@@ -145,6 +145,7 @@ public:
 
 	// printing functions
 	void printMesoNetwork2D();
+	void printMesoNetworkCTCS2D();
 	void printMesoPin2D(std::vector<double> &xpin, double h);
 	void printMesoBondNetwork();
 };

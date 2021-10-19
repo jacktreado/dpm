@@ -31,7 +31,7 @@ using namespace std;
 // global constants
 const double delShrink = 1e-3;		// fractional change in effective box length during extension
 const double dphiPrint = 0.01;	   	// packing fractions to skip between print steps
-const double boxLengthScale = 2.1; 	// neighbor list box size in units of initial l0
+const double boxLengthScale = 2.5; 	// neighbor list box size in units of initial l0
 const double phi0 = 0.5;		   	// initial packing fraction
 const double dt0 = 1e-2;		   	// initial magnitude of time step in units of MD time
 const double Ftol = 1e-10; 			// force tolerance
@@ -111,12 +111,13 @@ int main(int argc, char const *argv[])
 	meso2Dobj.printMesoNetwork2D();
 
 	// run stretching simulation to create network
-	meso2Dobj.mesoNetworkExtension(&meso2D::mesoNetworkForceUpdate, Ftol, dt0, delShrink, dphiPrint, phiMin);
-	// double dPtol = 1e-10;
-	// double dl0 = 5.0;
-	// double phiMin = 0.4;
-	// int NMINSKIP = 10;
-	// meso2Dobj.mesoNetworkEnthalpyMin(&meso2D::mesoNetworkForceUpdate, Ftol, dPtol, dt0, dl0, phiMin, NMINSKIP);
+	// meso2Dobj.mesoNetworkExtension(&meso2D::mesoNetworkForceUpdate, Ftol, dt0, delShrink, dphiPrint, phiMin);
+	double dPtol = 1e-10;
+	double dl0 = 1.75;
+	double da0 = 0.001;
+	double P0 = 1e-6;
+	int NMINSKIP = 1;
+	meso2Dobj.mesoNetworkEnthalpyMin(&meso2D::mesoNetworkForceUpdate, Ftol, dPtol, dt0, da0, dl0, P0, phiMin, NMINSKIP);
 
 	// say goodbye
 	cout << "\n** Finished readInMesoNetwork2D.cpp, ending. " << endl;

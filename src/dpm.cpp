@@ -2824,7 +2824,7 @@ void dpm::vertexEnthalpyMin(dpmMemFn forceCall, double Ftol, double dPtol, doubl
 			// take half step backwards, reset velocities
 			for (i=0; i<vertDOF; i++){
 				// take half step backwards
-				x[i] -= (0.5*dt*v[i] + 0.25*x[i]*(Pi/V));
+				x[i] -= 0.5*dt*(v[i] + 0.5*x[i]*(Pi/V));
 
 				// reset vertex velocities
 				v[i] = 0.0;
