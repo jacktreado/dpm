@@ -6,31 +6,7 @@ close all;
 clc;
 
 % create file name
-
-% parameters
-Nstr = '32';
-nstr = '32';
-castr = '1.08';
-kb0str = '1e-4';
-bestr = '4.5';
-hstr = '0.2';
-cLstr = '5';
-aLstr = '1';
-cBstr = '0';
-cKbstr = '0';
-
-
-% seed
-seed = 5;
-seedstr = num2str(seed);
-
-% file name str
-floc = '~/Jamming/CellSim/dpm/viz/meso2D/local/meso2D_data';
-% fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_cKb' cKbstr '_seed' seedstr];
-% fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_kb0' kb0str '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_seed' seedstr];
-fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_kb0' kb0str '_be' bestr '_h' hstr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_cKb' cKbstr '_seed' seedstr];
-fstr = [floc '/' fpattern '.pos'];
-fstr = '~/Jamming/CellSim/dpm/pos.test';
+fstr = 'local/meso2D_data/mesoHMin2D_N32_n32_ca1.08_kb01e-4_be7_da1e-3_dl1.5_P1e-6_h0.25_cL5_cB1_seed4.posctc';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);
@@ -348,7 +324,11 @@ for ff = FSTART:FSTEP:FEND
                 dx = dx - L*round(dx/L);
                 dy = ya(gj) - yi;
                 dy = dy - L*round(dy/L);
-                plot([xi, xi + dx],[yi, yi + dy],'k-','linewidth',2);
+                for xx = 0
+                    for yy = 0
+                        plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'k-','linewidth',2);
+                    end
+                end
             end
         end
     end
