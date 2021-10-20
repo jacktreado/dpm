@@ -2573,7 +2573,10 @@ void meso2D::updateMesophyllBondNetwork(int CTCMIN, int PAIRMIN){
 						// check if connected, otherwise go to next vertex
 						isConnected = gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2];
 
-						if (isConnected){
+						// only break at edges
+						canBreak = (zv[im1[gi]] <= 0 || zv[ip1[gi]] <= 0) && (zv[im1[gj]] <= 0 || zv[ip1[gj]] <= 0);
+
+						if (isConnected && canBreak){
 							// contact distance
 							sij = r[gi] + r[gj];
 
@@ -2592,7 +2595,7 @@ void meso2D::updateMesophyllBondNetwork(int CTCMIN, int PAIRMIN){
 							// only check bond if extended
 							if (rij > sij){
 								// change in energy from bond breaking
-								dU = 1.0 - 0.5*(kc/zij)*(pow(1 - (rij/sij),2.0)/h2);
+								dU = 1.0 - 0.5*(pow(1 - (rij/sij),2.0)/h2);
 
 								// remove if bond detaching decreases energy
 								if (dU < 0){
@@ -2611,7 +2614,7 @@ void meso2D::updateMesophyllBondNetwork(int CTCMIN, int PAIRMIN){
 								}
 								else{
 									// else, remove conditionally
-									poff = exp(-betaEff*dU);
+									poff = exp(-(betaEff*dU)/zij);
 									rdraw = drand48();
 
 									// detach
@@ -2700,9 +2703,9 @@ void meso2D::ageMesophyllShapeParameters(){
 
 		// update t0
 		if (zv[gi] > 0 && zv[ip1[gi]] > 0)
-			t0[gi] += dt*cB*(ti - t0[gi]);
-		else
 			t0[gi] -= dt*cB*t0[gi];
+		else
+			t0[gi] += dt*cB*(ti - t0[gi]);
 
 
 		// age bending mechanical constant
@@ -3253,6 +3256,18 @@ void meso2D::t0ToCurrent(){
 
 		// update t0
 		t0[gi] = ti;
+	}
+}
+
+void meso2D::t0ToReg(){
+	int gi, ci, vi;
+
+	gi=0; 
+	for (ci=0; ci<NCELLS; ci++){
+		for (vi=0; vi<nv[ci]; vi++){
+			t0[gi] = (2.0*PI)/nv[ci];
+			gi++;
+		}
 	}
 }
 

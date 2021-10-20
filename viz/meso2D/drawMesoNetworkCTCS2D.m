@@ -6,7 +6,8 @@ close all;
 clc;
 
 % create file name
-fstr = 'local/meso2D_data/mesoHMin2D_N32_n32_ca1.08_kb01e-4_be7_da1e-3_dl1.5_P1e-6_h0.25_cL5_cB1_seed4.posctc';
+% fstr = 'local/meso2D_data/mesoHMin2D_N32_n32_ca1.08_kb01e-4_be7_da1e-3_dl1.5_P1e-6_h0.25_cL5_cB1_seed4.posctc';
+fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);
@@ -129,7 +130,6 @@ if NFRAMES > 5
     ylabel('$U_a$','Interpreter','latex');
     ax = gca;
     ax.FontSize = 22;
-    ax.YScale = 'log';
     
      % plot packing fractions
     figure(16), clf, hold on, box on;
@@ -143,11 +143,18 @@ if NFRAMES > 5
     ax = gca;
     ax.FontSize = 22;
     
-     % plot p0 vs phi0
+    % plot shape vs porosity
+    ambroseData = load('/Users/jacktreado/Jamming/Flowers/structure/plant/ambroseMesoCells/ambroseData.mat');
+    porosity = ambroseData.porosity;
+    calAMean = ambroseData.calAMean;
+    calAMin = ambroseData.calAMin;
+    calAMax = ambroseData.calAMax;
+    
     figure(17), clf, hold on, box on;
-    plot(mean(calA0,2),phi,'ko','markersize',10);
-    xlabel('$\mathcal{A}_0$','Interpreter','latex');
-    ylabel('$\phi$','Interpreter','latex');
+    plot(1-phi,mean(calA,2),'ko','markersize',10);
+    errorbar(porosity,calAMean,calAMin,calAMax,'-ko','markersize',10,'markerfacecolor','b');
+    ylabel('$\mathcal{A}_0$','Interpreter','latex');
+    xlabel('$1-\phi$','Interpreter','latex');
     ax = gca;
     ax.FontSize = 22;
 end
@@ -224,12 +231,14 @@ end
 
 % make a movie
 makeAMovie = 0;
+ctccopy = 0;
 if makeAMovie == 1
 %     moviestr = [fpattern '.mp4'];
     moviestr = 'meso2D_enthalpy.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
+    ctccopy = -1:1;
 end
 
 fnum = 1;
@@ -324,8 +333,8 @@ for ff = FSTART:FSTEP:FEND
                 dx = dx - L*round(dx/L);
                 dy = ya(gj) - yi;
                 dy = dy - L*round(dy/L);
-                for xx = 0
-                    for yy = 0
+                for xx = ctccopy
+                    for yy = ctccopy
                         plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'k-','linewidth',2);
                     end
                 end

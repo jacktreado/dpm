@@ -40,7 +40,7 @@ const double kl = 0.1; 			// perimeter spring constant
 const double kc = 0.5; 			// interaction spring constant
 
 // set parameters
-const double ctch = 0.25;
+const double ctch = 0.5;
 const double cKb = 0;
 
 
@@ -89,7 +89,7 @@ int main(int argc, char const *argv[])
 	meso2Dobj.initializeNeighborLinkedList2D(boxLengthScale);
 
 	// set max # of vertices
-	NVMAX = 2*meso2Dobj.getNVTOT();
+	NVMAX = 5*meso2Dobj.getNVTOT();
 	meso2Dobj.setNVMAX(NVMAX);
 
 	// set aging parameters
@@ -107,13 +107,14 @@ int main(int argc, char const *argv[])
 	// relax configuration using network + bending
 	meso2Dobj.initializeMesophyllBondNetwork();
 	meso2Dobj.mesoFIRE(&meso2D::mesoNetworkForceUpdate, Ftol, dt0);
-	meso2Dobj.t0ToCurrent();
-	meso2Dobj.printMesoNetwork2D();
+	// meso2Dobj.t0ToCurrent();
+	meso2Dobj.t0ToReg();
+	meso2Dobj.printMesoNetworkCTCS2D();
 
 	// run stretching simulation to create network
 	// meso2Dobj.mesoNetworkExtension(&meso2D::mesoNetworkForceUpdate, Ftol, dt0, delShrink, dphiPrint, phiMin);
 	double dPtol = 1e-10;
-	double dl0 = 1.75;
+	double dl0 = 1.2;
 	double da0 = 0.001;
 	double P0 = 1e-6;
 	int NMINSKIP = 1;

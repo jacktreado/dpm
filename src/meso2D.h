@@ -136,6 +136,7 @@ public:
 	int mesoBondedPAIRS(int ci, int cj);
 	void addVertex(int gi, double newl0);
 	void t0ToCurrent();
+	void t0ToReg();
 
 	// hessian computation
 	void mesoBendingHessian(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb);
