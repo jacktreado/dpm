@@ -2469,8 +2469,10 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 
 		// increase lengths of void segments
 		for (gi=0; gi<NVTOT; gi++){
-			if (zv[gi] <= 0 && zv[im1[gi]] <= 0)
+			if (zv[gi] < 0){
 				l0[gi] *= (1.0 + da0*dl0);
+				l0[im1[gi]] *= (1.0 + da0*dl0);
+			}
 		}
 
 		// output to console

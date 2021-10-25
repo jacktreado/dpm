@@ -148,7 +148,7 @@ int main(int argc, char const *argv[])
 	meso2Dobj.mesoNetworkEnthalpyMin(&meso2D::mesoNetworkForceUpdate, Ftol, dPtol, dt0, da0, dl0, P0, phiMin, NMINSKIP);
 
 	// say goodbye
-	cout << "\n** Finished mesoNetwork2D.cpp, ending. " << endl;
+	cout << "\n** Finished mesoEnthalpyMin2D.cpp, ending. " << endl;
 
 	return 0;
 }

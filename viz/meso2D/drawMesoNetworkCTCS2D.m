@@ -6,7 +6,7 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/meso2D_data/mesoHMin2D_N32_n32_ca1.08_kb01e-4_be7_da1e-3_dl1.5_P1e-6_h0.25_cL5_cB1_seed4.posctc';
+% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N128_n32_ca1.14_kb01e-3_be200_da1e-3_dl1.5_P1e-6_h0.5_cL1_cB1_seed1.posctc';
 fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
@@ -59,7 +59,7 @@ S = mesoData.S(idx,:);
 P = 0.5*(S(:,1) + S(:,2));
 
 % print if multiple frames
-if NFRAMES > 5
+if NFRAMES > 2
     Sxx = S(:,1);
     Syy = S(:,2);
     Sxy = S(:,3);
@@ -124,20 +124,21 @@ if NFRAMES > 5
     % plot area deviations
     ea = 0.5*(a./a0 - 1).^2;
     figure(15), clf, hold on, box on;
-    plot(phi,ea,'-','color',[0.5 0.5 0.5],'linewidth',1.2);
-    errorbar(phi,mean(ea,2),std(ea,0,2),'k--','linewidth',2);
+    plot(phi,ea,'-','color',[0.5 0.5 0.5],'linewidth',1);
+    plot(phi,mean(ea,2),'k-','linewidth',2.5);
     xlabel('$\phi$','Interpreter','latex');
     ylabel('$U_a$','Interpreter','latex');
     ax = gca;
     ax.FontSize = 22;
+    ax.YScale = 'log';
     
      % plot packing fractions
     figure(16), clf, hold on, box on;
     yyaxis left
-    plot(1:NFRAMES,phi,'ko','markersize',10);
+    plot(1:NFRAMES,phi,'ko','markersize',10,'markerfacecolor','b');
     ylabel('$\phi$','Interpreter','latex');
     yyaxis right
-    plot(1:NFRAMES,P,'ks','markersize',10);
+    plot(1:NFRAMES,P,'ks','markersize',10,'markerfacecolor','r');
     ylabel('$P$','Interpreter','latex');
     xlabel('frame','Interpreter','latex');
     ax = gca;
@@ -151,13 +152,15 @@ if NFRAMES > 5
     calAMax = ambroseData.calAMax;
     
     figure(17), clf, hold on, box on;
-    plot(1-phi,mean(calA,2),'ko','markersize',10);
+    errorbar(1-phi,mean(calA,2),std(calA,0,2),'ko','markersize',10);
     errorbar(porosity,calAMean,calAMin,calAMax,'-ko','markersize',10,'markerfacecolor','b');
-    ylabel('$\mathcal{A}_0$','Interpreter','latex');
+    ylabel('$\mathcal{A}$','Interpreter','latex');
     xlabel('$1-\phi$','Interpreter','latex');
     ax = gca;
     ax.FontSize = 22;
 end
+
+
 
 %% Draw cells
 
@@ -224,7 +227,7 @@ if showverts == 0
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
-    FSTART = NFRAMES;
+    FSTART = 1;
     FSTEP = 1;
     FEND = FSTART;
 end
@@ -234,7 +237,7 @@ makeAMovie = 0;
 ctccopy = 0;
 if makeAMovie == 1
 %     moviestr = [fpattern '.mp4'];
-    moviestr = 'meso2D_enthalpy.mp4';
+    moviestr = 'mesoHMin2D_N32_n32_ca1.14_kb01e-3_be100_da1e-3_dl1.5_P1e-6_h0.5_cL1_cB1_seed4.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -278,7 +281,7 @@ for ff = FSTART:FSTEP:FEND
                 for xx = -1:1
                     for yy = -1:1
                         if zctmp(nn) > 0
-                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',0.2);
+                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor',clr,'FaceColor','none','LineWidth',1.5);
                         else
                             rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor',clr,'FaceColor','none');
                         end
@@ -295,7 +298,7 @@ for ff = FSTART:FSTEP:FEND
                 for yy = -1:1
                     vpos = [xtmp + xx*L, ytmp + yy*L];
                     finfo = [1:nvtmp 1];
-                    patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k');
+                    patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k','Linewidth',2.5);
                 end
             end
         end
