@@ -6,8 +6,8 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N128_n32_ca1.14_kb01e-3_be200_da1e-3_dl1.5_P1e-6_h0.5_cL1_cB1_seed1.posctc';
-fstr = '~/Jamming/CellSim/dpm/pos.test';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb01e-3_be100_da1e-3_dl1.5_P1e-5_h0.5_cL1_cB1_seed3.posctc';
+% fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);
@@ -174,7 +174,7 @@ ey = sin(th);
 showverts = 0;
 
 % color by shape or size
-colorOpt = 0;
+colorOpt = 1;
 
 if colorOpt == 1
     % color by real shape
@@ -224,8 +224,8 @@ end
 if showverts == 0
     FSTART = 1;
     FSTEP = 1;
-    FEND = NFRAMES;
-%     FEND = FSTART;
+%     FEND = NFRAMES;
+    FEND = FSTART;
 else
     FSTART = 1;
     FSTEP = 1;
@@ -280,10 +280,10 @@ for ff = FSTART:FSTEP:FEND
                 yplot = ytmp(vv) - rv;
                 for xx = -1:1
                     for yy = -1:1
-                        if zctmp(nn) > 0
-                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor',clr,'FaceColor','none','LineWidth',1.5);
+                        if nn == 1
+                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',1.5);
                         else
-                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor',clr,'FaceColor','none');
+                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','none');
                         end
                     end
                 end
@@ -298,7 +298,7 @@ for ff = FSTART:FSTEP:FEND
                 for yy = -1:1
                     vpos = [xtmp + xx*L, ytmp + yy*L];
                     finfo = [1:nvtmp 1];
-                    patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k','Linewidth',2.5);
+                    patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k','Linewidth',2.5,'markersize',10);
                 end
             end
         end
@@ -338,7 +338,7 @@ for ff = FSTART:FSTEP:FEND
                 dy = dy - L*round(dy/L);
                 for xx = ctccopy
                     for yy = ctccopy
-                        plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'k-','linewidth',2);
+                        plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'w-','linewidth',2);
                     end
                 end
             end

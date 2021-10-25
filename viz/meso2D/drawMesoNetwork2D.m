@@ -185,7 +185,7 @@ ey = sin(th);
 
 
 % show vertices or not
-showverts = 0;
+showverts = 1;
 
 % color by shape or size
 colorOpt = 0;
@@ -293,10 +293,10 @@ for ff = FSTART:FSTEP:FEND
                 yplot = ytmp(vv) - rv;
                 for xx = -1:1
                     for yy = -1:1
-                        if zctmp(nn) > 0
+                        if nn == 1
                             rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',0.2);
                         else
-                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor',clr,'FaceColor','none');
+                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','none');
                         end
                     end
                 end
@@ -338,7 +338,7 @@ for ff = FSTART:FSTEP:FEND
     end
         
     % plot box
-    plot([0 L L 0 0], [0 0 L L 0], 'k-', 'linewidth', 1.5);
+%     plot([0 L L 0 0], [0 0 L L 0], 'k-', 'linewidth', 1.5);
     axis equal;
     ax = gca;
     ax.XTick = [];
