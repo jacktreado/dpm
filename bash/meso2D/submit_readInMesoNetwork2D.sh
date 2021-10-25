@@ -126,7 +126,7 @@ let fcount=1
 for f in $flist; do
     # parse file name
     file=${f##*/}
-    baseid=${file%%.pos}
+    baseid=${file%%.input}
     seed=${baseid#*seed*}
     echo seed = $seed, input file = $file
 
