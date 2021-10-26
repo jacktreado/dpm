@@ -7,7 +7,7 @@ maindir=$gitdir/main/meso2D
 
 # directories for dpm + tumor simulations
 dpmdir=/gpfs/loomis/project/fas/ohern/"$USER"/dpm
-outputdir=$dpmdir/mesoHMin2D
+outputdir=$dpmdir/mesoEnthalpyMin2D
 
 # parent directory for simulation input, throw error if it does not exist
 inputdir=$dpmdir/mesoInput2D
@@ -154,7 +154,7 @@ for f in $flist; do
     fi
 
     # create output file
-    outputf=$simdatadir/"$basestr"_seed"$seed".ctcpos
+    outputf=$simdatadir/"$basestr"_seed"$seed".posctc
 
     # create runString
     runString="./$binf $f $kb0 $betaEff $da0 $dl0 $P0 $ctch $cL $cB $seed $outputf"
