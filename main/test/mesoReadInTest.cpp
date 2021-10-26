@@ -3,7 +3,7 @@
 // * Same as mesoNetwork2D, but initial condition is read in 
 
 // Compilation command:
-// g++ -O3 --std=c++11 -I src main/meso2D/mesoReadInTest.cpp src/*.cpp -o meso.o
+// g++ -O3 --std=c++11 -I src main/test/mesoReadInTest.cpp src/*.cpp -o meso.o
 // ./meso.o meso.input 1e-3 3 1 1 1 0 1 pos.test
 //
 //
@@ -33,7 +33,7 @@ const double delShrink = 1e-3;		// fractional change in effective box length dur
 const double dphiPrint = 0.01;	   	// packing fractions to skip between print steps
 const double boxLengthScale = 2.5; 	// neighbor list box size in units of initial l0
 const double phi0 = 0.5;		   	// initial packing fraction
-const double dt0 = 1e-2;		   	// initial magnitude of time step in units of MD time
+const double dt0 = 5e-3;		   	// initial magnitude of time step in units of MD time
 const double Ftol = 1e-10; 			// force tolerance
 const double phiMin = 0.4;			// minimum packing fraction in decompression algorithm
 const double kl = 0.5; 			// perimeter spring constant

@@ -50,7 +50,7 @@ let endSeed=$startSeed+$numSeeds-1
 # name strings
 inputstr=mesoInput_N"$NCELLS"_n"$n1"_ca"$calA0"
 basestr=mesoHMin2D_N"$NCELLS"_n"$n1"_ca"$calA0"_kb0"$kb0"_be"$betaEff"_da"$da0"_dl"$dl0"_P"$P0"_h"$ctch"_cL"$cL"_cB"$cB"
-runstr="$basestr"_startseed"$startSeed"_endseed"$endSeed"
+runstr="$basestr"_ns"$numSeeds"
 
 # make directory specific for this simulation
 simdatadir=$outputdir/$basestr
