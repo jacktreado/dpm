@@ -6,11 +6,29 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.18_kb01e-2_be100_da1e-3_dl1.5_P1e-6_h0.5_cL1_cB1_seed4.posctc';
-fstr = '~/Jamming/CellSim/dpm/pos.test';
+
+% parameters
+Nstr = '32';
+nstr = '32';
+castr = '1.08';
+kb0str = '1e-4';
+bestr = '4.5';
+hstr = '0.2';
+cLstr = '5';
+aLstr = '1';
+cBstr = '0';
+cKbstr = '0';
+
+
+% seed
+seed = 5;
+seedstr = num2str(seed);
+
+% file name str
+fstr = '~/Jamming/CellSim/dpm/shear.test';
 
 % read in data
-mesoData = readMesoNetworkCTCS2D(fstr);
+mesoData = readMesoShearConfig2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
@@ -22,9 +40,9 @@ NFRAMES = sum(idx);
 
 % sim info
 NCELLS = mesoData.NCELLS;
+gamma = mesoData.gamma(idx);
 nv = mesoData.nv(idx,:);
 LList = mesoData.L;
-ctcList = mesoData.ctcs;
 x = mesoData.x(idx,:);
 y = mesoData.y(idx,:);
 r = mesoData.r(idx,:);
@@ -59,7 +77,7 @@ S = mesoData.S(idx,:);
 P = 0.5*(S(:,1) + S(:,2));
 
 % print if multiple frames
-if NFRAMES > 2
+if NFRAMES > 5
     Sxx = S(:,1);
     Syy = S(:,2);
     Sxy = S(:,3);
@@ -124,8 +142,8 @@ if NFRAMES > 2
     % plot area deviations
     ea = 0.5*(a./a0 - 1).^2;
     figure(15), clf, hold on, box on;
-    plot(phi,ea,'-','color',[0.5 0.5 0.5],'linewidth',1);
-    plot(phi,mean(ea,2),'k-','linewidth',2.5);
+    plot(phi,ea,'-','color',[0.5 0.5 0.5],'linewidth',1.2);
+    errorbar(phi,mean(ea,2),std(ea,0,2),'k--','linewidth',2);
     xlabel('$\phi$','Interpreter','latex');
     ylabel('$U_a$','Interpreter','latex');
     ax = gca;
@@ -135,32 +153,23 @@ if NFRAMES > 2
      % plot packing fractions
     figure(16), clf, hold on, box on;
     yyaxis left
-    plot(1:NFRAMES,phi,'ko','markersize',10,'markerfacecolor','b');
+    plot(1:NFRAMES,phi,'ko','markersize',10);
     ylabel('$\phi$','Interpreter','latex');
     yyaxis right
-    plot(1:NFRAMES,P,'ks','markersize',10,'markerfacecolor','r');
+    plot(1:NFRAMES,P,'ks','markersize',10);
     ylabel('$P$','Interpreter','latex');
     xlabel('frame','Interpreter','latex');
     ax = gca;
     ax.FontSize = 22;
     
-    % plot shape vs porosity
-    ambroseData = load('/Users/jacktreado/Jamming/Flowers/structure/plant/ambroseMesoCells/ambroseData.mat');
-    porosity = ambroseData.porosity;
-    calAMean = ambroseData.calAMean;
-    calAMin = ambroseData.calAMin;
-    calAMax = ambroseData.calAMax;
-    
+     % plot p0 vs phi0
     figure(17), clf, hold on, box on;
-    errorbar(1-phi,mean(calA,2),std(calA,0,2),'ko','markersize',10);
-    errorbar(porosity,calAMean,calAMin,calAMax,'-ko','markersize',10,'markerfacecolor','b');
-    ylabel('$\mathcal{A}$','Interpreter','latex');
-    xlabel('$1-\phi$','Interpreter','latex');
+    plot(mean(calA0,2),phi,'ko','markersize',10);
+    xlabel('$\mathcal{A}_0$','Interpreter','latex');
+    ylabel('$\phi$','Interpreter','latex');
     ax = gca;
     ax.FontSize = 22;
 end
-
-
 
 %% Draw cells
 
@@ -169,6 +178,7 @@ th = 0.0:0.01:(2.0*pi);
 NTHE = length(th);
 ex = cos(th);
 ey = sin(th);
+
 
 % show vertices or not
 showverts = 0;
@@ -193,59 +203,32 @@ else
     cellCLR = winter(NUQ);
 end
 
-% construct list of contacts
-gijList = cell(NFRAMES,1);
-for ff = 1:NFRAMES
-    nvtmp = sum(nv(ff,:));
-    ctctmp = ctcList{ff};
-    gijtmp = zeros(nvtmp);
-    gi = 1;
-    ctchit = 1;
-    for ii = 1:nvtmp
-        for jj = (ii+1):nvtmp
-            if gi == (ctctmp(ctchit)+1)
-                gijtmp(ii,jj) = 1;
-                gijtmp(jj,ii) = 1;
-                ctchit = ctchit + 1;
-                if ctchit > length(ctctmp)
-                    break;
-                end
-            end
-            gi = gi+1;
-        end
-        if ctchit > length(ctctmp)
-            break;
-        end
-    end
-    gijList{ff} = gijtmp;
-end
+% draw cell cell contacts
+if ~isempty(who('ctcstr'))
+    % can choose to draw contacts
+    drawCTCS = 1;
 
-% get cc contacts
-cijList = cell(NFRAMES,1);
-for ff = 1:NFRAMES
-    gijtmp = gijList{ff};
-    cijtmp = zeros(NCELLS);
-    nvtmp = nv(ff,:);
-    szList = [0 cumsum(nvtmp(1:end-1))] + 1;
-    for nn = 1:NCELLS
-        for mm = (nn+1):NCELLS
-            ctcfound = 0;
-            gi = szList(nn);
-            for vi = 1:nvtmp(nn)
-                gj = szList(mm);
-                for vj = 1:nvtmp(mm)
-                    if gijtmp(gi,gj) == 1 && ctcfound == 0
-                        cijtmp(nn,mm) = 1;
-                        cijtmp(mm,nn) = 1;
-                        ctcfound = 1;
-                    end
-                    gj = gj + 1;
-                end
-                gi = gi + 1;
-            end
+    % load in ctc data
+    if drawCTCS == 1
+        cijList = cell(NFRAMES,1);
+        zc = zeros(NFRAMES,NCELLS);
+        NCTCS = 0.5*NCELLS*(NCELLS-1);
+        ltInds =  find(tril(ones(NCELLS),-1));
+        frmt = repmat('%f ',1,NCTCS);
+        fid = fopen(ctcstr);
+        for ff = 1:NFRAMES
+            cijtmp = zeros(NCELLS);
+            ctmp = textscan(fid,frmt,1);
+            ctmp = cell2mat(ctmp);
+            cijtmp(ltInds) = ctmp;
+            cijtmp = cijtmp + cijtmp';
+            cijList{ff} = cijtmp;
+            zc(ff,:) = sum(cijtmp > 0,1);
         end
+        fclose(fid);
     end
-    cijList{ff} = cijtmp;
+else
+    drawCTCS = 0;
 end
 
 % get frames to plot
@@ -255,21 +238,18 @@ if showverts == 0
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
-    FSTART = round(0.4*NFRAMES);
+    FSTART = NFRAMES;
     FSTEP = 1;
-    FEND = NFRAMES;
+    FEND = FSTART;
 end
 
 % make a movie
 makeAMovie = 0;
-ctccopy = 0;
 if makeAMovie == 1
-    moviestr = 'debug.mp4';
-%     moviestr = 'mesoHMin2D_N32_n32_ca1.14_kb01e-3_be100_da1e-3_dl1.5_P1e-6_h0.5_cL1_cB1_seed4.mp4';
+    moviestr = 'meso2D_shear.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
-    ctccopy = -1:1;
 end
 
 fnum = 1;
@@ -283,8 +263,8 @@ for ff = FSTART:FSTEP:FEND
     xf = x(ff,:);
     yf = y(ff,:);
     rf = r(ff,:);
-    zctmp = zc(ff,:);
     L = LList(ff,1);
+    gamtmp = gamma(ff);
     for nn = 1:NCELLS
         xtmp = xf{nn};
         ytmp = yf{nn};
@@ -306,12 +286,12 @@ for ff = FSTART:FSTEP:FEND
                 rv = rtmp(vv);
                 xplot = xtmp(vv) - rv;
                 yplot = ytmp(vv) - rv;
-                for xx = 0
-                    for yy = 0
-                        if nn > 0
-                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',1.5);
+                for xx = -1:1
+                    for yy = -1:1
+                        if nn == 1
+                            rectangle('Position',[xplot + xx*L + gamtmp*yy*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',0.2);
                         else
-                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','w');
+                            rectangle('Position',[xplot + xx*L + gamtmp*yy*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','none');
                         end
                     end
                 end
@@ -324,45 +304,23 @@ for ff = FSTART:FSTEP:FEND
             ytmp = ytmp + 0.8*rtmp.*(ry./rads);
             for xx = -1:1
                 for yy = -1:1
-                    vpos = [xtmp + xx*L, ytmp + yy*L];
+                    vpos = [xtmp + xx*L + gamtmp*yy*L, ytmp + yy*L];
                     finfo = [1:nvtmp 1];
-                    patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k','Linewidth',2.5,'markersize',10);
-                end
-            end
-        end
-    end
-    
-    % plot vv contacts
-    gijtmp = gijList{ff};
-    xa = cell2mat(xf');
-    ya = cell2mat(yf');
-    NVTOT = sum(nv(ff,:));
-    for gi = 1:NVTOT
-        xi = xa(gi);
-        yi = ya(gi);
-        for gj = (gi+1):NVTOT
-            if (gijtmp(gi,gj) == 1)
-                dx = xa(gj) - xi;
-                dx = dx - L*round(dx/L);
-                dy = ya(gj) - yi;
-                dy = dy - L*round(dy/L);
-                for xx = ctccopy
-                    for yy = ctccopy
-                        plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'k-','linewidth',2);
-                    end
+                    patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k');
                 end
             end
         end
     end
         
     % plot box
-    plot([0 L L 0 0], [0 0 L L 0], 'k-', 'linewidth', 1.5);
+    plot([0 1 1+gamtmp gamtmp 0]*L,[0 0 L L 0],'-k','linewidth',2);
+    plot([0 1 1 0 0]*L,[0 0 L L 0],'--r','linewidth',1.2);
     axis equal;
     ax = gca;
     ax.XTick = [];
     ax.YTick = [];
-    ax.XLim = [-0.25 1.25]*L;
-    ax.YLim = [-0.25 1.25]*L;
+    ax.XLim = [0.95 1.05]*L;
+    ax.YLim = [0.95 1.05]*L;
     
     % if making a movie, save frame
     if makeAMovie == 1
@@ -376,7 +334,6 @@ end
 if makeAMovie == 1
     close(vobj);
 end
-
 
 
 return;

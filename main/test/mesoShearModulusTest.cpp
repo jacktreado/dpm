@@ -14,23 +14,21 @@ using namespace std;
 int main(){
 	// local variables
 	bool plotCompression = 0;
-	int NCELLS = 16, n1 = 24, seed = 1;
-	double phi0 = 0.7, calA0 = 1.08, dispersion = 0.1, Ftol = 1e-12, Ptol = 1e-5, dt0 = 0.02, dphi0 = 0.01;
-	double boxLengthScale = 3.0, betaEff = 1.0, ctcdel = 1.0, ctch = 0.5, cL = 0.01, aL = 1.0, cB = 0.0, cKb = 0.0, kb0 = 1e-3;
+	int seed = 1;
+	double dispersion = 0.1, Ftol = 1e-12, Ptol = 1e-6, dt0 = 0.01, dphi0 = 0.01;
+	double boxLengthScale = 10, betaEff = 1.0, ctcdel = 1.0, ctch = 0.5, cL = 0.01, aL = 1.0, cB = 0.0, cKb = 0.0, kb0 = 0;
 
 	// pointer to dpm member function (should pt to null)
 	dpmMemFn jammingForceUpdate = nullptr;
 	meso2DMemFn mesoForceUpdate = nullptr;
 
-	string inputf = "meso_input.test";
+	string inputf = "meso.input";
 	string posf = "pos.test";
 	string hessf = "hess.test";
+	string shearf = "shear.test";
 
 	// instantiate object
 	meso2D mesoHessObj(inputf,seed);
-
-	// open position config file
-	mesoHessObj.openPosObject(posf);
 
 	// initialize neighbor linked list
 	mesoHessObj.initializeNeighborLinkedList2D(boxLengthScale);
@@ -47,9 +45,18 @@ int main(){
 
 	// relax configuration using network + bending
 	mesoForceUpdate = &meso2D::mesoNetworkForceUpdate;
-	mesoHessObj.initializeMesophyllBondNetwork();
+	// mesoHessObj.initializeMesophyllBondNetwork();
 	mesoHessObj.t0ToCurrent();
 	mesoHessObj.mesoFIRE(mesoForceUpdate, Ftol, dt0);
+
+	// duplicate system
+	cout << "** Duplicating jammed system, computing shear modulus using Lees-Edwards" << endl;
+	int NCELLS = mesoHessObj.getNCELLS();
+	meso2D mesoShearObj(NCELLS,seed);
+	mesoShearObj = mesoHessObj;
+
+	// open position config file to normal system, print for first time
+	mesoHessObj.openPosObject(posf);
 	mesoHessObj.printMesoNetwork2D();
 
 	// compute shear modulus using dynamical matrix	
@@ -59,33 +66,31 @@ int main(){
 
 	// get initial shear stress
 	cout << "** Now getting shear stress, checking against Lees-Edwards boundary conditions" << endl;
-	double sxycurr, sxyold;
+	double sxycurr, sxyold, Ucurr, Uold;
 	double L = mesoHessObj.getL(0);
-	sxyold = mesoHessObj.getstress(2)*(L*L);
+	// sxyold = mesoHessObj.getstress(2)*(L*L);
 
 
-
-
-
-
-
-	// duplicate system
-	cout << "** Duplicating jammed system, computing shear modulus using Lees-Edwards" << endl;
-	meso2D mesoShearObj(NCELLS,seed);
-	mesoShearObj = mesoHessObj;
+	// open print file for sheared system
+	mesoShearObj.openPosObject(shearf);
+	Uold = mesoHessObj.getU();				// get from Hess obj, should be same as shear obj
+	sxyold = mesoShearObj.dUdgamma();
 
 	// compute shear modulus via Lees-Edwards boundary conditions
-	double dgamma = 1e-8;
+	double dgamma = 1e-6;
 	double gamma = dgamma;
-	int NGAMMA = 10;
+	int NGAMMA = 20;
 	vector<double> GLE(NGAMMA,0.0);
 	for (int g=0; g<NGAMMA; g++){
 		// relax using FIRE
 		cout << "** In main, minimizing at g = " << g << ", gamma = " << gamma << "...";
 		mesoShearObj.mesoShearStrainFIRE(gamma,Ftol,dt0);
+		mesoShearObj.printMesoShearConfig2D(gamma);
 
 		// get out shear stress
-		sxycurr = mesoShearObj.getstress(2)*(L*L);
+		// sxycurr = mesoShearObj.getstress(2)*(L*L);
+		Ucurr = mesoShearObj.getU();
+		sxycurr = mesoShearObj.dUdgamma();
 		cout << "sxy = " << sxycurr << endl;
 
 		// compute shear modulus

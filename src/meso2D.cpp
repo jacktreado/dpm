@@ -2467,12 +2467,18 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 		if (NVTOT < NVMAX)
 			addMesophyllCellMaterial(0.0);
 
-		// increase lengths of void segments
+		// // increase lengths of void segments
+		// for (gi=0; gi<NVTOT; gi++){
+		// 	if (zv[gi] < 0){
+		// 		l0[gi] *= (1.0 + da0*dl0);
+		// 		l0[im1[gi]] *= (1.0 + da0*dl0);
+		// 	}
+		// }
+
+		// increase lengths of void segments bordered by contact-less vertices
 		for (gi=0; gi<NVTOT; gi++){
-			if (zv[gi] < 0){
+			if (zv[gi] <= 0 && zv[ip1[gi]] <= 0)
 				l0[gi] *= (1.0 + da0*dl0);
-				l0[im1[gi]] *= (1.0 + da0*dl0);
-			}
 		}
 
 		// output to console
@@ -3793,7 +3799,6 @@ double meso2D::mesoPrintLinearResponse(){
 
 
 
-
 /******************************
 
 	M E S O P H Y L L
@@ -4186,5 +4191,123 @@ void meso2D::printMesoBondNetwork(){
 		}
 	}
 	ctcout << endl;
+}
+
+void meso2D::printMesoShearConfig2D(double gamma){
+	// local variables
+	bool gtmp;
+	int ci, cj, vi, gi, gj, gijtmp, ctmp, zcc, zctmp, zvtmp, zg;
+	double xi, yi, dx, dy, Lx, Ly;
+
+	// check if pos object is open
+	if (!posout.is_open()){
+		cerr << "** ERROR: in printMesoNetwork2D, posout is not open, but function call will try to use. Ending here." << endl;
+		exit(1);
+	}
+	else
+		cout << "** In printMesoNetwork2D, printing particle positions to file..." << endl;
+
+	// save box sizes
+	Lx = L.at(0);
+	Ly = L.at(1);
+
+	// print information starting information
+	posout << setw(w) << left << "NEWFR" << " " << endl;
+	posout << setw(w) << left << "NUMCL" << setw(w) << left << NCELLS << endl;
+	posout << setw(w) << left << "PACKF" << setw(wnum) << setprecision(pnum) << left << vertexPackingFraction2D() << endl;
+	posout << setw(w) << left << "GAMMA" << setw(wnum) << setprecision(pnum) << left << gamma << endl;
+
+	// print box sizes
+	posout << setw(w) << left << "BOXSZ";
+	posout << setw(wnum) << setprecision(pnum) << left << Lx;
+	posout << setw(wnum) << setprecision(pnum) << left << Ly;
+	posout << endl;
+
+	// print stress info
+	posout << setw(w) << left << "STRSS";
+	posout << setw(wnum) << setprecision(pnum) << left << stress.at(0);
+	posout << setw(wnum) << setprecision(pnum) << left << stress.at(1);
+	posout << setw(wnum) << setprecision(pnum) << left << stress.at(2);
+	posout << endl;
+
+	// print coordinate for rest of the cells
+	for (ci=0; ci<NCELLS; ci++){
+		// compute number of contacts with other cells
+		zctmp = 0;
+		for (cj=0; cj<NCELLS; cj++){
+			// compute # of cell contacts
+			ctmp = 0;
+			if (ci > cj)
+				ctmp = cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2];
+			else if (ci < cj)
+				ctmp = cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2];
+
+			if (ctmp > 0)
+				zctmp++;
+		}
+
+		// cell information
+		posout << setw(w) << left << "CINFO";
+		posout << setw(w) << left << nv.at(ci);
+		posout << setw(w) << left << zctmp;
+		posout << setw(wnum) << left << a0.at(ci);
+		posout << setw(wnum) << left << area(ci);
+		posout << setw(wnum) << left << perimeter(ci);
+		posout << endl;
+
+		// get initial vertex positions
+		gi = gindex(ci,0);
+		xi = x.at(NDIM*gi);
+		yi = x.at(NDIM*gi + 1);
+
+		posout << setw(w) << left << "VINFO";
+		posout << setw(w) << left << ci;
+		posout << setw(w) << left << 0;
+
+		// output initial vertex information
+		posout << setw(wnum) << setprecision(pnum) << right << xi;
+		posout << setw(wnum) << setprecision(pnum) << right << yi;
+		posout << setw(wnum) << setprecision(pnum) << right << r.at(gi);
+		posout << setw(wnum) << setprecision(pnum) << right << l0.at(gi);
+		posout << setw(wnum) << setprecision(pnum) << right << t0.at(gi);
+		posout << setw(wnum) << setprecision(pnum) << right << kbi.at(gi);
+		posout << setw(wnum) << setprecision(pnum) << right << zv.at(gi);
+		posout << endl;
+
+		// vertex information for next vertices
+		for (vi=1; vi<nv.at(ci); vi++){
+			// get global vertex index for next vertex
+			gi++;
+
+			// get next vertex positions
+			dx = x.at(NDIM*gi) - xi;
+			if (pbc[0])
+				dx -= Lx*round(dx/Lx);
+			xi += dx;
+
+			dy = x.at(NDIM*gi + 1) - yi;
+			if (pbc[1])
+				dy -= Ly*round(dy/Ly);
+			yi += dy;
+
+			// Print indexing information
+			posout << setw(w) << left << "VINFO";
+			posout << setw(w) << left << ci;
+			posout << setw(w) << left << vi;
+
+			// output vertex information
+			posout << setw(wnum) << setprecision(pnum) << right << xi;
+			posout << setw(wnum) << setprecision(pnum) << right << yi;
+			posout << setw(wnum) << setprecision(pnum) << right << r.at(gi);
+			posout << setw(wnum) << setprecision(pnum) << right << l0.at(gi);
+			posout << setw(wnum) << setprecision(pnum) << right << t0.at(gi);
+			posout << setw(wnum) << setprecision(pnum) << right << kbi.at(gi);
+			posout << setw(wnum) << setprecision(pnum) << right << zv.at(gi);
+			posout << endl;
+		}
+	}
+
+	// print end frame
+	posout << setw(w) << left << "ENDFR" << endl;
 }
 

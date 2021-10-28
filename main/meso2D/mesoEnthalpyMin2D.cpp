@@ -7,7 +7,7 @@
 //
 // Compilation command:
 // g++ -O3 --std=c++11 -I src main/meso2D/mesoEnthalpyMin2D.cpp src/*.cpp -o meso.o
-// ./meso.o 16 24 1.12 1e-4 5 1e-3 2 1e-5 0.25 2 0.5 1 pos.test
+// ./meso.o 16 24 1.12 1e-2 100 1e-3 1.5 1e-6 0.5 1 1 1 pos.test
 //
 //
 // Parameter input list
@@ -41,11 +41,11 @@ const double dphiGrow = 0.01;	   	// packing fraction increment during initial g
 const double delShrink = 1e-3;		// fractional change in effective box length during extension
 const double boxLengthScale = 3.0; 	// neighbor list box size in units of initial l0
 const double phi0 = 0.5;		   	// initial packing fraction
-const double dt0 = 2e-3;		   	// initial magnitude of time step in units of MD time
+const double dt0 = 5e-3;		   	// initial magnitude of time step in units of MD time
 const double Ptol = 1e-6;		   	// target pressure in initial compression
 const double Ftol = 1e-10; 			// force tolerance
 const double dPtol = 1e-10; 		// fixed pressure tolerance
-const double phiMin = 0.4;			// minimum packing fraction in decompression algorithm
+const double phiMin = 0.3;			// minimum packing fraction in decompression algorithm
 const double T0 = 1e-2; 			// temperature for jamming preparation protocol
 const double trun = 50.0; 			// amount of time to run annealing
 const double kl = 0.5; 				// perimeter spring constant
@@ -54,6 +54,7 @@ const double dispersion = 0.1; 		// polydispersity (fixed)
 const double aL = 1.0; 				// distribute aging to void only
 const double cKb = 0.0; 			// bending rigidity aging
 const int NMINSKIP = 10; 			// number of frames to skip
+const int NVMAXMAG = 5; 			// scale of max number of vertices
 
 // set parameters
 const double ctcdel = 1.0;
@@ -120,7 +121,7 @@ int main(int argc, char const *argv[])
 	meso2Dobj.initializeNeighborLinkedList2D(boxLengthScale);
 
 	// set max # of vertices
-	NVMAX = 5*meso2Dobj.getNVTOT();
+	NVMAX = NVMAXMAG*meso2Dobj.getNVTOT();
 	meso2Dobj.setNVMAX(NVMAX);
 
 	// jam to target pressure

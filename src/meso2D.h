@@ -149,6 +149,7 @@ public:
 	void printMesoNetworkCTCS2D();
 	void printMesoPin2D(std::vector<double> &xpin, double h);
 	void printMesoBondNetwork();
+	void printMesoShearConfig2D(double gamma);
 };
 
 #endif
