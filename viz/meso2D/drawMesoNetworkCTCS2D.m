@@ -6,8 +6,8 @@ close all;
 clc;
 
 % create file name
-fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n24_ca1.18_kb01e-2_be125_da1e-3_dl0.1_P1e-6_h0.5_cL1_cB0_seed14.posctc';
-% fstr = '~/Jamming/CellSim/dpm/pos.test';
+% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n24_ca1.18_kb01e-3_be100_da1e-3_dl0.1_P1e-6_h0.5_cL5_cB5_seed13.posctc';
+fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);
@@ -152,7 +152,7 @@ if NFRAMES > 2
     calAMax = ambroseData.calAMax;
     
     figure(17), clf, hold on, box on;
-    errorbar(1-phi,mean(calA,2),std(calA,0,2),'ko','markersize',10);
+    errorbar(phi(2)-phi,mean(calA,2),std(calA,0,2),'ko','markersize',10);
     errorbar(porosity,calAMean,calAMin,calAMax,'-ko','markersize',10,'markerfacecolor','b');
     ylabel('$\mathcal{A}$','Interpreter','latex');
     xlabel('$1-\phi$','Interpreter','latex');
@@ -251,7 +251,7 @@ end
 % get frames to plot
 if showverts == 0
     FSTART = 1;
-    FSTEP = 10;
+    FSTEP = 1;
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
