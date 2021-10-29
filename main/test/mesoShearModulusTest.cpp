@@ -68,8 +68,6 @@ int main(){
 	cout << "** Now getting shear stress, checking against Lees-Edwards boundary conditions" << endl;
 	double sxycurr, sxyold, Ucurr, Uold;
 	double L = mesoHessObj.getL(0);
-	// sxyold = mesoHessObj.getstress(2)*(L*L);
-
 
 	// open print file for sheared system
 	mesoShearObj.openPosObject(shearf);

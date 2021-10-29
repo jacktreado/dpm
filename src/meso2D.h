@@ -137,6 +137,8 @@ public:
 	void addVertex(int gi, double newl0);
 	void t0ToCurrent();
 	void t0ToReg();
+	double sigAffine(double gamma);
+	double GAffine(double gamma);
 
 	// hessian computation
 	void mesoBendingHessian(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb);

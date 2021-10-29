@@ -3799,6 +3799,187 @@ double meso2D::mesoPrintLinearResponse(){
 
 
 
+// function to compute shear stress (first derivative of U w.r.t. shear strain gamma)
+double meso2D::sigAffine(double gamma){
+	// local variables
+	int gi, gj, im, ci, cj, vi, vj;
+	double sig = 0.0;
+	double l0i, lim1x, lim1y, lix, liy, lim1,li, uim1x, uim1y, uix, uiy, dli;
+	double si, ci, ti, dti;
+
+	// loop over vertices
+	for (gi=0; gi<NVTOT; gi++){
+		// -- PERIMETER ENERGY CONTRIBUTION 
+
+		// segment preferred length
+		l0i = l0[gi];
+
+		// segment vectors
+		lim1y 	= x[NDIM*gi + 1] - x[NDIM*im1[gi] + 1];
+		im 		= round(dy/L[1]);
+		lim1x 	= x[NDIM*gi] - x[NDIM*im1[gi]];
+
+		lix 	= x[NDIM*ip1[gi]] - x[NDIM*gi];
+		liy 	= x[NDIM*ip1[gi] + 1] - x[NDIM*gi + 1];
+
+		// check periodic boundaries
+		if (pbc[0]){
+			lim1x -= L[0]*round(lim1x/L[0]);
+			lix -= L[0]*round(lix/L[0]);
+		}
+		if (pbc[1]){
+			lim1y -= L[1]*round(lim1y/L[1]);
+			liy -= L[1]*round(liy/L[1]);
+		}
+
+		// segment lengths
+		lim1 = sqrt(lim1x*lim1x + lim1y*lim1y);
+		li = sqrt(lix*lix + liy*liy);
+
+		// segment unit vectors
+		uim1x 	= lim1x/lim1;
+		uim1y 	= lim1y/lim1;
+
+		uix 	= lix/li;
+		uiy 	= liy/li;
+
+		// segment strain
+		dli = (li/l0i) - 1.0;
+
+		// add to stress contribution
+		sig += kl*(dli/l0i)*uiy*lix;
+
+
+		// -- BENDING ENERGY CONTRIBUTION
+		si = lix*lim1y - liy*lim1x;
+		ci = lix*lim1x + liy*lim1y;
+
+		// angle
+		ti = atan2(si,ci);
+
+		// angle deviation
+		dti = ti - t0[gi];
+
+		// add to stress constribution
+		sig += kb*(dti*(uiy*uiy - uim1y*uim1y));
+
+
+
+		// -- INTERACTION ENERGY CONTRIBUTION
+		for (gj=gi+1; gj<NVTOT; gj++){
+			// contact distance
+			sij = r[gi] + r[gj];
+
+			// get vertex-vertex distance
+			dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
+			im = round(dy/L[1]);
+			dy -= L[1]*im;
+
+			dx = x[NDIM*gj] - x[NDIM*gi];
+			dx -= L[1]*im*gamma;
+			dx -= L[0]*round(dx/L[0]);
+
+			rij = sqrt(dx*dx + dy*dy);
+
+			if (rij < sij){
+
+			}
+			if (gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2]){
+
+				// only compute force if spring is extended
+				if (rij > sij){
+					// get cell indices
+					cindices(ci,vi,gi);
+					cindices(cj,vj,gj);
+
+					// zij: determines strength of bond attraction
+					zij = 0.5*(zc[ci] + zc[cj])*ctcdel + 1.0;
+
+					// add to shear stress
+					U += 0.5*(kc/zij)*pow((1 - (rij/sij)),2.0);
+				}
+			}
+		}
+	}
+
+	// return stress value
+	return sig;
+}
+
+
+
+// function to compute affine contribution to shear modulus (second *partial* derivative of U w.r.t. shear strain gamma)
+double meso2D::GAffine(double gamma){
+	// local variables
+	int gi;
+	double Gaff = 0.0;
+	double l0i, lim1x, lim1y, lix, liy, lim1,li, uim1x, uim1y, uix, uiy, dli;
+	double si, ci, ti, dti;
+
+	// loop over vertices
+	for (gi=0; gi<NVTOT; gi++){
+		// -- PERIMETER ENERGY CONTRIBUTION 
+
+		// segment preferred length
+		l0i = l0[gi];
+
+		// segment vectors
+		lim1x 	= x[NDIM*gi] - x[NDIM*im1[gi]];
+		lim1y 	= x[NDIM*gi + 1] - x[NDIM*im1[gi] + 1];
+
+		lix 	= x[NDIM*ip1[gi]] - x[NDIM*gi];
+		liy 	= x[NDIM*ip1[gi] + 1] - x[NDIM*gi + 1];
+
+		// check periodic boundaries
+		if (pbc[0]){
+			lim1x -= L[0]*round(lim1x/L[0]);
+			lix -= L[0]*round(lix/L[0]);
+		}
+		if (pbc[1]){
+			lim1y -= L[1]*round(lim1y/L[1]);
+			liy -= L[1]*round(liy/L[1]);
+		}
+
+		// segment lengths
+		lim1 = sqrt(lim1x*lim1x + lim1y*lim1y);
+		li = sqrt(lix*lix + liy*liy);
+
+		// segment unit vectors
+		uim1x 	= lim1x/lim1;
+		uim1y 	= lim1y/lim1;
+
+		uix 	= lix/li;
+		uiy 	= liy/li;
+
+		// segment strain
+		dli = (li/l0i) - 1.0;
+
+		// add to (affine) shear modulus
+		Gaff += kl*((uliy/l0i)*(dli*liy + ((uiy*lix*lix)/l0i)));
+
+
+
+
+		// -- BENDING ENERGY CONTRIBUTION
+		si = lix*lim1y - liy*lim1x;
+		ci = lix*lim1x + liy*lim1y;
+
+		// angle
+		ti = atan2(si,ci);
+
+		// angle deviation
+		dti = ti - t0[gi];
+
+		// add to (affine) shear modulus
+		Gaff += kb*(pow(uiy*uiy - uim1y*uim1y,2.0) + 2.0*dti*uiy*uim1y*(uix*uim1y - uim1x*uiy));
+	}
+
+	// return stress value
+	return Gaff;
+}
+
+
+
 /******************************
 
 	M E S O P H Y L L
