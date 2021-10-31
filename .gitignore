@@ -1,6 +1,7 @@
 *.o
 *.xyz
 *.test
+*.input
 bash/*/slurm
 bash/*/bin
 bash/*/tasks

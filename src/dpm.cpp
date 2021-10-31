@@ -294,6 +294,7 @@ double dpm::perimeter(int ci) {
 	return perimVal;
 }
 
+
 // get cell center of mass position
 void dpm::com2D(int ci, double &cx, double &cy) {
 	// local variables
@@ -2704,6 +2705,216 @@ void dpm::vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double d
 
 		// update iterate
 		k++;
+	}
+}
+
+void dpm::vertexEnthalpyMin(dpmMemFn forceCall, double Ftol, double dPtol, double P0, double dt0, bool plotCompression) {
+	// local variables
+	int i, d;
+	double rho0; 
+
+	// box size, momentum, and internal virial pressure
+	double V=L[0]*L[1], Pi=0.0, P=0.0;
+
+	// check to see if cell linked-list has been initialized
+	if (NBX == -1){
+		cerr << "	** ERROR: In meso2D::mesoNetworkFIRE, NBX = -1, so cell linked-list has not yet been initialized. Ending here.\n";
+		exit(1);
+	}
+
+	// FIRE variables
+	double PFIRE, fnorm, fcheck, dPcheck, vnorm, alpha, dtmax, dtmin;
+	int npPos, npNeg, fireit;
+
+	// set dt based on geometric parameters
+	setdt(dt0);
+
+	// Initialize FIRE variables
+	PFIRE  		= 0;	
+	fnorm 		= 0;
+	vnorm 		= 0;
+	alpha   	= alpha0;
+
+	dtmax   	= 20.0*dt;
+	dtmin   	= 1e-1*dt;
+
+	npPos      	= 0;
+	npNeg      	= 0;
+
+	fireit    	= 0;
+	fcheck  	= 10*Ftol;
+
+	// reset forces and velocities
+	resetForcesAndEnergy();
+	fill(v.begin(), v.end(), 0.0);
+
+	// initial length scale
+	rho0 = sqrt(a0.at(0));
+
+	// relax forces using FIRE
+	while ((fcheck > Ftol || dPcheck > dPtol || fireit < NDELAY) && fireit < itmax){
+		// VV VELOCITY UPDATE #1
+		for (i=0; i<vertDOF; i++)
+			v[i] += 0.5*dt*(F[i] - 0.5*v[i]*(Pi/V));
+		Pi += 0.5*dt*(P-P0);
+
+		// compute PFIRE
+		PFIRE = 0.0;
+		for (i=0; i<vertDOF; i++)
+			PFIRE += v[i]*(F[i] - 0.5*v[i]*(Pi/V));
+		PFIRE += Pi*(P-P0);
+
+		// print to console
+		if (fireit % NSKIP == 0){
+			cout << endl << endl;
+			cout << "===========================================" << endl;
+			cout << " 	F I R E 								" << endl;
+			cout << " 		E N T H A L P Y  					" << endl;
+			cout << "	M I N I M I Z A T I O N 				" << endl;
+			cout << "===========================================" << endl;
+			cout << endl;
+			cout << "	** fireit 	= " << fireit << endl;
+			cout << "	** fcheck 	= " << fcheck << endl;
+			cout << "	** U 		= " << U << endl;
+			cout << "	** dt 		= " << dt << endl;
+			cout << "	** PFIRE 	= " << PFIRE << endl;
+			cout << "	** alpha 	= " << alpha << endl;
+			cout << "	** npPos 	= " << npPos << endl;
+			cout << "	** npNeg 	= " << npNeg << endl;
+			cout << "	** V  		= " << V << endl;
+			cout << "	** P 		= " << P << endl;
+			cout << "	** Pi 		= " << Pi << endl;
+			cout << "	** phi 		= " << vertexPackingFraction2D() << endl;
+
+			if (plotCompression)
+				printConfiguration2D();
+		}
+
+		// Adjust simulation based on net motion of degrees of freedom
+		if (PFIRE > 0){
+			// increase positive counter
+			npPos++;
+
+			// reset negative counter
+			npNeg = 0;
+
+			// alter simulation if enough positive steps have been taken
+			if (npPos > NDELAY){
+				// change time step
+				if (dt*finc < dtmax)
+					dt *= finc;
+
+				// decrease alpha
+				alpha *= falpha;
+			}
+		}
+		else{
+			// reset positive counter
+			npPos = 0;
+
+			// increase negative counter
+			npNeg++;
+
+			// check if simulation is stuck
+			if (npNeg > NNEGMAX){
+				cerr << "	** ERROR: During initial FIRE minimization, P < 0 for too long, so ending." << endl;
+				exit(1);
+			}
+
+			// take half step backwards, reset velocities
+			for (i=0; i<vertDOF; i++){
+				// take half step backwards
+				x[i] -= 0.5*dt*(v[i] + 0.5*x[i]*(Pi/V));
+
+				// reset vertex velocities
+				v[i] = 0.0;
+			}
+			V -= 0.5*dt*Pi;
+
+			// decrease time step if past initial delay
+			if (fireit > NDELAY){
+				// decrease time step 
+				if (dt*fdec > dtmin)
+					dt *= fdec;
+
+				// reset alpha
+				alpha = alpha0;
+			}
+		}
+
+		// compute fnorm, vnorm and P
+		fnorm = 0.0;
+		vnorm = 0.0;
+		for (i=0; i<vertDOF; i++){
+			fnorm 	+= pow(F[i] - 0.5*v[i]*(Pi/V),2.0);
+			vnorm 	+= v[i]*v[i];
+		}
+		fnorm += pow(P - P0,2.0);
+		vnorm += Pi*Pi;
+		fnorm = sqrt(fnorm);
+		vnorm = sqrt(vnorm);
+
+		// update velocities (s.d. vs inertial dynamics) only if forces are acting
+		if (fnorm > 0){
+			for (i=0; i<vertDOF; i++)
+				v[i] = (1 - alpha)*v[i] + alpha*((F[i]-0.5*v[i]*(Pi/V))/fnorm)*vnorm;
+			Pi = (1 - alpha)*Pi + alpha*((P - P0)/fnorm)*vnorm;
+		}
+
+		// VV POSITION UPDATE
+		for (i=0; i<vertDOF; i++)
+			x[i] += dt*(v[i] + 0.5*x[i]*(Pi/V));
+		V += dt*Pi;
+		L[0] = sqrt(V);
+		L[1] = sqrt(V);
+		for (d = 0; d < NDIM; d++)
+			lb[d] = L[d] / sb[d];
+
+		// update forces (function passed as argument)
+		CALL_MEMBER_FN(*this, forceCall)();
+
+		// update instantaneous pressure
+		P = 0.5*(stress[0] + stress[1]);
+
+		// VV VELOCITY UPDATE #2
+		for (i=0; i<vertDOF; i++)
+			v[i] += 0.5*dt*(F[i] - 0.5*v[i]*(Pi/V));
+		Pi += 0.5*dt*(P - P0);
+
+		// update fcheck based on fnorm (= force per degree of freedom)
+		fcheck = 0.0;
+		for (i=0; i<vertDOF; i++)
+			fcheck += pow(F[i] - 0.5*v[i]*(Pi/V),2.0);
+		fcheck += pow(P - P0,2.0);
+		fcheck = sqrt(fcheck/vertDOF);
+
+		// update iterator
+		fireit++;
+	}
+	// check if FIRE converged
+	if (fireit == itmax){
+		cout << "	** FIRE minimization did not converge, fireit = " << fireit << ", itmax = " << itmax << "; ending." << endl;
+		exit(1);
+	}
+	else{
+		cout << endl;
+		cout << "===========================================" << endl;
+		cout << " 	F I R E 								" << endl;
+		cout << " 		E N T H A L P Y  					" << endl;
+		cout << "	M I N I M I Z A T I O N 				" << endl;
+		cout << "		C O N V E R G E D! 					" << endl;
+		cout << "===========================================" << endl;
+		cout << endl;
+		cout << "	** fireit 	= " << fireit << endl;
+		cout << "	** fcheck 	= " << fcheck << endl;
+		cout << "	** U 		= " << U << endl;
+
+		cout << "	** fnorm	= " << fnorm << endl;
+		cout << "	** vnorm 	= " << vnorm << endl;
+		cout << "	** dt 		= " << dt << endl;
+		cout << "	** P 		= " << P << endl;
+		cout << "	** alpha 	= " << alpha << endl;
+		cout << endl << endl;
 	}
 }
 

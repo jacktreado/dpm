@@ -237,6 +237,7 @@ public:
 	void vertexCompress2Target2D(dpmMemFn forceCall, double Ftol, double dt0, double phi0Target, double dphi0);
 	void vertexJamming2D(dpmMemFn forceCall, double Ftol, double Ptol, double dt0, double dphi0, bool plotCompression);
 	void vertexAnneal2Jam2D(dpmMemFn forceCall, double Ftol, double Ptol, double dt0, double dphi0, double T0, double trun, bool plotCompression);
+	void vertexEnthalpyMin(dpmMemFn forceCall, double Ftol, double dPtol, double P0, double dt0, bool plotCompression);
 
 	// hessian methods
 	// note: dynamical matrix contribution is always M = H - S

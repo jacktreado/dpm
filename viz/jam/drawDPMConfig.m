@@ -41,8 +41,8 @@ end
 % file info
 vizdir = pwd;
 fname = [fpattern '.pos'];
-fstr = [vizdir '/' datadir '/' fname];
-% fstr = '../../pos.test';
+% fstr = [vizdir '/' datadir '/' fname];
+fstr = '../../pos.test';
 
 % read in data
 dpmData = readDPMConfig(fstr);
@@ -51,9 +51,7 @@ dpmData = readDPMConfig(fstr);
 NFRAMES = dpmData.NFRAMES;
 NCELLS = dpmData.NCELLS;
 nv = dpmData.nv(1,:);
-L = dpmData.L(1,:);
-Lx = L(1);
-Ly = L(2);
+LList = dpmData.L;
 x = dpmData.x;
 y = dpmData.y;
 r = dpmData.r;
@@ -74,7 +72,7 @@ phi = dpmData.phi;
 %% Draw cells
 
 % show vertices or not
-showverts = 1;
+showverts = 0;
 
 % get cell colors
 [nvUQ, ~, IC] = unique(nv);
@@ -84,7 +82,7 @@ cellCLR = winter(NUQ);
 % get frames to plot
 if showverts == 0
     FSTART = 1;
-    FSTEP = 1;
+    FSTEP = 3;
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
@@ -94,9 +92,9 @@ else
 end
 
 % make a movie
-makeAMovie = 0;
+makeAMovie = 1;
 if makeAMovie == 1
-    moviestr = 'a2j.mp4';
+    moviestr = 'compress2jamming.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -115,6 +113,7 @@ for ff = FSTART:FSTEP:FEND
     yf = y(ff,:);
     rf = r(ff,:);
     zctmp = zc(ff,:);
+    L = LList(ff,1);
     for nn = 1:NCELLS
         xtmp = xf{nn};
         ytmp = yf{nn};
@@ -134,9 +133,9 @@ for ff = FSTART:FSTEP:FEND
                 for xx = -1:1
                     for yy = -1:1
                         if zctmp(nn) > 0
-                            rectangle('Position',[xplot + xx*Lx, yplot + yy*Ly, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',0.2);
+                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',0.2);
                         else
-                            rectangle('Position',[xplot + xx*Lx, yplot + yy*Ly, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor',clr,'FaceColor','none');
+                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor',clr,'FaceColor','none');
                         end
                     end
                 end
@@ -151,7 +150,7 @@ for ff = FSTART:FSTEP:FEND
             ytmp = ytmp + 0.8*rtmp.*(ry./rads);
             for xx = -1:1
                 for yy = -1:1
-                    vpos = [xtmp + xx*Lx, ytmp + yy*Ly];
+                    vpos = [xtmp + xx*L, ytmp + yy*L];
                     finfo = [1:nv(nn) 1];
                     patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k');
                 end
@@ -160,17 +159,17 @@ for ff = FSTART:FSTEP:FEND
     end
     
     % plot box
-    plot([0 Lx Lx 0 0], [0 0 Ly Ly 0], 'k-', 'linewidth', 1.5);
+    plot([0 L L 0 0], [0 0 L L 0], 'k-', 'linewidth', 1.5);
     axis equal;
     ax = gca;
     ax.XTick = [];
     ax.YTick = [];
-    ax.XLim = [-0.25 1.25]*Lx;
-    ax.YLim = [-0.25 1.25]*Ly;
+    ax.XLim = [-0.25 1.25]*L;
+    ax.YLim = [-0.25 1.25]*L;
     
     % if making a movie, save frame
     if makeAMovie == 1
-        currframe = getframe(ax);
+        currframe = getframe(gcf);
         writeVideo(vobj,currframe);
     end
 end

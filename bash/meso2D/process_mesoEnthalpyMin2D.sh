@@ -4,7 +4,7 @@
 outputdir=/gpfs/loomis/project/fas/ohern/jdt45/dpm
 
 # directory for simulations specific to sphereGel
-simtypedir=$outputdir/meso2D
+simtypedir=$outputdir/mesoEnthalpyMin2D
 
 # directory to save matfiles
 savedir=$simtypedir/matfiles
@@ -23,16 +23,18 @@ NCELLS=$1
 n1=$2
 calA0=$3
 kb0=$4
-ctch=$6
-cL=$7
-aL=$8
-cB=$9
-cKb="${10}"
-partition="${11}"
-time="${12}"
+betaEff=$5
+da0=$6
+dl0=$7
+P0=$8
+ctch=$9
+cL="${10}"
+cB="${11}"
+partition="${12}"
+time="${13}"
 
 # name strings
-basestr=meso2D_N"$NCELLS"_n"$n1"_ca"$calA0"_kb0"$kb0"_be"$betaEff"_h"$ctch"_cL"$cL"_aL"$aL"_cB"$cB"_cKb"$cKb"
+basestr=mesoHMin2D_N"$NCELLS"_n"$n1"_ca"$calA0"_kb0"$kb0"_be"$betaEff"_da"$da0"_dl"$dl0"_P"$P0"_h"$ctch"_cL"$cL"_cB"$cB"
 runstr="$basestr"_PROCESS
 searchstr="$basestr"_seed
 
@@ -48,7 +50,7 @@ fi
 savestr="$savedir"/"$basestr"_processed.mat
 
 # create matlab command
-MCODE="addpath ~/dpm/viz/meso2D; processMesoNetwork2D('$simdatadir','$searchstr','$savestr'); quit"
+MCODE="addpath ~/dpm/viz/meso2D; processMesoEnthalpyMin2D('$simdatadir','$searchstr','$savestr'); quit"
 
 # setup slurm files
 slurmf=slurm/"$runstr".slurm
@@ -85,12 +87,13 @@ sbatch -t $time $slurmf
 # 3. calA0
 # 4. kb0
 # 5. betaEff
-# 6. ctch
-# 7. cL (perimeter aging)
-# 8. aL (either age contact (0) or void (1) perimeter)
-# 9. cB (bending angle aging)
-# 10. cKb
-# 11. partition
-# 12. time
+# 6. da0
+# 7. dl0
+# 8. P0
+# 9. ctch
+# 10. cL (perimeter aging)
+# 11. cB (bending angle aging)
+# 12. partition
+# 13. time
 
 

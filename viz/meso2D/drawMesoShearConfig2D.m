@@ -25,15 +25,10 @@ seed = 5;
 seedstr = num2str(seed);
 
 % file name str
-floc = '~/Jamming/CellSim/dpm/viz/meso2D/local/meso2D_data';
-% fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_cKb' cKbstr '_seed' seedstr];
-% fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_kb0' kb0str '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_seed' seedstr];
-fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_kb0' kb0str '_be' bestr '_h' hstr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_cKb' cKbstr '_seed' seedstr];
-fstr = [floc '/' fpattern '.pos'];
-fstr = '~/Jamming/CellSim/dpm/meso.input';
+fstr = '~/Jamming/CellSim/dpm/shear.test';
 
 % read in data
-mesoData = readMesoNetwork2D(fstr);
+mesoData = readMesoShearConfig2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
@@ -45,6 +40,7 @@ NFRAMES = sum(idx);
 
 % sim info
 NCELLS = mesoData.NCELLS;
+gamma = mesoData.gamma(idx);
 nv = mesoData.nv(idx,:);
 LList = mesoData.L;
 x = mesoData.x(idx,:);
@@ -185,7 +181,7 @@ ey = sin(th);
 
 
 % show vertices or not
-showverts = 1;
+showverts = 0;
 
 % color by shape or size
 colorOpt = 0;
@@ -238,7 +234,7 @@ end
 % get frames to plot
 if showverts == 0
     FSTART = 1;
-    FSTEP = 10;
+    FSTEP = 1;
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
@@ -250,8 +246,7 @@ end
 % make a movie
 makeAMovie = 0;
 if makeAMovie == 1
-%     moviestr = [fpattern '.mp4'];
-    moviestr = 'meso2D_enthalpy.mp4';
+    moviestr = 'meso2D_shear.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -268,8 +263,8 @@ for ff = FSTART:FSTEP:FEND
     xf = x(ff,:);
     yf = y(ff,:);
     rf = r(ff,:);
-    zctmp = zc(ff,:);
     L = LList(ff,1);
+    gamtmp = gamma(ff);
     for nn = 1:NCELLS
         xtmp = xf{nn};
         ytmp = yf{nn};
@@ -294,9 +289,9 @@ for ff = FSTART:FSTEP:FEND
                 for xx = -1:1
                     for yy = -1:1
                         if nn == 1
-                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',0.2);
+                            rectangle('Position',[xplot + xx*L + gamtmp*yy*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',0.2);
                         else
-                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','none');
+                            rectangle('Position',[xplot + xx*L + gamtmp*yy*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','none');
                         end
                     end
                 end
@@ -309,42 +304,23 @@ for ff = FSTART:FSTEP:FEND
             ytmp = ytmp + 0.8*rtmp.*(ry./rads);
             for xx = -1:1
                 for yy = -1:1
-                    vpos = [xtmp + xx*L, ytmp + yy*L];
+                    vpos = [xtmp + xx*L + gamtmp*yy*L, ytmp + yy*L];
                     finfo = [1:nvtmp 1];
                     patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k');
                 end
             end
         end
-%         text(cx,cy,num2str(nn));
-%         plot(mean(xtmp),mean(ytmp),'wo','markersize',8,'markerfacecolor','w');
-        
-%         % get shape tensor
-%         cx = mean(xtmp);
-%         cy = mean(ytmp);
-%         rx = xtmp - cx;
-%         ry = ytmp - cy;
-%         rn = sqrt(rx.^2 + ry.^2);
-%         urx = rx./rn;
-%         ury = ry./rn;
-%         Gxx = sum(rx.*urx)/nvtmp;
-%         Gyy = sum(ry.*ury)/nvtmp;
-%         Gxy = sum(rx.*ury)/nvtmp;
-%         [V,D] = eig([Gxx, Gxy; Gxy, Gyy]);
-%         lambda = diag(D);
-%         cx = mod(cx,Lx);
-%         cy = mod(cy,Ly);
-%         quiver(cx,cy,lambda(1)*V(1,1),lambda(1)*V(2,1),'-w','linewidth',2);
-%         quiver(cx,cy,lambda(2)*V(1,2),lambda(2)*V(2,2),'-w','linewidth',2);
     end
         
     % plot box
-%     plot([0 L L 0 0], [0 0 L L 0], 'k-', 'linewidth', 1.5);
+    plot([0 1 1+gamtmp gamtmp 0]*L,[0 0 L L 0],'-k','linewidth',2);
+    plot([0 1 1 0 0]*L,[0 0 L L 0],'--r','linewidth',1.2);
     axis equal;
     ax = gca;
     ax.XTick = [];
     ax.YTick = [];
-    ax.XLim = [-0.25 1.25]*L;
-    ax.YLim = [-0.25 1.25]*L;
+    ax.XLim = [0.95 1.05]*L;
+    ax.YLim = [0.95 1.05]*L;
     
     % if making a movie, save frame
     if makeAMovie == 1
@@ -359,6 +335,8 @@ if makeAMovie == 1
     close(vobj);
 end
 
+
+return;
 
 %% Draw state with lowest coordination closest to z = 3
 

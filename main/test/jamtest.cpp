@@ -21,8 +21,8 @@ using namespace std;
 int main(){
 	// local variables
 	int NCELLS = 32, nsmall = 32, seed = 1;
-	double phi0 = 0.4, calA0 = 1.3, smallfrac = 0.5, sizefrac = 1.4, disp = 0.1, Ftol = 1e-10, Ptol = 1e-6, dt0 = 2e-2;
-	double ka = 1.0, kl = 0.1, kb = 0.0001, kc = 1.0, thA = 12.0, thK = 5.0, boxLengthScale = 2.5, l1 = 0.0, l2 = 0.0;
+	double phi0 = 0.4, calA0 = 1.1, smallfrac = 0.5, sizefrac = 1.4, disp = 0, Ftol = 1e-10, Ptol = 1e-7, dt0 = 2e-2;
+	double ka = 1.0, kl = 0.1, kb = 0, kc = 1.0, thA = 0.0, thK = 0.0, boxLengthScale = 3.0, l1 = 0.0, l2 = 0.0;
 
 	// options for attraction
 	bool useAttraction = 0;

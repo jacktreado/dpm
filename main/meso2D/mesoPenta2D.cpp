@@ -126,7 +126,7 @@ int main(int argc, char const *argv[])
 	meso2Dobj.initializeNeighborLinkedList2D(boxLengthScale);
 
 	// set max # of vertices
-	NVMAX = 2*meso2Dobj.getNVTOT();
+	NVMAX = 5*meso2Dobj.getNVTOT();
 	meso2Dobj.setNVMAX(NVMAX);
 
 	// put initial pins in box center

@@ -9,7 +9,7 @@ maindir=$cellsdir/main/meso2D
 outputdir=/gpfs/loomis/project/fas/ohern/jdt45/dpm
 
 # directory for simulations specific to jamming
-simtypedir=$outputdir/meso2D
+simtypedir=$outputdir/mesoEnthalpyMin2D
 
 # make directories, unless they already exist
 mkdir -p $outputdir
@@ -25,25 +25,25 @@ n1=$2
 calA0=$3
 kb0=$4
 betaEff=$5
-ctch=$6
-cL=$7
-aL=$8
-cB=$9
-cKb="${10}"
-partition="${11}"
-time="${12}"
-numRuns="${13}"
-startSeed="${14}"
+da0=$6
+dl0=$7
+P0=$8
+ctch=$9
+cL="${10}"
+cB="${11}"
+partition="${12}"
+time="${13}"
+numRuns="${14}"
+startSeed="${15}"
 
 # other variables
-disp=0.1
 numSeedsPerRun=1
 
 let numSeeds=$numSeedsPerRun*$numRuns
 let endSeed=$startSeed+$numSeeds-1
 
 # name strings
-basestr=meso2D_N"$NCELLS"_n"$n1"_ca"$calA0"_kb0"$kb0"_be"$betaEff"_h"$ctch"_cL"$cL"_aL"$aL"_cB"$cB"_cKb"$cKb"
+basestr=mesoHMin2D_N"$NCELLS"_n"$n1"_ca"$calA0"_kb0"$kb0"_be"$betaEff"_da"$da0"_dl"$dl0"_P"$P0"_h"$ctch"_cL"$cL"_cB"$cB"
 runstr="$basestr"_startseed"$startSeed"_endseed"$endSeed"
 
 # make directory specific for this simulation
@@ -52,18 +52,19 @@ mkdir -p $simdatadir
 
 # compile into binary using packing.h
 binf=bin/"$runstr".o
-mainf=$maindir/mesoNetwork2D.cpp
-echo Running mesoNetwork2D simulations with parameters:
+mainf=$maindir/mesoEnthalpyMin2D.cpp
+echo Running mesoEnthalpyMin2D simulations with parameters:
 echo NCELLS = "$NCELLS"
 echo n1 = "$n1"
 echo calA0 = "$calA0"
 echo kb0 = "$kb0"
 echo betaEff = "$betaEff"
+echo da0 = "$da0"
+echo dl0 = "$dl0"
+echo P0 = "$P0"
 echo ctch = "$ctch"
 echo cL = "$cL"
-echo aL = "$aL"
 echo cB = "$cB"
-echo cKb = "$cKb"
 
 # run compiler
 rm -f $binf
@@ -106,10 +107,10 @@ for seed in `seq $startSeed $numSeedsPerRun $endSeed`; do
         filestr="$basestr"_seed"$seed"
 
         # create output files
-        posf=$simdatadir/$filestr.pos
+        posf=$simdatadir/$filestr.posctc
 
         # append to runString
-        runString="$runString ; ./$binf $NCELLS $n1 $disp $calA0 $kb0 $betaEff $ctch $cL $aL $cB $cKb $runseed $posf"
+        runString="$runString ; ./$binf $NCELLS $n1 $calA0 $kb0 $betaEff $da0 $dl0 $P0 $ctch $cL $cB $runseed $posf"
     done
 
     # finish off run string
@@ -165,15 +166,16 @@ sbatch -t $time $slurmf
 # 3. calA0
 # 4. kb0
 # 5. betaEff
-# 6. ctch
-# 7. cL (perimeter aging)
-# 8. aL (either age contact (0) or void (1) perimeter)
-# 9. cB (bending angle aging)
-# 10. cKb
-# 11. partition
-# 12. time
-# 13. number of runs (number of array entries, i.e. arraynum)
-# 14. start seed (end seed determined by number of runs)
+# 6. da0
+# 7. dl0
+# 8. P0
+# 9. ctch
+# 10. cL (perimeter aging)
+# 11. cB (bending angle aging)
+# 12. partition
+# 13. time
+# 14. number of runs (number of array entries, i.e. arraynum)
+# 15. start seed (end seed determined by number of runs)
 
 
 
