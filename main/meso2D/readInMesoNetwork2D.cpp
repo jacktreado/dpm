@@ -18,6 +18,15 @@
 // 8. seed: 			seed for random number generator
 // 9. positionFile: 	string of path to output file with position/configuration data
 
+// 
+// 
+// NOTE (10/29):
+// ** Investigate chaging P0 further, preliminary (N=16) sims show that this has better early-time dynamics, no need to make kb > 1e-3
+// ** Also changing da0, dl0 ... can get dip (with kb = 1e-3) but return to calA = 1.15 more difficult, slower area growth?
+//  -- Making da0 = 1e-1, seems like cells become much more circular initially .. maybe bare rate of da0 matters as well as relative rate of dl0?
+//	-- I think, DIP OCCURS BECAUSE THERE IS NOT ENOUGH VOID PERIMETER!!! So tuning da0 / dl0 will tune rate of decrease as well as rate of contact breaking
+// 	-- Need to look into calA0 vs porosity to figure out, when does (calA0 decrease, porosity increase) vs (calA0 increase, porosity increase) and other combinations
+
 // header files
 #include "meso2D.h"
 #include <sstream>
@@ -34,7 +43,7 @@ const double delShrink = 1e-3;		// fractional change in effective box length dur
 const double dphiPrint = 0.01;	   	// packing fractions to skip between print steps
 const double boxLengthScale = 2.5; 	// neighbor list box size in units of initial l0
 const double phi0 = 0.5;		   	// initial packing fraction
-const double dt0 = 5e-3;		   	// initial magnitude of time step in units of MD time
+const double dt0 = 2e-3;		   	// initial magnitude of time step in units of MD time
 const double Ftol = 1e-10; 			// force tolerance
 const double dPtol = 1e-10;			// pressure change tolerance
 const double phiMin = 0.3;			// minimum packing fraction in decompression algorithm

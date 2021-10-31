@@ -1,12 +1,11 @@
-%% Draw dpm config files
-% NOTE: need to get configs with contact info
+%% Script to draw development without boundaries
 
 clear;
 close all;
 clc;
 
 % create file name
-fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n24_ca1.14_kb01e-3_be100_da0.05_dl0.1_P1e-8_h0.5_cL1_cB1_seed100.posctc';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n24_ca1.14_kb01e-3_be50_da0.05_dl0.01_P1e-8_h0.5_cL1_cB1_seed15.posctc';
 % fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
@@ -57,110 +56,6 @@ calA = p.^2./(4.0*pi*a);
 % stress data
 S = mesoData.S(idx,:);
 P = 0.5*(S(:,1) + S(:,2));
-
-% print if multiple frames
-if NFRAMES > 2
-    Sxx = S(:,1);
-    Syy = S(:,2);
-    Sxy = S(:,3);
-    
-    figure(10), clf, hold on, box on;
-    
-    plot(find(Sxx<0),abs(Sxx(Sxx<0)),'ks','markersize',10,'MarkerFaceColor','r');
-    plot(find(Sxx>0),Sxx(Sxx>0),'rs','markersize',10);
-    
-    plot(find(Syy<0),abs(Syy(Syy<0)),'ko','markersize',10,'MarkerFaceColor','b');
-    plot(find(Syy>0),Syy(Syy>0),'bo','markersize',10);
-    
-    xlabel('frame id. ','Interpreter','latex');
-    ylabel('$\Sigma_{xx}$, $\Sigma_{yy}$','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;
-    
-    figure(11), clf, hold on, box on;
-    
-    plot(phi(Sxy<0),abs(Sxy(Sxy<0)),'ks','markersize',10,'MarkerFaceColor','k');
-    plot(phi(Sxy>0),Sxy(Sxy>0),'ko','markersize',10);
-    
-    xlabel('$1-\phi$','Interpreter','latex');
-    ylabel('$\Sigma_{xy}$','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;
-    
-    figure(12), clf, hold on, box on;
-    plot(1:NFRAMES,calA,'-','color',[0.5 0.5 0.5],'linewidth',1.2);
-    plot(1:NFRAMES,mean(calA,2),'k-','linewidth',3);
-    xlabel('frame id','Interpreter','latex');
-    ylabel('$\mathcal{A}$','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;
-    
-    
-    
-    % compute shear anisotropy
-    P = 0.5*(Sxx + Syy);
-    sN = (Syy - Sxx)./P;
-    sXY = -Sxy./P;
-    tau = sqrt(sN.^2 + sXY.^2);
-    figure(13), clf, hold on, box on;
-    plot(phi,tau,'k-','linewidth',2);
-    plot(phi,abs(sN),'b--','linewidth',2);
-    plot(phi,abs(sXY),'r--','linewidth',2);
-    xlabel('$1-\phi$','Interpreter','latex');
-    ylabel('$\hat{\tau}$','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;
-    
-    
-    % plot contact network
-    figure(14), clf, hold on, box on;
-    plot(1:NFRAMES,zc,'-','color',[0.5 0.5 0.5],'linewidth',1.2);
-    plot(1:NFRAMES,mean(zc,2),'k--','linewidth',2.5);
-    xlabel('frame id.','Interpreter','latex');
-    ylabel('$z$','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;
-    
-    % plot area deviations
-    ea = 0.5*(a./a0 - 1).^2;
-    figure(15), clf, hold on, box on;
-    plot(phi,ea,'-','color',[0.5 0.5 0.5],'linewidth',1);
-    plot(phi,mean(ea,2),'k-','linewidth',2.5);
-    xlabel('$\phi$','Interpreter','latex');
-    ylabel('$U_a$','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;
-    ax.YScale = 'log';
-    
-     % plot packing fractions
-    figure(16), clf, hold on, box on;
-    yyaxis left
-    plot(1:NFRAMES,phi,'ko','markersize',10,'markerfacecolor','b');
-    ylabel('$\phi$','Interpreter','latex');
-    yyaxis right
-    plot(1:NFRAMES,P,'ks','markersize',10,'markerfacecolor','r');
-    ylabel('$P$','Interpreter','latex');
-    xlabel('frame','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;
-    
-    % plot shape vs porosity
-    ambroseData = load('/Users/jacktreado/Jamming/Flowers/structure/plant/ambroseMesoCells/ambroseData.mat');
-    porosity = ambroseData.porosity;
-    calAMean = ambroseData.calAMean;
-    calAMin = ambroseData.calAMin;
-    calAMax = ambroseData.calAMax;
-    
-    figure(17), clf, hold on, box on;
-    errorbar(phi(2)-phi,mean(calA,2),std(calA,0,2),'ko','markersize',10);
-    errorbar(porosity,calAMean,calAMin,calAMax,'-ko','markersize',10,'markerfacecolor','b');
-    ylabel('$\mathcal{A}$','Interpreter','latex');
-    xlabel('$1-\phi$','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;
-end
-
-
 
 %% Draw cells
 
@@ -274,7 +169,6 @@ if makeAMovie == 1
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
-    ctccopy = -1:1;
 end
 
 fnum = 1;
@@ -327,8 +221,8 @@ for ff = FSTART:FSTEP:FEND
             rads = sqrt(rx.^2 + ry.^2);
             xtmp = xtmp + 0.8*rtmp.*(rx./rads);
             ytmp = ytmp + 0.8*rtmp.*(ry./rads);
-            for xx = -1:1
-                for yy = -1:1
+            for xx = 0
+                for yy = 0
                     vpos = [xtmp + xx*L, ytmp + yy*L];
                     finfo = [1:nvtmp 1];
                     patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k','Linewidth',2.5,'markersize',10);
@@ -366,8 +260,8 @@ for ff = FSTART:FSTEP:FEND
     ax = gca;
     ax.XTick = [];
     ax.YTick = [];
-    ax.XLim = [-0.25 1.25]*L;
-    ax.YLim = [-0.25 1.25]*L;
+    ax.XLim = [-0.25 1.25]*LList(end,1);
+    ax.YLim = [-0.25 1.25]*LList(end,2);
     
     % if making a movie, save frame
     if makeAMovie == 1
@@ -385,74 +279,3 @@ end
 
 
 return;
-
-%% Draw state with lowest coordination closest to z = 3
-
-zmean = mean(zc,2);
-dz = abs(zmean - 3);
-[~, ff] = min(dz);
-
-% reset figure for this frame
-figure(20), clf, hold on, box on;
-
-% get geometric info
-xf = x(ff,:);
-yf = y(ff,:);
-rf = r(ff,:);
-zctmp = zc(ff,:);
-L = LList(ff,1);
-for nn = 1:NCELLS
-    xtmp = xf{nn};
-    ytmp = yf{nn};
-    cx = mean(xtmp);
-    cy = mean(ytmp);
-    rtmp = rf{nn};
-    nvtmp = nv(ff,nn);
-    if colorOpt == 2
-        cbin = calA0(ff,nn) > calA0Bins(1:end-1) & calA0(ff,nn) < calA0Bins(2:end);
-        clr = cellCLR(cbin,:);
-    elseif colorOpt == 1
-        cbin = calA(ff,nn) > calABins(1:end-1) & calA(ff,nn) < calABins(2:end);
-        clr = cellCLR(cbin,:);
-    else
-        clr = cellCLR(IC(ff,nn),:);
-    end
-    if showverts == 1
-        for vv = 1:nvtmp
-            rv = rtmp(vv);
-            xplot = xtmp(vv) - rv;
-            yplot = ytmp(vv) - rv;
-            for xx = -1:1
-                for yy = -1:1
-                    if zctmp(nn) > 0
-                        rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',0.2);
-                    else
-                        rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor',clr,'FaceColor','none');
-                    end
-                end
-            end
-        end
-    else
-        rx = xtmp - cx;
-        ry = ytmp - cy;
-        rads = sqrt(rx.^2 + ry.^2);
-        xtmp = xtmp + 0.8*rtmp.*(rx./rads);
-        ytmp = ytmp + 0.8*rtmp.*(ry./rads);
-        for xx = -1:1
-            for yy = -1:1
-                vpos = [xtmp + xx*L, ytmp + yy*L];
-                finfo = [1:nvtmp 1];
-                patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k');
-            end
-        end
-    end
-end
-
-% plot box
-plot([0 L L 0 0], [0 0 L L 0], 'k-', 'linewidth', 1.5);
-axis equal;
-ax = gca;
-ax.XTick = [];
-ax.YTick = [];
-ax.XLim = [-0.25 1.25]*L;
-ax.YLim = [-0.25 1.25]*L;
