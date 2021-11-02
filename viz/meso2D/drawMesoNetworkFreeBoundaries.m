@@ -5,15 +5,15 @@ close all;
 clc;
 
 % create file name
-fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n24_ca1.14_kb01e-3_be50_da0.05_dl0.01_P1e-8_h0.5_cL1_cB1_seed15.posctc';
-% fstr = '~/Jamming/CellSim/dpm/pos.test';
+% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n24_ca1.14_kb01e-3_be100_da0.05_dl0.2_P1e-7_h0.5_cL1_cB1_seed11.posctc';
+fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
-idx = phi > 0.01;
+idx = phi > 0.5;
 phi = phi(idx);
 
 % number of frames
@@ -22,8 +22,8 @@ NFRAMES = sum(idx);
 % sim info
 NCELLS = mesoData.NCELLS;
 nv = mesoData.nv(idx,:);
-LList = mesoData.L;
-ctcList = mesoData.ctcs;
+LList = mesoData.L(idx,:);
+ctcList = mesoData.ctcs(idx,:);
 x = mesoData.x(idx,:);
 y = mesoData.y(idx,:);
 r = mesoData.r(idx,:);
@@ -164,8 +164,8 @@ end
 makeAMovie = 0;
 ctccopy = 0;
 if makeAMovie == 1
-    moviestr = 'debug.mp4';
-%     moviestr = 'mesoHMin2D_N32_n32_ca1.14_kb01e-3_be100_da1e-3_dl1.5_P1e-6_h0.5_cL1_cB1_seed4.mp4';
+%     moviestr = 'debug.mp4';
+    moviestr = 'mesoHMin2D_N64_n24_ca1.14_kb01e-3_be100_da0.05_dl0.1_P1e-8_h0.5_cL1_cB1_seed100.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -225,7 +225,7 @@ for ff = FSTART:FSTEP:FEND
                 for yy = 0
                     vpos = [xtmp + xx*L, ytmp + yy*L];
                     finfo = [1:nvtmp 1];
-                    patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k','Linewidth',2.5,'markersize',10);
+                    patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k','Linewidth',1.5,'markersize',10);
                 end
             end
         end
@@ -247,7 +247,7 @@ for ff = FSTART:FSTEP:FEND
                 dy = dy - L*round(dy/L);
                 for xx = ctccopy
                     for yy = ctccopy
-                        plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'k-','linewidth',2);
+                        plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'w-','linewidth',1.5);
                     end
                 end
             end

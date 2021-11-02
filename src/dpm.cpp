@@ -1941,16 +1941,34 @@ void dpm::attractiveForceUpdate(){
 
 void dpm::setdt(double dt0) {
 	// local variables
-	int i;
-	double ta, tl, tb, tmin, rho0;
+	int i, gi;
+	double ta, tl, tb, tc, tmin, l0min, rmin, rho0;
 
 	// typical length
 	rho0 = sqrt(a0.at(0));
 
+	// get min l0
+	l0min = 1e8;
+	for (gi=0; gi<NVTOT; gi++){
+		if (l0[gi] < l0min)
+			l0min = l0[gi];
+	}
+
+	// get min radius
+	rmin = 1e8;
+	for (gi=0; gi<NVTOT; gi++){
+		if (r[gi] < rmin)
+			rmin = r[gi];
+	}
+
 	// set typical time scales
 	ta = rho0 / sqrt(ka);
-	tl = (rho0 * l0.at(0)) / sqrt(ka * kl);
-	tb = (rho0 * l0.at(0)) / sqrt(ka * kb);
+	// tl = (rho0 * l0min) / sqrt(ka * kl);
+	// tb = (rho0 * l0min) / sqrt(ka * kb);
+	// tc = (rho0 * rmin) / sqrt (ka * kc);
+	tl = l0min / sqrt(ka);
+	tb = l0min / sqrt(ka);
+	tc = rmin / sqrt(ka);
 
 	// set main time scale as min
 	tmin = 1e8;
@@ -1960,6 +1978,8 @@ void dpm::setdt(double dt0) {
 		tmin = tl;
 	if (tb < tmin)
 		tmin = tb;
+	if (tc < tmin)
+		tmin = tc;
 
 	// set dt
 	dt = dt0 * tmin;

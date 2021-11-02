@@ -2454,6 +2454,7 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 	// loop until phi0 < phiMin
 	while (phi > phiMin && k < itmax){
 		// relax current configuration
+		Lold = L[0];
 		mesoEnthalpyFIRE(forceCall, Ftol, dPtol, P0, dt0);
 
 		// break contact network
@@ -2465,7 +2466,7 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 
 		// add vertices
 		if (NVTOT < NVMAX)
-			addMesophyllCellMaterial(0.0);
+			addMesophyllCellMaterial(da0*dl0);
 
 		// // increase lengths of void segments
 		// for (gi=0; gi<NVTOT; gi++){
@@ -2479,6 +2480,8 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 		for (gi=0; gi<NVTOT; gi++){
 			if (zv[gi] <= 0 && zv[ip1[gi]] <= 0)
 				l0[gi] *= (1.0 + da0*dl0);
+			else
+				l0[gi] *= (1.0 + da0);
 		}
 
 		// output to console
@@ -2514,9 +2517,13 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 		if (k % NMINSKIP == 0)
 			printMesoNetworkCTCS2D();
 
-		// increase particle size
+		// increase particle size, radii size
 		for (ci=0; ci<NCELLS; ci++)
-			a0[ci] *= (1.0 + da0*da0);
+			a0[ci] *= pow(1 + da0,2.0);
+		for (gi=0; gi<NVTOT; gi++){
+			// r[gi] *= L[0]/Lold;
+			r[gi] *= (1.0 + da0);
+		}
 
 		// increase box size
 		// Lold = L[0];

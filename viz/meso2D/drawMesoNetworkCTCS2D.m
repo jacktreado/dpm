@@ -6,15 +6,15 @@ close all;
 clc;
 
 % create file name
-fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n24_ca1.14_kb01e-3_be100_da0.05_dl0.1_P1e-8_h0.5_cL1_cB1_seed100.posctc';
-% fstr = '~/Jamming/CellSim/dpm/pos.test';
+% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n24_ca1.14_kb01e-3_be100_da0.05_dl0.07_P5e-7_h0.5_cL1_cB1_seed12.posctc';
+fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
-idx = phi > 0.01;
+idx = phi > 0.1;
 phi = phi(idx);
 
 % number of frames
@@ -23,8 +23,8 @@ NFRAMES = sum(idx);
 % sim info
 NCELLS = mesoData.NCELLS;
 nv = mesoData.nv(idx,:);
-LList = mesoData.L;
-ctcList = mesoData.ctcs;
+LList = mesoData.L(idx,:);
+ctcList = mesoData.ctcs(idx,:);
 x = mesoData.x(idx,:);
 y = mesoData.y(idx,:);
 r = mesoData.r(idx,:);
@@ -150,14 +150,30 @@ if NFRAMES > 2
     calAMean = ambroseData.calAMean;
     calAMin = ambroseData.calAMin;
     calAMax = ambroseData.calAMax;
+    calAMeas = ambroseData.calAMeas;
+    dCalAMin = ambroseData.dCalAMin;
+    dCalAMax = ambroseData.dCalAMax;
     
     figure(17), clf, hold on, box on;
-    errorbar(phi(2)-phi,mean(calA,2),std(calA,0,2),'ko','markersize',10);
-    errorbar(porosity,calAMean,calAMin,calAMax,'-ko','markersize',10,'markerfacecolor','b');
+    errorbar(phi(2)-phi(2:end),mean(calA(2:end,:),2),std(calA(2:end,:),0,2),'-k','linewidth',1.75);
+    errorbar(porosity,calAMean,calAMin,calAMax,'k>','markersize',10,'markerfacecolor','b');
+    errorbar(porosity,calAMeas,dCalAMin,dCalAMax,'k>','markersize',10,'markerfacecolor','r');
     ylabel('$\mathcal{A}$','Interpreter','latex');
     xlabel('$1-\phi$','Interpreter','latex');
     ax = gca;
     ax.FontSize = 22;
+    
+    aMean = ambroseData.areaMeanY;
+    aSim = mean(a,2);
+    
+    figure(18), clf, hold on, box on;
+    plot(porosity,aMean./aMean(1),'bo','markersize',10,'markerfacecolor','b');
+    plot(phi(2)-phi(2:end),aSim(2:end)./aSim(2),'ks','markersize',10);
+    ylabel('$a/a(0)$','Interpreter','latex');
+    xlabel('$1-\phi$','Interpreter','latex');
+    ax = gca;
+    ax.FontSize = 22;
+    ax.YScale = 'log';
 end
 
 
@@ -171,7 +187,7 @@ ex = cos(th);
 ey = sin(th);
 
 % show vertices or not
-showverts = 0;
+showverts = 10;
 
 % color by shape or size
 colorOpt = 0;
@@ -260,7 +276,7 @@ if showverts == 0
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
-    FSTART = round(0.4*NFRAMES);
+    FSTART = 2;
     FSTEP = 1;
     FEND = NFRAMES;
 end
@@ -331,7 +347,7 @@ for ff = FSTART:FSTEP:FEND
                 for yy = -1:1
                     vpos = [xtmp + xx*L, ytmp + yy*L];
                     finfo = [1:nvtmp 1];
-                    patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k','Linewidth',2.5,'markersize',10);
+                    patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k','Linewidth',1.5,'markersize',10);
                 end
             end
         end
