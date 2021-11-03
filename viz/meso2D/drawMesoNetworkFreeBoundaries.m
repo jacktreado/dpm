@@ -5,7 +5,7 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n24_ca1.14_kb01e-3_be100_da0.05_dl0.2_P1e-7_h0.5_cL1_cB1_seed11.posctc';
+% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n24_ca1.14_kb01e-4_be100_da0.05_dl1.1_P1e-4_h0.5_cL1_cB1_seed16.posctc';
 fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
@@ -13,7 +13,7 @@ mesoData = readMesoNetworkCTCS2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
-idx = phi > 0.5;
+idx = phi > 0.1;
 phi = phi(idx);
 
 % number of frames
@@ -145,7 +145,7 @@ end
 
 % get frames to plot
 if showverts == 0
-    FSTART = 1;
+    FSTART = 2;
     FSTEP = 1;
     if NFRAMES > 50
         FSTEP = 2;
@@ -155,17 +155,17 @@ if showverts == 0
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
-    FSTART = round(0.4*NFRAMES);
+    FSTART = 2;
     FSTEP = 1;
     FEND = NFRAMES;
 end
 
 % make a movie
-makeAMovie = 0;
+makeAMovie = 1;
 ctccopy = 0;
 if makeAMovie == 1
-%     moviestr = 'debug.mp4';
-    moviestr = 'mesoHMin2D_N64_n24_ca1.14_kb01e-3_be100_da0.05_dl0.1_P1e-8_h0.5_cL1_cB1_seed100.mp4';
+    moviestr = 'goodNetworkFreeBnd.mp4';
+%     moviestr = 'mesoHMin2D_N64_n24_ca1.14_kb01e-3_be100_da0.05_dl0.1_P1e-8_h0.5_cL1_cB1_seed100.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -189,6 +189,12 @@ for ff = FSTART:FSTEP:FEND
         ytmp = yf{nn};
         cx = mean(xtmp);
         cy = mean(ytmp);
+        rx = xtmp - cx;
+        ry = ytmp - cy;
+        cx = mod(cx,L);
+        cy = mod(cy,L);
+        xtmp = cx + rx;
+        ytmp = cy + ry;
         rtmp = rf{nn};
         nvtmp = nv(ff,nn);
         if colorOpt == 2
@@ -231,28 +237,28 @@ for ff = FSTART:FSTEP:FEND
         end
     end
     
-    % plot vv contacts
-    gijtmp = gijList{ff};
-    xa = cell2mat(xf');
-    ya = cell2mat(yf');
-    NVTOT = sum(nv(ff,:));
-    for gi = 1:NVTOT
-        xi = xa(gi);
-        yi = ya(gi);
-        for gj = (gi+1):NVTOT
-            if (gijtmp(gi,gj) == 1)
-                dx = xa(gj) - xi;
-                dx = dx - L*round(dx/L);
-                dy = ya(gj) - yi;
-                dy = dy - L*round(dy/L);
-                for xx = ctccopy
-                    for yy = ctccopy
-                        plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'w-','linewidth',1.5);
-                    end
-                end
-            end
-        end
-    end
+%     % plot vv contacts
+%     gijtmp = gijList{ff};
+%     xa = cell2mat(xf');
+%     ya = cell2mat(yf');
+%     NVTOT = sum(nv(ff,:));
+%     for gi = 1:NVTOT
+%         xi = xa(gi);
+%         yi = ya(gi);
+%         for gj = (gi+1):NVTOT
+%             if (gijtmp(gi,gj) == 1)
+%                 dx = xa(gj) - xi;
+%                 dx = dx - L*round(dx/L);
+%                 dy = ya(gj) - yi;
+%                 dy = dy - L*round(dy/L);
+%                 for xx = ctccopy
+%                     for yy = ctccopy
+%                         plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'w-','linewidth',1.5);
+%                     end
+%                 end
+%             end
+%         end
+%     end
         
     % plot box
     plot([0 L L 0 0], [0 0 L L 0], 'k-', 'linewidth', 1.5);

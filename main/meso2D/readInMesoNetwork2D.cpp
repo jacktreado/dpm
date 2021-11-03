@@ -26,6 +26,10 @@
 //  -- Making da0 = 1e-1, seems like cells become much more circular initially .. maybe bare rate of da0 matters as well as relative rate of dl0?
 //	-- I think, DIP OCCURS BECAUSE THERE IS NOT ENOUGH VOID PERIMETER!!! So tuning da0 / dl0 will tune rate of decrease as well as rate of contact breaking
 // 	-- Need to look into calA0 vs porosity to figure out, when does (calA0 decrease, porosity increase) vs (calA0 increase, porosity increase) and other combinations
+// 
+// 
+// NOTE (11/03):
+// -- Increasing da0, P0 works! Also, need to keep dl0 on ctc vertices = 0, matches exp better in calA, and matches observation that ctc perimeter stays the same
 
 // header files
 #include "meso2D.h"
@@ -44,14 +48,14 @@ const double dphiPrint = 0.01;	   	// packing fractions to skip between print st
 const double boxLengthScale = 2.5; 	// neighbor list box size in units of initial l0
 const double phi0 = 0.5;		   	// initial packing fraction
 const double dt0 = 1e-2;		   	// initial magnitude of time step in units of MD time
-const double Ftol = 1e-10; 			// force tolerance
+const double Ftol = 1e-12; 			// force tolerance
 const double dPtol = 1e-10;			// pressure change tolerance
 const double phiMin = 0.3;			// minimum packing fraction in decompression algorithm
 const double kl = 0.5; 				// perimeter spring constant
 const double aL = 1.0; 				// distribution of aging to boundary (when = 1)
 const double kc = 0.5; 				// interaction spring constant
 const double cKb = 0; 				// change in bending energy
-const int NMINSKIP = 5;			// number of frames to skip output
+const int NMINSKIP = 1;				// number of frames to skip output
 const int NVMAXMAG = 5; 			// scale of max number of vertices
 
 // set parameters

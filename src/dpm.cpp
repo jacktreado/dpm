@@ -294,6 +294,28 @@ double dpm::perimeter(int ci) {
 	return perimVal;
 }
 
+// get preferred cell perimeter p0
+double dpm::getp0(int ci){
+	int gi, vi;
+	double val = 0.0;
+
+	gi = szList[ci];
+	for (vi=0; vi<nv[ci]; vi++){
+		val += l0[gi];
+		gi++;
+	}
+
+	return val;
+}
+
+// get preferred shape parameter calA0
+double dpm::getCalA0(int ci){
+	return pow(getp0(ci),2.0)/(4.0*PI*a0[ci]);
+}
+
+double dpm::getCalA(int ci){
+	return pow(perimeter(ci),2.0)/(4.0*PI*area(ci));
+}
 
 // get cell center of mass position
 void dpm::com2D(int ci, double &cx, double &cy) {

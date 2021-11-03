@@ -169,6 +169,9 @@ public:
 	double area(int ci);
 	double area(int ci, double gamma);
 	double perimeter(int ci);
+	double getp0(int ci);
+	double getCalA0(int ci);
+	double getCalA(int ci);
 	void com2D(int ci, double &cx, double &cy);
 	double vertexPackingFraction2D();
 	double vertexPreferredPackingFraction2D();

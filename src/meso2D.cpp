@@ -2440,8 +2440,8 @@ void meso2D::mesoFreeGrowth(meso2DMemFn forceCall, double Ftol, double dt0, doub
 // simulate network *formation* using *enthalpy minimization*
 void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double dPtol, double dt0, double da0, double dl0, double P0, double phiMin, int NMINSKIP){
 	// local variables
-	int i, ci, gi, d, k = 0;
-	double Lold, phi, phi0;
+	int i, ci, gi, vi, d, k = 0;
+	double Lold, phi, phi0, calAtmp;
 
 	// initialize packing fraction definitions
 	phi0 = vertexPreferredPackingFraction2D();
@@ -2466,22 +2466,29 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 
 		// add vertices
 		if (NVTOT < NVMAX)
-			addMesophyllCellMaterial(da0*dl0);
+			addMesophyllCellMaterial(0.0);
 
-		// // increase lengths of void segments
+		// // increase lengths of void segments bordered by contact-less vertices
 		// for (gi=0; gi<NVTOT; gi++){
-		// 	if (zv[gi] < 0){
+		// 	if (zv[gi] <= 0 && zv[ip1[gi]] <= 0)
 		// 		l0[gi] *= (1.0 + da0*dl0);
-		// 		l0[im1[gi]] *= (1.0 + da0*dl0);
-		// 	}
+		// 	// else
+		// 		// l0[gi] *= (1.0 + 0.5*da0);
 		// }
 
-		// increase lengths of void segments bordered by contact-less vertices
-		for (gi=0; gi<NVTOT; gi++){
-			if (zv[gi] <= 0 && zv[ip1[gi]] <= 0)
-				l0[gi] *= (1.0 + da0*dl0);
-			else
-				l0[gi] *= (1.0 + da0);
+		// increase lengths of void segments bordered by contact-less vertices (IF shape is below max, otherwise normal growth)
+		gi = 0;
+		for (ci=0; ci<NCELLS; ci++){
+			calAtmp = getCalA(ci);
+			for (vi=0; vi<nv[ci]; vi++){
+				if (zv[gi] <= 0 && zv[ip1[gi]] <= 0){
+					if (calAtmp < calAmax)
+						l0[gi] *= (1.0 + da0*dl0);
+					else
+						l0[gi] *= (1.0 + da0);
+				}
+				gi++;
+			}
 		}
 
 		// output to console

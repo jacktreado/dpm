@@ -19,6 +19,7 @@
 
 // global constants
 const double kbmax = 1e-2;
+const double calAmax = 2.0;
 
 class meso2D;
 typedef void (meso2D::*meso2DMemFn)(void);

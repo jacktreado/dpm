@@ -6,7 +6,7 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n24_ca1.14_kb01e-3_be100_da0.05_dl0.07_P5e-7_h0.5_cL1_cB1_seed12.posctc';
+% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n24_ca1.14_kb02e-3_be75_da0.01_dl1.01_P1e-4_h0.5_cL1_cB1_seed17.posctc';
 fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
@@ -14,7 +14,7 @@ mesoData = readMesoNetworkCTCS2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
-idx = phi > 0.1;
+idx = phi > 0.1 & phi < 1.0;
 phi = phi(idx);
 
 % number of frames
@@ -156,7 +156,7 @@ if NFRAMES > 2
     
     figure(17), clf, hold on, box on;
     errorbar(phi(2)-phi(2:end),mean(calA(2:end,:),2),std(calA(2:end,:),0,2),'-k','linewidth',1.75);
-    errorbar(porosity,calAMean,calAMin,calAMax,'k>','markersize',10,'markerfacecolor','b');
+%     errorbar(porosity,calAMean,calAMin,calAMax,'k>','markersize',10,'markerfacecolor','b');
     errorbar(porosity,calAMeas,dCalAMin,dCalAMax,'k>','markersize',10,'markerfacecolor','r');
     ylabel('$\mathcal{A}$','Interpreter','latex');
     xlabel('$1-\phi$','Interpreter','latex');
@@ -187,7 +187,7 @@ ex = cos(th);
 ey = sin(th);
 
 % show vertices or not
-showverts = 10;
+showverts = 0;
 
 % color by shape or size
 colorOpt = 0;
@@ -266,7 +266,7 @@ end
 
 % get frames to plot
 if showverts == 0
-    FSTART = 1;
+    FSTART = 2;
     FSTEP = 1;
     if NFRAMES > 50
         FSTEP = 2;
@@ -276,17 +276,17 @@ if showverts == 0
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
-    FSTART = 2;
+    FSTART = 7;
     FSTEP = 1;
-    FEND = NFRAMES;
+    FEND = FSTART;
 end
 
 % make a movie
-makeAMovie = 0;
+makeAMovie = 1;
 ctccopy = 0;
 if makeAMovie == 1
-    moviestr = 'debug.mp4';
-%     moviestr = 'mesoHMin2D_N32_n32_ca1.14_kb01e-3_be100_da1e-3_dl1.5_P1e-6_h0.5_cL1_cB1_seed4.mp4';
+%     moviestr = 'debug.mp4';
+    moviestr = 'goodNetwork.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -399,76 +399,40 @@ if makeAMovie == 1
 end
 
 
+%% Draw individual cell shape dynamics
 
-return;
-
-%% Draw state with lowest coordination closest to z = 3
-
-zmean = mean(zc,2);
-dz = abs(zmean - 3);
-[~, ff] = min(dz);
+% pick random cell
+cellidx = randi(NCELLS);
 
 % reset figure for this frame
 figure(20), clf, hold on, box on;
 
 % get geometric info
-xf = x(ff,:);
-yf = y(ff,:);
-rf = r(ff,:);
-zctmp = zc(ff,:);
-L = LList(ff,1);
-for nn = 1:NCELLS
-    xtmp = xf{nn};
-    ytmp = yf{nn};
+xf = x(:,cellidx);
+yf = y(:,cellidx);
+nvf = nv(:,cellidx);
+zvf = zv(:,cellidx);
+for ff = 1:2:NFRAMES
+    xtmp = xf{ff};
+    ytmp = yf{ff};
+    zvtmp = zvf{ff};
+    nvtmp = nvf(ff);
     cx = mean(xtmp);
     cy = mean(ytmp);
-    rtmp = rf{nn};
-    nvtmp = nv(ff,nn);
-    if colorOpt == 2
-        cbin = calA0(ff,nn) > calA0Bins(1:end-1) & calA0(ff,nn) < calA0Bins(2:end);
-        clr = cellCLR(cbin,:);
-    elseif colorOpt == 1
-        cbin = calA(ff,nn) > calABins(1:end-1) & calA(ff,nn) < calABins(2:end);
-        clr = cellCLR(cbin,:);
-    else
-        clr = cellCLR(IC(ff,nn),:);
-    end
-    if showverts == 1
-        for vv = 1:nvtmp
-            rv = rtmp(vv);
-            xplot = xtmp(vv) - rv;
-            yplot = ytmp(vv) - rv;
-            for xx = -1:1
-                for yy = -1:1
-                    if zctmp(nn) > 0
-                        rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',0.2);
-                    else
-                        rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor',clr,'FaceColor','none');
-                    end
-                end
-            end
-        end
-    else
-        rx = xtmp - cx;
-        ry = ytmp - cy;
-        rads = sqrt(rx.^2 + ry.^2);
-        xtmp = xtmp + 0.8*rtmp.*(rx./rads);
-        ytmp = ytmp + 0.8*rtmp.*(ry./rads);
-        for xx = -1:1
-            for yy = -1:1
-                vpos = [xtmp + xx*L, ytmp + yy*L];
-                finfo = [1:nvtmp 1];
-                patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k');
-            end
+    xtmp = xtmp - cx;
+    ytmp = ytmp - cy;
+    ip1 = [2:nvtmp 1];
+    for vv = 1:nvtmp
+        if zvtmp(vv) <= 0
+            plot([xtmp(vv) xtmp(ip1(vv))],[ytmp(vv) ytmp(ip1(vv))],'-','linewidth',3,'color','g');
+        else
+            plot([xtmp(vv) xtmp(ip1(vv))],[ytmp(vv) ytmp(ip1(vv))],'-','linewidth',1.5,'color','b');
         end
     end
+    axis equal;
+    ax = gca;
+    ax.XTick = [];
+    ax.YTick = [];
+    ax.XLim = [-0.25*LList(end,1) 0.25*LList(end,1)];
+    ax.YLim = [-0.25*LList(end,2) 0.25*LList(end,2)];
 end
-
-% plot box
-plot([0 L L 0 0], [0 0 L L 0], 'k-', 'linewidth', 1.5);
-axis equal;
-ax = gca;
-ax.XTick = [];
-ax.YTick = [];
-ax.XLim = [-0.25 1.25]*L;
-ax.YLim = [-0.25 1.25]*L;
