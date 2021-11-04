@@ -75,7 +75,7 @@ for ss = 1:NSIMS
     LList{ss} = L;
     
     % find void polygons
-    polyList{ss} = voidPolys(mesoData);
+%     polyList{ss} = voidPolys(mesoData);
     
     % preferred shape / cx
     calA0 = zeros(NFRAMES,NCELLS);
