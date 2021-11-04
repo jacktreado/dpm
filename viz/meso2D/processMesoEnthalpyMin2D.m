@@ -128,7 +128,7 @@ for ss = 1:NSIMS
     saveStruct.LList = LList(svidx,:);
     saveStruct.cxList = cxList(svidx,:);
     saveStruct.cyList = cyList(svidx,:);
-    saveStruct.polyList = polyList(svidx,:);
+%     saveStruct.polyList = polyList(svidx,:);
     saveStruct.calA0List = calA0List(svidx,:);
     saveStruct.calAList = calAList(svidx,:);
     saveStruct.zList = zList(svidx,:);
@@ -155,15 +155,15 @@ nporobins = 40;
 % reload finalized data
 phiList = saveStruct.phiList;
 calAList = saveStruct.calAList;
-polyList = saveStruct.polyList;
+% polyList = saveStruct.polyList;
 
 % lists for later ensemble averaging
 NFRAMETOT = sum(NFRAMESList);
 poros = zeros(NFRAMETOT,1);
 calAMeans = zeros(NFRAMETOT,1);
 calAStds = zeros(NFRAMETOT,1);
-npolys = zeros(NFRAMETOT,1);
-polyTypeList = zeros(NFRAMETOT,9);
+% npolys = zeros(NFRAMETOT,1);
+% polyTypeList = zeros(NFRAMETOT,9);
 zMeans = zeros(NFRAMETOT,1);
 zStds = zeros(NFRAMETOT,1);
 
@@ -197,19 +197,19 @@ for ss = 1:NSIMS
     calAMeans(last:next) = mean(calAtmp,2);
     calAStds(last:next) = std(calAtmp,0,2);
     
-    % get polygon information
-    polytmp = polyList{ss};
-    npolys(last:next) = cellfun(@length,polytmp);
-    polytypes = zeros(NFRAMEStmp,9);
-    for ff = 1:NFRAMEStmp
-        polyconfigtmp = polytmp{ff};
-        polytypetmp = cellfun(@length,polyconfigtmp);
-        for pp = 3:10
-            polytypes(ff,pp-2) = sum(polytypetmp == pp);
-        end
-        polytypes(ff,end) = sum(polytypetmp > 10);
-    end
-    polyTypeList(last:next,:) = polytypes;
+%     % get polygon information
+%     polytmp = polyList{ss};
+%     npolys(last:next) = cellfun(@length,polytmp);
+%     polytypes = zeros(NFRAMEStmp,9);
+%     for ff = 1:NFRAMEStmp
+%         polyconfigtmp = polytmp{ff};
+%         polytypetmp = cellfun(@length,polyconfigtmp);
+%         for pp = 3:10
+%             polytypes(ff,pp-2) = sum(polytypetmp == pp);
+%         end
+%         polytypes(ff,end) = sum(polytypetmp > 10);
+%     end
+%     polyTypeList(last:next,:) = polytypes;
     
     % get contact information
     ztmp = zList{ss};
@@ -225,9 +225,9 @@ poro_bc = 0.5*(poro_be(2:end) + poro_be(1:end-1));
 % ensemble averaged data
 calA = zeros(nporobins,2);
 z = zeros(nporobins,2);
-npoly = zeros(nporobins,2);
-polytypeMean = zeros(nporobins,9);
-polytypeStd = zeros(nporobins,9);
+% npoly = zeros(nporobins,2);
+% polytypeMean = zeros(nporobins,9);
+% polytypeStd = zeros(nporobins,9);
 
 % loop over porosity bins, get all data
 for bb = 1:nporobins
@@ -245,20 +245,20 @@ for bb = 1:nporobins
     z(bb,1) = mean(zMeans(binidx));
     z(bb,2) = mean(zStds(binidx));
     
-    npoly(bb,1) = mean(npolys(binidx));
-    npoly(bb,2) = std(npolys(binidx));
-    
-    polytypeMean(bb,:) = mean(polyTypeList(binidx,:),1);
-    polytypeStd(bb,:) = std(polyTypeList(binidx,:),0,1);
+%     npoly(bb,1) = mean(npolys(binidx));
+%     npoly(bb,2) = std(npolys(binidx));
+%     
+%     polytypeMean(bb,:) = mean(polyTypeList(binidx,:),1);
+%     polytypeStd(bb,:) = std(polyTypeList(binidx,:),0,1);
 end
 
 % save ensemble averages to save struct
 saveStruct.poro_bc = poro_bc;
 saveStruct.calA = calA;
 saveStruct.z = z;
-saveStruct.npoly = npoly;
-saveStruct.polytypeMean = polytypeMean;
-saveStruct.polytypeStd = polytypeStd;
+% saveStruct.npoly = npoly;
+% saveStruct.polytypeMean = polytypeMean;
+% saveStruct.polytypeStd = polytypeStd;
 save(savestr,'-struct','saveStruct');
 
 
