@@ -25,7 +25,7 @@ NFRAMESList = zeros(NSIMS,1);
 nvList = cell(NSIMS,NCELLS);
 LList = cell(NSIMS,1);
 phiList = cell(NSIMS,1);
-polyList = cell(NSIMS,1);
+% polyList = cell(NSIMS,1);
 calAList = cell(NSIMS,1);
 calA0List = cell(NSIMS,1);
 SxxList = cell(NSIMS,1);
@@ -146,6 +146,8 @@ NSIMS = saveStruct.NSIMS;
 
 %% Add ensemble averaged quantities to save struct
 
+fprintf('Computing ensemble averages\n');
+
 % number of frames
 NFRAMESList = saveStruct.NFRAMESList;
 
@@ -260,6 +262,10 @@ saveStruct.z = z;
 % saveStruct.polytypeMean = polytypeMean;
 % saveStruct.polytypeStd = polytypeStd;
 save(savestr,'-struct','saveStruct');
+
+
+fprintf('Wrote data to %s!\n',savestr);
+fprintf('Ending.\n');
 
 
 end
