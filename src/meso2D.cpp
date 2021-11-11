@@ -1110,9 +1110,12 @@ void meso2D::mesoNetworkForceUpdate(){
 					U += 0.5*(kc/zij)*pow((1 - (rij/sij)),2.0);
 
 					// add to virial stress tensor
-					stress[0] += (dx*fx*rho0)/(L[0]*L[1]);
-					stress[1] += (dy*fy*rho0)/(L[0]*L[1]);
-					stress[2] += (0.5*(dx*fy + dy*fx)*rho0)/(L[0]*L[1]);
+					stress[0] += (dx*fx)/(L[0]*L[1]);
+					stress[1] += (dy*fy)/(L[0]*L[1]);
+					stress[2] += (0.5*(dx*fy + dy*fx))/(L[0]*L[1]);
+					// stress[0] += (dx*fx*rho0)/(L[0]*L[1]);
+					// stress[1] += (dy*fy*rho0)/(L[0]*L[1]);
+					// stress[2] += (0.5*(dx*fy + dy*fx)*rho0)/(L[0]*L[1]);
 				}
 			}
 		}
@@ -1182,9 +1185,9 @@ void meso2D::mesoNetworkForceUpdate(double gamma){
 					U += 0.5*(kc/zij)*pow((1 - (rij/sij)),2.0);
 
 					// add to virial stress tensor
-					stress[0] += (dx*fx*rho0)/(L[0]*L[1]);
-					stress[1] += (dy*fy*rho0)/(L[0]*L[1]);
-					stress[2] += (0.5*(dx*fy + dy*fx)*rho0)/(L[0]*L[1]);
+					stress[0] += (dx*fx)/(L[0]*L[1]);
+					stress[1] += (dy*fy)/(L[0]*L[1]);
+					stress[2] += (0.5*(dx*fy + dy*fx))/(L[0]*L[1]);
 				}
 			}
 		}
@@ -1450,7 +1453,7 @@ void meso2D::mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, 
 	}
 
 	// FIRE variables
-	double PFIRE, fnorm, fcheck, dPcheck, vnorm, alpha, dtmax, dtmin;
+	double PFIRE, fnorm, fcheck, fcheckFrc, dPcheck, vnorm, alpha, dtmax, dtmin;
 	int npPos, npNeg, fireit;
 
 	// set dt based on geometric parameters
@@ -1470,6 +1473,7 @@ void meso2D::mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, 
 
 	fireit    	= 0;
 	fcheck  	= 10*Ftol;
+	fcheckFrc 	= fcheck;
 
 	// reset forces and velocities
 	resetForcesAndEnergy();
@@ -1503,6 +1507,7 @@ void meso2D::mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, 
 			cout << endl;
 			cout << "	** fireit 	= " << fireit << endl;
 			cout << "	** fcheck 	= " << fcheck << endl;
+			cout << " 	** fcheckFrc 	= " << fcheckFrc << endl;
 			cout << "	** U 		= " << U << endl;
 			cout << "	** dt 		= " << dt << endl;
 			cout << "	** PFIRE 	= " << PFIRE << endl;
@@ -1606,11 +1611,13 @@ void meso2D::mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, 
 		Pi += 0.5*dt*(P - P0);
 
 		// update fcheck based on fnorm (= force per degree of freedom)
-		fcheck = 0.0;
+		fcheckFrc = 0.0;
 		for (i=0; i<vertDOF; i++)
-			fcheck += pow(F[i] - 0.5*v[i]*(Pi/V),2.0);
-		fcheck += pow(P - P0,2.0);
+			fcheckFrc += pow(F[i] - 0.5*v[i]*(Pi/V),2.0);
+		fcheck = fcheckFrc + pow(P - P0,2.0);
+		fcheckFrc = sqrt(fcheckFrc/vertDOF);
 		fcheck = sqrt(fcheck/vertDOF);
+
 
 		// update iterator
 		fireit++;
@@ -1632,6 +1639,7 @@ void meso2D::mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, 
 		cout << endl;
 		cout << "	** fireit 	= " << fireit << endl;
 		cout << "	** fcheck 	= " << fcheck << endl;
+		cout << "	** fcheckFrc 	= " << fcheckFrc << endl;
 		cout << "	** U 		= " << U << endl;
 
 		cout << "	** fnorm	= " << fnorm << endl;
@@ -2441,7 +2449,7 @@ void meso2D::mesoFreeGrowth(meso2DMemFn forceCall, double Ftol, double dt0, doub
 void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double dPtol, double dt0, double da0, double dl0, double P0, double phiMin, int NMINSKIP){
 	// local variables
 	int i, ci, gi, vi, d, k = 0;
-	double Lold, phi, phi0, calAtmp;
+	double G, Lold, phi, phi0, calAtmp;
 
 	// initialize packing fraction definitions
 	phi0 = vertexPreferredPackingFraction2D();
@@ -2456,6 +2464,13 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 		// relax current configuration
 		Lold = L[0];
 		mesoEnthalpyFIRE(forceCall, Ftol, dPtol, P0, dt0);
+
+		// print MINIMIZED positions if change in packing fraction is large enough
+		if (k % NMINSKIP == 0){
+			if (hessout.is_open())
+				mesoPrintLinearResponse(forceCall, Ftol, dt0);
+			printMesoNetworkCTCS2D();
+		}
 
 		// break contact network
 		updateMesophyllBondNetwork(CTCMIN,PAIRMIN);
@@ -2519,10 +2534,6 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 		cout << "	* meant0 		= " << meant0() << endl;
 		cout << "	* meankb 		= " << meankb() << endl;
 		cout << endl << endl;
-
-		// print positions if change in packing fraction is large enough
-		if (k % NMINSKIP == 0)
-			printMesoNetworkCTCS2D();
 
 		// increase particle size, radii size
 		for (ci=0; ci<NCELLS; ci++)
@@ -3648,22 +3659,19 @@ void meso2D::mesoDynamicalMatrix(Eigen::MatrixXd &M, Eigen::MatrixXd &H, Eigen::
 
 
 // function to use dynamical matrix to compute shear modulus, and prints w/ eigenvalues
-// NOTES:
-// 2. Need to check against numerically computing both contributions using Lees-Edwards + FIRE
-// 3. Incorporate into specific function to simulation, write new main file, put on cluster
-double meso2D::mesoPrintLinearResponse(){
+void meso2D::mesoPrintLinearResponse(meso2DMemFn forceCall, double Ftol, double dt0){
 	// local variables
 	int ci, cj, vi, vj, gi, gj, k, l, kx, ky, lx, ly;
 	double zij, sij, dx, dy, rij, uy;
-	double Gaff, Gnonaff, evproj, rho0;
+	double G=0.0, B=0.0;
 
 	// check that hess object is open
 	if (!hessout.is_open()){
-		cout << "** ERROR: In mesoPrintShearModulus, hessout object not yet open. Ending. " << endl;
+		cout << "** ERROR: In mesoPrintLinearResponse, hessout object not yet open. Ending. " << endl;
 		exit(1);
 	}
 	else
-		cout << "** In mesoPrintShearModulus, computing and printing G and eigenvales... " << endl;
+		cout << "** In mesoPrintLinearResponse, computing and printing G and eigenvales... " << endl;
 
 	// components of dynamical matrix
 	Eigen::MatrixXd M(vertDOF, vertDOF);  
@@ -3681,93 +3689,9 @@ double meso2D::mesoPrintLinearResponse(){
 	// eigenvalues
 	Eigen::VectorXd evals = meig.eigenvalues();
 
-	// eigenvector matrix
-	Eigen::MatrixXd evecs = meig.eigenvectors();
-
-	// First compute affine contribution to shear modulus
-	Gaff = 0.0;
-	rho0 = sqrt(a0[0]);
-	for (ci=0; ci<NCELLS; ci++){
-		for (cj=(ci+1); cj<NCELLS; cj++){
-			// contact scaler
-			zij = 0.5*(zc[ci] + zc[cj])*ctcdel + 1.0;
-
-			// only add if cells are in contact
-			if (cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2] > 0){
-				// loop over pairs of vertices
-				for (vi=0; vi<nv[ci]; vi++){
-					gi = gindex(ci,vi);
-					for (vj=0; vj<nv[cj]; vj++){
-						gj = gindex(cj,vj);
-
-						// contact distance
-						sij = r[gi] + r[gj];
-
-						// true distance
-						dx = x[NDIM*gj] - x[NDIM*gi];
-						dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
-						if (pbc[0])
-							dx -= L[0]*round(dx/L[0]);
-						if (pbc[1])
-							dy -= L[1]*round(dy/L[1]);
-						rij = sqrt(dx*dx + dy*dy);
-
-						// uy for shear modulus
-						uy = dy/rij;
-
-						// check whether bonded or overlapping
-						if (rij > sij && gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2])
-							Gaff -= ((kc*dy)/(zij*sij))*((uy*uy*uy) - (dy/sij));
-						else if (rij < sij)
-							Gaff -= ((kc*dy)/sij)*((uy*uy*uy) - (dy/sij));
-					}
-				}
-			}
-		}
-	}
-	cerr << "Gaffine = " << Gaff << endl;
-
-	// Next, compute nonaffine contribution
-	cerr << "Faffine" << endl;
-	vector<double> Fa(vertDOF,0.0);
-	for (gi=0; gi<NVTOT; gi++){
-		// d.o.f. indices
-		kx = NDIM*gi;
-		ky = kx + 1;
-
-		// loop over pairs
-		for (gj=0; gj<NVTOT; gj++){
-			// d.o.f. indices
-			lx = NDIM*gj;
-			ly = lx + 1;
-
-			// get distance in y direction
-			dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
-			if (pbc[1])
-				dy -= L[1]*round(dy/L[1]);
-
-			// add to affine force
-			Fa[kx] -= M(kx,lx)*(dy/rho0);
-			Fa[ky] -= M(ky,lx)*(dy/rho0);
-		}
-	}
-
-	// project affine force onto eigenvectors for non-affine G contribution
-	Gnonaff = 0.0;
-	cerr << "G non affine" << endl;
-	for (k=3; k<vertDOF; k++){
-		// prject eigenvector k onto affine forces
-		evproj = 0.0;
-		for (l=0; l<vertDOF; l++)
-			evproj += evecs(l,k)*Fa[l];
-
-		// add to non-affine G
-		Gnonaff -= (evproj*evproj)/evals(k);
-	}
-	cerr << "Gnonaff = " << Gnonaff << endl;
-
-	// save shear modulus
-	double G = Gaff + Gnonaff;
+	// // also get shear & bulk modulus using numerical derivatives
+	G = numericalShearModulus(forceCall, Ftol, dt0);
+	B = numericalBulkModulus(forceCall, Ftol, dt0);
 
 	// print eigenvectors
 	hessout << setw(w) << left << "NEWFR" << " " << endl;
@@ -3782,6 +3706,11 @@ double meso2D::mesoPrintLinearResponse(){
 	// print shear modulus
 	hessout << setw(w) << left << "SHRMD";
 	hessout << setw(wnum) << setprecision(pnum) << left << G;
+	hessout << endl;
+
+	// print shear modulus
+	hessout << setw(w) << left << "BLKMD";
+	hessout << setw(wnum) << setprecision(pnum) << left << B;
 	hessout << endl;
 
 	// print dynamical matrix eigenvalues
@@ -3806,227 +3735,188 @@ double meso2D::mesoPrintLinearResponse(){
 
 	// print end frame
 	hessout << setw(w) << left << "ENDFR" << " " << endl;
+}
 
-	// return sum as full shear modulus
+// function to compute shear modulus numerically
+// NOTE: need to add code to not break contacts between strain steps, will fix cell-linked list 
+// problem & will smooth out shear stress
+double meso2D::numericalShearModulus(meso2DMemFn forceCall, double Ftol, double dt0){
+	// local variables
+	int k;
+	double sxyold, sxycurr; 
+
+	// shear strain
+	double dgamma = 1e-7;
+	double gamma = 0.0;
+	int NGAMMA = 5;
+
+	// save shear stress
+	vector<double> sxyList(NGAMMA+1,0.0);
+	vector<double> UList(NGAMMA+1,0.0);
+
+	// initialize saved variables
+	vector<double> Lsave(NDIM,0.0);
+	vector<double> xsave(vertDOF, 0.0);
+	vector<double> vsave(vertDOF, 0.0);
+	vector<double> Fsave(vertDOF, 0.0);
+	vector<double> rsave(vertDOF, 0.0);
+	vector<double> l0save(vertDOF, 0.0);
+	vector<double> t0save(vertDOF, 0.0);
+	vector<double> a0save(vertDOF, 0.0);
+
+	Lsave = L;
+	xsave = x;
+	vsave = v;
+	Fsave = F;
+	rsave = r;
+	l0save = l0;
+	t0save = t0;
+	a0save = a0;
+
+	// initial relaxation at 0 strain
+	mesoFIRE(forceCall, Ftol, dt0);
+	sxyList.at(0) = stress[2];
+	UList.at(0) = U;
+
+	// loop over shear strains gamma, relax using FIRE, compute change in Sxy
+	for (k=0; k<NGAMMA; k++){
+		// update gamma for this iteration
+		gamma += dgamma;
+
+		// relax at fixed shear strain + volume
+		mesoShearStrainFIRE(gamma, Ftol, dt0);
+
+		// save shear stress
+		sxyList.at(k+1) = stress[2];
+
+		// save total potential energy
+		UList.at(k+1) = U;
+	}
+
+	// compute numerical derivative, take average
+	double G = 0.0;
+	for (k=0; k<NGAMMA-1; k++)
+		G -= 0.5*(sxyList.at(k+2) - sxyList.at(k))/dgamma;
+	G /= (NGAMMA-1);
+
+	// reset system
+	L = Lsave;
+	x = xsave;
+	v = vsave;
+	F = Fsave;
+	r = rsave;
+	l0 = l0save;
+	t0 = t0save;
+	a0 = a0save;
+
+	// print energy for numerical check
+	cout << "computing G: List of U during strain:" << endl;
+	gamma = 0.0;
+	for (k=0; k<NGAMMA+1; k++){
+		cout << setprecision(8) << gamma << "\t" << UList.at(k) << endl;
+		gamma += dgamma;
+	}
+
+	// return numerical result
 	return G;
 }
 
+// function to compute bulk modulus numerically
+double meso2D::numericalBulkModulus(meso2DMemFn forceCall, double Ftol, double dt0){
+	// local variables
+	int k, gi, d;
+	double pold, pcurr; 
 
+	// shear strain
+	double dgamma = 1e-7;
+	double gamma = 0.0;
+	int NGAMMA = 5;
 
-// // function to compute shear stress (first derivative of U w.r.t. shear strain gamma)
-// double meso2D::sigAffine(double gamma){
-// 	// local variables
-// 	int gi, gj, im, ci, cj, vi, vj;
-// 	double sig = 0.0;
-// 	double l0i, lim1x, lim1y, lix, liy, lim1,li, uim1x, uim1y, uix, uiy, dli;
-// 	double si, ci, ti, dti;
+	// save shear stress
+	vector<double> pList(NGAMMA+1,0.0);
+	vector<double> UList(NGAMMA+1,0.0);
+	vector<double> AList(NGAMMA+1,0.0);
 
-// 	// loop over vertices
-// 	for (gi=0; gi<NVTOT; gi++){
-// 		// -- PERIMETER ENERGY CONTRIBUTION 
+	// initialize saved variables
+	vector<double> Lsave(NDIM,0.0);
+	vector<double> lbsave(NDIM,0.0);
+	vector<double> xsave(vertDOF, 0.0);
+	vector<double> vsave(vertDOF, 0.0);
+	vector<double> Fsave(vertDOF, 0.0);
+	vector<double> rsave(vertDOF, 0.0);
+	vector<double> l0save(vertDOF, 0.0);
+	vector<double> t0save(vertDOF, 0.0);
+	vector<double> a0save(vertDOF, 0.0);
 
-// 		// segment preferred length
-// 		l0i = l0[gi];
+	Lsave = L;
+	xsave = x;
+	vsave = v;
+	Fsave = F;
+	rsave = r;
+	l0save = l0;
+	t0save = t0;
+	a0save = a0;
 
-// 		// segment vectors (consider possible fixed shear strain gamma)
-// 		lim1y 	= x[NDIM*gi + 1] - x[NDIM*im1[gi] + 1];
-// 		im 		= round(lim1y/L[1]);
-// 		lim1y	-= L[1]*im;
+	// initial relaxation at 0 strain
+	mesoFIRE(forceCall, Ftol, dt0);
+	pList.at(0) = 0.5*(stress[0] + stress[1]);
+	UList.at(0) = U;
+	AList.at(0) = L[0]*L[1];
 
-// 		lim1x 	= x[NDIM*gi] - x[NDIM*im1[gi]];
-// 		lim1x 	-= L[1]*im*gamma;
-// 		lim1x 	-= L[0]*round(lim1x/L[0]);
+	// loop over shear strains gamma, relax using FIRE, compute change in Sxy
+	for (k=0; k<NGAMMA; k++){
+		// update gamma for this iteration
+		gamma += dgamma;
 
-// 		liy 	= x[NDIM*ip1[gi] + 1] - x[NDIM*gi + 1];
-// 		im 		= round(liy/L[1]);
-// 		liy 	-= L[1]*im;
+		// affine displacement
+		for (d = 0; d < NDIM; d++){
+			L[d] = (1.0 - gamma)*Lsave[d];
+			lb[d] = L[d] / sb[d];
+		}
+		for(gi=0; gi<NVTOT; gi++){
+			x[NDIM*gi] *= 1.0 - gamma;
+			x[NDIM*gi + 1] *= 1.0 - gamma;
+		}
 
-// 		lix 	= x[NDIM*ip1[gi]] - x[NDIM*gi];
-// 		lix 	-= L[1]*im*gamma;
-// 		liy 	-= L[0]*round(lix/L[0]);
+		// relax at fixed volume
+		mesoFIRE(forceCall, Ftol, dt0);
 
-// 		// segment lengths
-// 		lim1 = sqrt(lim1x*lim1x + lim1y*lim1y);
-// 		li = sqrt(lix*lix + liy*liy);
+		// save shear stress
+		pList.at(k+1) = 0.5*(stress[0] + stress[1]);
 
-// 		// segment unit vectors
-// 		uim1x 	= lim1x/lim1;
-// 		uim1y 	= lim1y/lim1;
+		// save total potential energy + box 
+		UList.at(k+1) = U;
+		AList.at(k+1) = L[0]*L[1];
+	}
 
-// 		uix 	= lix/li;
-// 		uiy 	= liy/li;
+	// compute numerical derivative, take average
+	double B = 0.0;
+	for (k=0; k<NGAMMA-1; k++)
+		B -= AList.at(k+1)*(0.5*(pList.at(k+2) - pList.at(k))/(AList.at(k+1)-AList.at(k)));
+	B /= (NGAMMA-1);
 
-// 		// segment strain
-// 		dli = (li/l0i) - 1.0;
+	// reset system
+	L = Lsave;
+	lb = lbsave;
+	x = xsave;
+	v = vsave;
+	F = Fsave;
+	r = rsave;
+	l0 = l0save;
+	t0 = t0save;
+	a0 = a0save;
 
-// 		// add to stress contribution
-// 		sig += kl*(dli/l0i)*uiy*lix;
+	// print energy for numerical check
+	cout << "computing B: List of U during strain:" << endl;
+	gamma = 0.0;
+	for (k=0; k<NGAMMA+1; k++){
+		cout << setprecision(8) << gamma << "\t" << AList.at(k) << "\t" << UList.at(k) << endl;
+		gamma += dgamma;
+	}
 
-
-// 		// -- BENDING ENERGY CONTRIBUTION
-// 		si = lix*lim1y - liy*lim1x;
-// 		ci = lix*lim1x + liy*lim1y;
-
-// 		// angle
-// 		ti = atan2(si,ci);
-
-// 		// angle deviation
-// 		dti = ti - t0[gi];
-
-// 		// add to stress constribution
-// 		sig += kb*(dti*(uiy*uiy - uim1y*uim1y));
-
-// 		// -- INTERACTION ENERGY CONTRIBUTION
-// 		for (gj=gi+1; gj<NVTOT; gj++){
-// 			// contact distance
-// 			sij = r[gi] + r[gj];
-
-// 			// get vertex-vertex distance
-// 			dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
-// 			im = round(dy/L[1]);
-// 			dy -= L[1]*im;
-
-// 			dx = x[NDIM*gj] - x[NDIM*gi];
-// 			dx -= L[1]*im*gamma;
-// 			dx -= L[0]*round(dx/L[0]);
-
-// 			rij = sqrt(dx*dx + dy*dy);
-
-// 			if ( rij < sij || (rij > sij && gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2]) ){
-// 				// get energy scale if connected
-// 				if (rij < sij)
-// 					eij = kc;
-// 				else{
-// 					// get cell indices
-// 					cindices(ci,vi,gi);
-// 					cindices(cj,vj,gj);
-
-// 					// zij: determines strength of bond attraction
-// 					zij = 0.5*(zc[ci] + zc[cj])*ctcdel + 1.0;
-
-// 					// get energy
-// 					eij = kc/zij;
-// 				}
-
-// 				// add to shear stress contribution
-// 				sig += (eij/sij)*(1.0 - (rij/sij))*(dy/rij)*dx;
-// 			}
-// 		}
-// 	}
-
-// 	// return stress value
-// 	return sig;
-// }
-
-
-
-// // function to compute affine contribution to shear modulus (second *partial* derivative of U w.r.t. shear strain gamma)
-// double meso2D::GAffine(double gamma){
-// 	// local variables
-// 	int gi;
-// 	double Gaff = 0.0;
-// 	double l0i, lim1x, lim1y, lix, liy, lim1,li, uim1x, uim1y, uix, uiy, dli;
-// 	double si, ci, ti, dti;
-// 	double dx, dy, rij, sij, eij, zij;
-
-// 	// loop over vertices
-// 	for (gi=0; gi<NVTOT; gi++){
-// 		// -- PERIMETER ENERGY CONTRIBUTION 
-
-// 		// segment preferred length
-// 		l0i = l0[gi];
-
-// 		// segment vectors (consider possible fixed shear strain gamma)
-// 		lim1y 	= x[NDIM*gi + 1] - x[NDIM*im1[gi] + 1];
-// 		im 		= round(lim1y/L[1]);
-// 		lim1y	-= L[1]*im;
-
-// 		lim1x 	= x[NDIM*gi] - x[NDIM*im1[gi]];
-// 		lim1x 	-= L[1]*im*gamma;
-// 		lim1x 	-= L[0]*round(lim1x/L[0]);
-
-// 		liy 	= x[NDIM*ip1[gi] + 1] - x[NDIM*gi + 1];
-// 		im 		= round(liy/L[1]);
-// 		liy 	-= L[1]*im;
-
-// 		lix 	= x[NDIM*ip1[gi]] - x[NDIM*gi];
-// 		lix 	-= L[1]*im*gamma;
-// 		liy 	-= L[0]*round(lix/L[0]);
-
-// 		// segment lengths
-// 		lim1 = sqrt(lim1x*lim1x + lim1y*lim1y);
-// 		li = sqrt(lix*lix + liy*liy);
-
-// 		// segment unit vectors
-// 		uim1x 	= lim1x/lim1;
-// 		uim1y 	= lim1y/lim1;
-
-// 		uix 	= lix/li;
-// 		uiy 	= liy/li;
-
-// 		// segment strain
-// 		dli = (li/l0i) - 1.0;
-
-// 		// add to (affine) shear modulus
-// 		Gaff += kl*((uliy/l0i)*(dli*liy + ((uiy*lix*lix)/l0i)));
-
-
-// 		// -- BENDING ENERGY CONTRIBUTION
-// 		si = lix*lim1y - liy*lim1x;
-// 		ci = lix*lim1x + liy*lim1y;
-
-// 		// angle
-// 		ti = atan2(si,ci);
-
-// 		// angle deviation
-// 		dti = ti - t0[gi];
-
-// 		// add to (affine) shear modulus
-// 		Gaff += kb*(pow(uiy*uiy - uim1y*uim1y,2.0) + 2.0*dti*uiy*uim1y*(uix*uim1y - uim1x*uiy));
-
-// 		// -- INTERACTION ENERGY CONTRIBUTION
-// 		for (gj=gi+1; gj<NVTOT; gj++){
-// 			// contact distance
-// 			sij = r[gi] + r[gj];
-
-// 			// get vertex-vertex distance
-// 			dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
-// 			im = round(dy/L[1]);
-// 			dy -= L[1]*im;
-
-// 			dx = x[NDIM*gj] - x[NDIM*gi];
-// 			dx -= L[1]*im*gamma;
-// 			dx -= L[0]*round(dx/L[0]);
-
-// 			rij = sqrt(dx*dx + dy*dy);
-
-// 			if ( rij < sij || (rij > sij && gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2]) ){
-// 				// get energy scale if connected
-// 				if (rij < sij)
-// 					eij = kc;
-// 				else{
-// 					// get cell indices
-// 					cindices(ci,vi,gi);
-// 					cindices(cj,vj,gj);
-
-// 					// zij: determines strength of bond attraction
-// 					zij = 0.5*(zc[ci] + zc[cj])*ctcdel + 1.0;
-
-// 					// get energy
-// 					eij = kc/zij;
-// 				}
-
-// 				// add to (affine) shear modulus
-// 				Gaff += 
-// 			}
-// 		}
-// 	}
-
-// 	// return stress value
-// 	return Gaff;
-// }
-
-
+	// return numerical result
+	return B;
+}
 
 /******************************
 

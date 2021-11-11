@@ -77,12 +77,13 @@ showverts = 0;
 % get cell colors
 [nvUQ, ~, IC] = unique(nv);
 NUQ = length(nvUQ);
-cellCLR = winter(NUQ);
+allClr = jet(6);
+cellCLR = allClr(1:NUQ,:);
 
 % get frames to plot
 if showverts == 0
     FSTART = 1;
-    FSTEP = 3;
+    FSTEP = 1;
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
@@ -94,7 +95,7 @@ end
 % make a movie
 makeAMovie = 1;
 if makeAMovie == 1
-    moviestr = 'compress2jamming.mp4';
+    moviestr = 'compress2jamming_dpb.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);

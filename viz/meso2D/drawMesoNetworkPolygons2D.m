@@ -5,7 +5,7 @@ close all;
 clc;
 
 % create file name
-fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb01e-4_be50_da1e-3_dl0.5_P1e-6_h0.5_cL10_cB2_seed2.posctc';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N128_n32_ca1.14_kb01e-3_be50_da0.02_dl10_P1e-4_h0.5_cL1_cB1_seed12.posctc';
 % fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data

@@ -1641,9 +1641,12 @@ void dpm::vertexRepulsiveForces2D() {
 	}
 
 	// normalize stress by box area, make dimensionless
-	stress[0] *= (rho0 / (L[0] * L[1]));
-	stress[1] *= (rho0 / (L[0] * L[1]));
-	stress[2] *= (rho0 / (L[0] * L[1]));
+	stress[0] *= (1.0 / (L[0] * L[1]));
+	stress[1] *= (1.0 / (L[0] * L[1]));
+	stress[2] *= (1.0 / (L[0] * L[1]));
+	// stress[0] *= (rho0 / (L[0] * L[1]));
+	// stress[1] *= (rho0 / (L[0] * L[1]));
+	// stress[2] *= (rho0 / (L[0] * L[1]));
 }
 
 
@@ -1717,9 +1720,12 @@ void dpm::vertexRepulsiveForces2D(double gamma) {
 	}
 
 	// normalize stress by box area, make dimensionless
-	stress[0] *= (rho0 / (L[0] * L[1]));
-	stress[1] *= (rho0 / (L[0] * L[1]));
-	stress[2] *= (rho0 / (L[0] * L[1]));
+	stress[0] *= (1.0 / (L[0] * L[1]));
+	stress[1] *= (1.0 / (L[0] * L[1]));
+	stress[2] *= (1.0 / (L[0] * L[1]));
+	// stress[0] *= (rho0 / (L[0] * L[1]));
+	// stress[1] *= (rho0 / (L[0] * L[1]));
+	// stress[2] *= (rho0 / (L[0] * L[1]));
 }
 
 void dpm::vertexAttractiveForces2D() {

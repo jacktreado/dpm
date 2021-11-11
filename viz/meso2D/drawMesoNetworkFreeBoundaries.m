@@ -5,15 +5,15 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n24_ca1.14_kb01e-4_be100_da0.05_dl1.1_P1e-4_h0.5_cL1_cB1_seed16.posctc';
-fstr = '~/Jamming/CellSim/dpm/pos.test';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb01e-3_be50_da0.02_dl5_P1e-4_h0.5_cL0_cB0_seed10.posctc';
+% fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
-idx = phi > 0.1;
+idx = phi > 0.395;
 phi = phi(idx);
 
 % number of frames
@@ -145,15 +145,15 @@ end
 
 % get frames to plot
 if showverts == 0
-    FSTART = 2;
+    FSTART = 26;
     FSTEP = 1;
     if NFRAMES > 50
         FSTEP = 2;
     elseif NFRAMES > 150
         FSTEP = 10;
     end
-    FEND = NFRAMES;
-%     FEND = FSTART;
+%     FEND = NFRAMES;
+    FEND = FSTART;
 else
     FSTART = 2;
     FSTEP = 1;
@@ -161,10 +161,10 @@ else
 end
 
 % make a movie
-makeAMovie = 1;
+makeAMovie = 0;
 ctccopy = 0;
 if makeAMovie == 1
-    moviestr = 'goodNetworkFreeBnd.mp4';
+    moviestr = 'mesoHMin2D_N128_n32_ca1.14_kb01e-3_be50_da0.02_dl7_P1e-4_h0.5_cL0_cB0_seed12.mp4';
 %     moviestr = 'mesoHMin2D_N64_n24_ca1.14_kb01e-3_be100_da0.05_dl0.1_P1e-8_h0.5_cL1_cB1_seed100.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;

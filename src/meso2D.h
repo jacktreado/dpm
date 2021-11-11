@@ -138,14 +138,14 @@ public:
 	void addVertex(int gi, double newl0);
 	void t0ToCurrent();
 	void t0ToReg();
-	double sigAffine(double gamma);
-	double GAffine(double gamma);
 
-	// hessian computation
+	// hessian computation & linear response
 	void mesoBendingHessian(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb);
 	void mesoSpringNetworkHessian(Eigen::MatrixXd &Hs, Eigen::MatrixXd &Ss);
 	void mesoDynamicalMatrix(Eigen::MatrixXd &M, Eigen::MatrixXd &H, Eigen::MatrixXd &S);
-	double mesoPrintLinearResponse();
+	void mesoPrintLinearResponse(meso2DMemFn forceCall, double Ftol, double dt0);
+	double numericalShearModulus(meso2DMemFn forceCall, double Ftol, double dt0);
+	double numericalBulkModulus(meso2DMemFn forceCall, double Ftol, double dt0);
 
 	// printing functions
 	void printMesoNetwork2D();

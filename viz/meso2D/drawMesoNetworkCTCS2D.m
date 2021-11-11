@@ -6,7 +6,7 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n24_ca1.14_kb02e-3_be75_da0.01_dl1.01_P1e-4_h0.5_cL1_cB1_seed17.posctc';
+% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb02e-2_be50_da0.02_dl5_P1e-4_h0.5_cL0_cB0_seed13.posctc';
 fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
@@ -14,7 +14,7 @@ mesoData = readMesoNetworkCTCS2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
-idx = phi > 0.1 & phi < 1.0;
+idx = phi > 0.375 & phi < 1.0;
 phi = phi(idx);
 
 % number of frames
@@ -135,14 +135,20 @@ if NFRAMES > 2
      % plot packing fractions
     figure(16), clf, hold on, box on;
     yyaxis left
-    plot(1:NFRAMES,phi,'ko','markersize',10,'markerfacecolor','b');
-    ylabel('$\phi$','Interpreter','latex');
-    yyaxis right
-    plot(1:NFRAMES,P,'ks','markersize',10,'markerfacecolor','r');
-    ylabel('$P$','Interpreter','latex');
-    xlabel('frame','Interpreter','latex');
+    plot((2:NFRAMES) - 1,phi(2:NFRAMES),'ko','markersize',10,'markerfacecolor','b');
+    h = ylabel('$\phi$','Interpreter','latex');
+    h.Color = 'b';
     ax = gca;
-    ax.FontSize = 22;
+    ax.YColor = 'b';
+    yyaxis right
+    plot((2:NFRAMES) - 1,P(2:NFRAMES),'ks','markersize',10,'markerfacecolor','r');
+    h = ylabel('$P$','Interpreter','latex');
+    h.Color = 'r';
+    ax = gca;
+    ax.YColor = 'r';
+    xlabel('frame','Interpreter','latex');
+    ax.YLim = [0 2e-4];
+    ax.FontSize = 36;
     
     % plot shape vs porosity
     ambroseData = load('/Users/jacktreado/Jamming/Flowers/structure/plant/ambroseMesoCells/ambroseData.mat');
@@ -276,17 +282,17 @@ if showverts == 0
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
-    FSTART = 7;
+    FSTART = 13;
     FSTEP = 1;
     FEND = FSTART;
 end
 
 % make a movie
-makeAMovie = 1;
+makeAMovie = 0;
 ctccopy = 0;
 if makeAMovie == 1
 %     moviestr = 'debug.mp4';
-    moviestr = 'goodNetwork.mp4';
+    moviestr = 'mesoHMin2D_N64_n32_ca1.14_kb05e-3_be50_da0.02_dl5_P1e-4_h0.5_cL0_cB0_seed10.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -323,16 +329,18 @@ for ff = FSTART:FSTEP:FEND
             clr = cellCLR(IC(ff,nn),:);
         end
         if showverts == 1
+            vpos = [xtmp, ytmp];
+            patch('Faces',[1:nvtmp 1],'vertices',vpos,'FaceColor','none','EdgeColor','k','Linewidth',1.5,'LineStyle','-');
             for vv = 1:nvtmp
                 rv = rtmp(vv);
                 xplot = xtmp(vv) - rv;
                 yplot = ytmp(vv) - rv;
                 for xx = 0
                     for yy = 0
-                        if nn > 0
-                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',1.5);
+                        if nn == 19
+                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',2);
                         else
-                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','w');
+                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','w','LineWidth',2);
                         end
                     end
                 end
@@ -348,6 +356,7 @@ for ff = FSTART:FSTEP:FEND
                     vpos = [xtmp + xx*L, ytmp + yy*L];
                     finfo = [1:nvtmp 1];
                     patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k','Linewidth',1.5,'markersize',10);
+%                     text(cx,cy,num2str(nn));
                 end
             end
         end
@@ -369,7 +378,7 @@ for ff = FSTART:FSTEP:FEND
                 dy = dy - L*round(dy/L);
                 for xx = ctccopy
                     for yy = ctccopy
-                        plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'k-','linewidth',2);
+                        plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'k--','linewidth',2);
                     end
                 end
             end
@@ -398,11 +407,11 @@ if makeAMovie == 1
     close(vobj);
 end
 
-
+return;
 %% Draw individual cell shape dynamics
 
 % pick random cell
-cellidx = randi(NCELLS);
+cellidx = 19;
 
 % reset figure for this frame
 figure(20), clf, hold on, box on;
@@ -412,27 +421,32 @@ xf = x(:,cellidx);
 yf = y(:,cellidx);
 nvf = nv(:,cellidx);
 zvf = zv(:,cellidx);
-for ff = 1:2:NFRAMES
+frList = [2 6 10 13];
+NFR = length(frList);
+LP = LList(end,1);
+for ii = 1:NFR
+    ff = frList(ii);
     xtmp = xf{ff};
     ytmp = yf{ff};
     zvtmp = zvf{ff};
     nvtmp = nvf(ff);
+    
     cx = mean(xtmp);
     cy = mean(ytmp);
     xtmp = xtmp - cx;
-    ytmp = ytmp - cy;
+    ytmp = ytmp - cy - (ii-1)*0.175*LP;
     ip1 = [2:nvtmp 1];
     for vv = 1:nvtmp
         if zvtmp(vv) <= 0
-            plot([xtmp(vv) xtmp(ip1(vv))],[ytmp(vv) ytmp(ip1(vv))],'-','linewidth',3,'color','g');
+            plot([xtmp(vv) xtmp(ip1(vv))],[ytmp(vv) ytmp(ip1(vv))],'-','linewidth',2,'color','g');
         else
-            plot([xtmp(vv) xtmp(ip1(vv))],[ytmp(vv) ytmp(ip1(vv))],'-','linewidth',1.5,'color','b');
+            plot([xtmp(vv) xtmp(ip1(vv))],[ytmp(vv) ytmp(ip1(vv))],'-','linewidth',2,'color','b');
         end
     end
     axis equal;
     ax = gca;
     ax.XTick = [];
     ax.YTick = [];
-    ax.XLim = [-0.25*LList(end,1) 0.25*LList(end,1)];
-    ax.YLim = [-0.25*LList(end,2) 0.25*LList(end,2)];
+    ax.XLim = [-0.15*LP 0.15*LP];
+    ax.YLim = [-NFR*0.175*LP 0.1*LP];
 end
