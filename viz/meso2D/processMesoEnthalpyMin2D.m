@@ -23,7 +23,7 @@ fskip = false(NSIMS,1);
 fnameList = cell(NSIMS,1);
 NFRAMESList = zeros(NSIMS,1);
 
-nvList = cell(NSIMS,NCELLS);
+nvList = cell(NSIMS,1);
 LList = cell(NSIMS,1);
 phiList = cell(NSIMS,1);
 polyList = cell(NSIMS,1);
