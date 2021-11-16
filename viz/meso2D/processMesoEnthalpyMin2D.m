@@ -208,6 +208,7 @@ for ss = 1:NSIMS
     calAStds(last:next) = std(calAtmp,0,2);
     
     % get polygon information
+    LListtmp = LList{ss};
     polytmp = polyList{ss};
     npolys(last:next) = cellfun(@length,polytmp);
     polytypes = zeros(NFRAMEStmp,NPOLYCHECK);
@@ -220,6 +221,7 @@ for ss = 1:NSIMS
             polytypes(ff,pp-(minpoly-1)) = sum(polytypetmp == pp);
         end
         polytypes(ff,end) = sum(polytypetmp > maxpoly);
+        Abox = LListtmp(ff,1)*LListtmp(ff,2);
         for ii = 1:NPOLYS
             ptmp = polyconfigtmp{ii};
             NE = size(ptmp,1);
