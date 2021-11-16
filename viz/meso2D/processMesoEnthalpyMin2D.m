@@ -1,5 +1,6 @@
 function processMesoEnthalpyMin2D(floc,fpattern,savestr)
 %% FUNCTION to analyze enthalpy-minimized mesophyll network simulations
+% NOTE: skip the first frame by default, not saved in ensemble or list 
 
 % get list of files that fit pattern
 flist = dir([floc '/' fpattern '*.posctc']);
@@ -37,7 +38,6 @@ kbList = cell(NSIMS,1);
 cxList = cell(NSIMS,1);
 cyList = cell(NSIMS,1);
 
-
 % Loop
 for ss = 1:NSIMS
     % file info
@@ -51,31 +51,36 @@ for ss = 1:NSIMS
     end
     mesoData = readMesoNetworkCTCS2D(fstr);
     
-    % get number of frames
-    NFRAMES = mesoData.NFRAMES;
-    NFRAMESList(ss) = NFRAMES;
-    fnameList{ss} = fname;
+    % find void polygons, get number of OK frames
+    polyListTmp = voidPolys(mesoData);
+    NFRAMES = size(polyListTmp,1);
 
     % sim info
     NCELLS = mesoData.NCELLS;
-    nv = mesoData.nv;
-    L = mesoData.L;
-    x = mesoData.x;
-    y = mesoData.y;
-    zc = mesoData.zc;
-    a0 = mesoData.a0;
-    l0 = mesoData.l0;
-    t0 = mesoData.t0;
-    kb = mesoData.kb;
+    nv = mesoData.nv(2:NFRAMES,:);
+    L = mesoData.L(2:NFRAMES,:);
+    x = mesoData.x(2:NFRAMES,:);
+    y = mesoData.y(2:NFRAMES,:);
+    zc = mesoData.zc(2:NFRAMES,:);
+    a0 = mesoData.a0(2:NFRAMES,:);
+    l0 = mesoData.l0(2:NFRAMES,:);
+    t0 = mesoData.t0(2:NFRAMES,:);
+    kb = mesoData.kb(2:NFRAMES,:);
+    S = mesoData.S(2:NFRAMES,:);
+    phi = mesoData.phi(2:NFRAMES);
+    p = mesoData.p(2:NFRAMES,:);
+    a = mesoData.a(2:NFRAMES,:);
+    polyList{ss} = polyListTmp(2:NFRAMES);
+    
+    NFRAMES = NFRAMES - 1;
+    NFRAMESList(ss) = NFRAMES;
+    fnameList{ss} = fname;
     
     % cell vertices
     nvList{ss} = nv;
     
     % box
     LList{ss} = L;
-    
-    % find void polygons
-    polyList{ss} = voidPolys(mesoData);
     
     % preferred shape / cx
     calA0 = zeros(NFRAMES,NCELLS);
@@ -98,12 +103,10 @@ for ss = 1:NSIMS
     calA0List{ss} = calA0;
 
     % actual shape
-    p = mesoData.p;
-    a = mesoData.a;
     calAList{ss} = p.^2./(4.0*pi*a);
     
     % packing fraction
-    phiList{ss} = mesoData.phi;
+    phiList{ss} = phi;
     
     % connections
     zList{ss} = zc;
@@ -112,8 +115,7 @@ for ss = 1:NSIMS
     t0List{ss} = t0;
     kbList{ss} = kb;
     
-    % stress
-    S = mesoData.S;
+     % stress
     SxxList{ss} = S(:,1);
     SyyList{ss} = S(:,2);
     SxyList{ss} = S(:,3);
@@ -385,8 +387,14 @@ for ff = 1:NFRAMES
     L = LList(ff,1);
     [mainTiling, NFMAIN] = getMesoVoidPolygons(cx,cy,cijtmp,L);
     polys{ff} = mainTiling;
-    NPOLYS(ff) = NFMAIN;
-    fprintf('* On frame %d / %d, got %d void polygons...\n',ff,NFRAMES,NFMAIN);
+    NPOLYS(ff) = size(polys{ff},1);
+    if NPOLYS(ff) >= 5
+        fprintf('* On frame %d / %d, got %d void polygons...\n',ff,NFRAMES,NFMAIN);
+    else
+        fprintf('* On frame %d / %d, got %d void polygons, so ending here...\n',ff,NFRAMES,NFMAIN);
+        polys(ff+1:end) = [];
+        break;
+    end
 end
 
 end
