@@ -4,9 +4,13 @@ clear;
 close all;
 clc;
 
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb01e-3_be50_da0.02_dl10_P1e-4_h0.5_cL0_cB0_seed100.posctc';
-fstr = '~/Jamming/CellSim/dpm/pos.test';
-hessstr = '~/Jamming/CellSim/dpm/hess.test';
+
+fname = 'mesoDM2D_N64_n32_ca1.14_kb01e-3_be75_da0.02_dl5_P1e-4_h0.5_cL0_cB0_seed100';
+fstr = ['local/mesoHMin2D_data/' fname '.posctc'];
+hessstr = ['local/mesoHMin2D_data/' fname '.hess'];
+
+% fstr = '~/Jamming/CellSim/dpm/pos.test';
+% hessstr = '~/Jamming/CellSim/dpm/hess.test';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);
@@ -232,6 +236,14 @@ end
 figure(4), clf, hold on, box on;
 plot(phi(2) - phi(3:end),mmean(2:end),'ko','markersize',10,'markerfacecolor','b');
 plot(phi(2) - phi(3:end),hmean(2:end),'ko','markersize',10,'markerfacecolor','r');
+xlabel('$\varphi - \varphi_{\rm min}$','Interpreter','latex');
+ylabel('mean eigenvalue','Interpreter','latex');
+ax = gca;
+ax.FontSize = 22;
+
+
+figure(5), clf, hold on, box on;
+plot(phi(2) - phi(3:end),B(3:end),'ko','markersize',10,'markerfacecolor','b');
 xlabel('$\varphi - \varphi_{\rm min}$','Interpreter','latex');
 ylabel('mean eigenvalue','Interpreter','latex');
 ax = gca;

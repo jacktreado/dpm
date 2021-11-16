@@ -6,8 +6,8 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb02e-2_be50_da0.02_dl5_P1e-4_h0.5_cL0_cB0_seed13.posctc';
-fstr = '~/Jamming/CellSim/dpm/pos.test';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb01e-3_be50_da0.02_dl10_P1e-4_h0.5_cL0_cB0_seed15.posctc';
+% fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);
@@ -120,6 +120,28 @@ if NFRAMES > 2
     ylabel('$z$','Interpreter','latex');
     ax = gca;
     ax.FontSize = 22;
+    
+    % plot contact populations
+    zchecklist = 3:8;
+    NZCHECK = length(zchecklist);
+    zpop = zeros(NFRAMES,NZCHECK);
+    for ff = 1:NFRAMES
+        zctmp = zc(ff,:);
+        for cc = 1:NZCHECK
+            zpop(ff,cc) = sum(zctmp == zchecklist(cc))/NCELLS;
+        end
+    end
+    figure(50), clf, hold on, box on;
+    clr = jet(NZCHECK);
+    for cc = 1:NZCHECK
+        plot(phi(2)-phi(2:end),zpop(2:end,cc),'-','linewidth',2,'color',clr(cc,:));
+    end
+    ylabel('$z$','Interpreter','latex');
+    xlabel('$1-\phi$','Interpreter','latex');
+    legend({'3','4','5','6','7','$\geq 8$'},'Interpreter','latex','fontsize',14,'location','best');
+    ax = gca;
+    ax.FontSize = 24;
+    
     
     % plot area deviations
     ea = 0.5*(a./a0 - 1).^2;

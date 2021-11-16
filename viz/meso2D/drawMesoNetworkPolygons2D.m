@@ -5,7 +5,7 @@ close all;
 clc;
 
 % create file name
-fstr = 'local/mesoHMin2D_data/mesoHMin2D_N128_n32_ca1.14_kb01e-3_be50_da0.02_dl10_P1e-4_h0.5_cL1_cB1_seed12.posctc';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb02e-2_be100_da0.02_dl5_P1e-4_h0.5_cL0_cB0_seed15.posctc';
 % fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
@@ -13,7 +13,7 @@ mesoData = readMesoNetworkCTCS2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
-idx = phi > 0.01;
+idx = phi > 0.1;
 phi = phi(idx);
 
 % number of frames
@@ -22,8 +22,8 @@ NFRAMES = sum(idx);
 % sim info
 NCELLS = mesoData.NCELLS;
 nv = mesoData.nv(idx,:);
-LList = mesoData.L;
-ctcList = mesoData.ctcs;
+LList = mesoData.L(idx,:);
+ctcList = mesoData.ctcs(idx,:);
 x = mesoData.x(idx,:);
 y = mesoData.y(idx,:);
 r = mesoData.r(idx,:);
@@ -131,10 +131,10 @@ end
 
 % get frames to plot
 if showverts == 0
-    FSTART = 1;
+    FSTART = 14;
     FSTEP = 1;
-    FEND = NFRAMES;
-%     FEND = FSTART;
+%     FEND = NFRAMES;
+    FEND = FSTART;
 else
     FSTART = NFRAMES;
     FSTEP = 1;
@@ -155,6 +155,7 @@ end
 
 fnum = 1;
 figure(fnum), clf, hold on, box on;
+pclr = winter(14);
 for ff = FSTART:FSTEP:FEND
     % reset figure for this frame
     figure(fnum), clf, hold on, box on;
@@ -214,12 +215,11 @@ for ff = FSTART:FSTEP:FEND
     end
     
     % plot polygons
-    pclr = jet(14);
     for pp = 1:length(polys{ff})
         ptmp = polys{ff}{pp};
         NE = length(ptmp);
         if NE < 17
-            patch('Faces',[1:NE 1],'vertices',ptmp,'FaceColor',pclr(NE-2,:),'EdgeColor','k');
+            patch('Faces',[1:NE 1],'vertices',ptmp,'FaceColor',pclr(NE-2,:),'EdgeColor','k','FaceAlpha',0.75);
         else
             patch('Faces',[1:NE 1],'vertices',ptmp,'FaceColor','k','EdgeColor','k','FaceAlpha',0.75);
         end
@@ -247,3 +247,63 @@ if makeAMovie == 1
     close(vobj);
 end
 
+
+%% Plot fraction of area contributed by each type of polygon
+
+% polygon area population
+minpoly = 3;
+maxpoly = 12;
+polycheck = minpoly:maxpoly;
+NCHECK = length(polycheck);
+polyAreaPop = zeros(NFRAMES,NCHECK);
+for ff = 1:NFRAMES
+    tmppolys = polys{ff};
+    NPOLYS = length(tmppolys);
+    Abox = LList(ff,1)*LList(ff,2);
+    for ii = 1:NPOLYS
+        ptmp = tmppolys{ii};
+        NE = size(ptmp,1);
+        atmp = polyarea(ptmp(:,1),ptmp(:,2));
+        if NE < maxpoly
+            cc = NE-2;
+        else
+            cc = maxpoly-2;
+        end
+        polyAreaPop(ff,cc) = polyAreaPop(ff,cc) + (atmp/Abox);
+    end
+end
+
+
+clr = jet(NCHECK);
+figure(2), clf, hold on, box on;
+for cc = 1:NCHECK
+    plot(1-phi(2:end),polyAreaPop(2:end,cc),'-','linewidth',2,'color',clr(cc,:));
+end
+xlabel('$\varphi - \varphi_{\rm min}$','Interpreter','latex');
+ylabel('$f_z(\varphi)$','Interpreter','latex');
+ax = gca;
+ax.FontSize = 24;
+colormap('jet');
+cb = colorbar;
+cb.Ticks = (polycheck-3)./(NCHECK-1);
+cb.TickLabels = {'$3$','$4$','$5$','$6$','$7$','$8$','$9$','$10$','$11$','$\geq 12$'};
+cb.TickLabelInterpreter = 'latex';
+
+
+% also group into 3, 4, 5-7, >7
+figure(3), clf, hold on, box on;
+clr = jet(4);
+for cc = 1:4
+    if cc < 3
+        plot(1-phi(2:end),polyAreaPop(2:end,cc),'-ko','markerfacecolor',clr(cc,:),'markersize',10);
+    elseif cc == 3
+        plot(1-phi(2:end),sum(polyAreaPop(2:end,3:5),2),'-ko','markerfacecolor',clr(cc,:),'markersize',10);
+    else
+        plot(1-phi(2:end),sum(polyAreaPop(2:end,6:end),2),'-ko','markerfacecolor',clr(cc,:),'markersize',10);
+    end
+end
+xlabel('$\varphi=1-\phi$','Interpreter','latex');
+ylabel('$f_z(\varphi)$','Interpreter','latex');
+ax = gca;
+ax.FontSize = 24;
+legend({'$3$','$4$','$5-7$','$\geq 8$'},'Interpreter','latex','FontSize',14,'location','best');
