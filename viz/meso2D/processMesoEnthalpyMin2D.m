@@ -152,7 +152,7 @@ fprintf('Computing ensemble averages\n');
 NFRAMESList = saveStruct.NFRAMESList;
 
 % number of porosity bins
-nporobins = 40;
+nporobins = 15;
 
 % polygon type info
 minpoly = 3;

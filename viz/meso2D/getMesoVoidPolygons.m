@@ -11,6 +11,7 @@ NCELLS = length(cx);
 % construct full list of cell centers
 NP = 9*NCELLS;
 P = zeros(NP,2);
+B = zeros(NP,1);
 for nn = 1:NCELLS
     cxtmp = cx(nn);
     cytmp = cy(nn);
@@ -19,6 +20,7 @@ for nn = 1:NCELLS
         for yy = -1:1
             P((kbox-1)*NCELLS + nn,1) = cxtmp + xx*L;
             P((kbox-1)*NCELLS + nn,2) = cytmp + yy*L;
+            B((kbox-1)*NCELLS + nn) = kbox;
             kbox = kbox + 1;
         end
     end
@@ -41,8 +43,6 @@ for nn = 1:NCELLS
 
             dy = ym - yn;
             imy = round(dy/L);
-            
-            % loop over image tiles, only add non-boundary contacts
             for xx = -1:1
                 xi = 2 + xx;
                 for yy = -1:1
@@ -71,6 +71,21 @@ for nn = 1:NCELLS
         end
     end
 end
+
+% figure(1), clf, hold on, box on;
+% plot(P(:,1),P(:,2),'ko');
+% for pp = 1:NP
+%     for qq = (pp+1):NP
+%         if A(pp,qq) == 1
+%             plot([P(pp,1) P(qq,1)],[P(pp,2) P(qq,2)],'k-','linewidth',1.5);
+%         end
+%     end
+% end
+% ax = gca;
+% ax.XTick = [];
+% ax.YTick = [];
+% axis equal;
+% test = 1;
 
 % create graph of whole periodic boundary
 G = graph(A);
