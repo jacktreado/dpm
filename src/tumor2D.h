@@ -74,7 +74,9 @@ public:
 	// biology functions
 	void psiDiffusion();
 	void psiVicsek();
+    void psiGap(double dPsi);
 	void crawlerUpdate();
+    void adipocyteShrink();
 	void updateECMAttachments(bool attach);
 	void adipocyteECMAdhesionForces();
 
