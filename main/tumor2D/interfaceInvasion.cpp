@@ -17,15 +17,15 @@
 
 // preprocessor macros
 #define NDIM 2
-	
+
 // namspace
 using namespace std;
 
 // global constants
 const double ka = 1.0;					// area force spring constant (should be unit)
-const double kl = 0.05; 				// contractility spring constant
+const double kl = 0.2; 				// contractility spring constant
 const double kb = 1e-3;					// bending energy
-const double kc = 0.1;					// interaction force spring constant
+const double kc = 0.05;					// interaction force spring constant
 const double gamtt = 0.0; 				// surface tension
 const double boxLengthScale = 3.0;		// neighbor list box size in units of initial l0
 const double dt0 = 2e-2;				// initial magnitude of time step in units of MD time
@@ -123,7 +123,7 @@ int main(int argc, char const *argv[])
 	tumor2Dobj.initializeNeighborLinkedList2D(boxLengthScale);
 
 	// run FIRE to relax forces fully
-	tumor2Dobj.tumorFIRE(invasionForceUpdate,Ftol,0.2*dt0);
+	//tumor2Dobj.tumorFIRE(invasionForceUpdate,Ftol,0.2*dt0);
 
 	// invasion
 	cout << "Running invasion protocol..." << endl;
