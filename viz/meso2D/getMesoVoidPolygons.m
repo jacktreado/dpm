@@ -87,12 +87,24 @@ end
 % axis equal;
 % test = 1;
 
+% prune adjacencies that have <= to 1 contact
+Atmp = zeros(NP);
+zp = zeros(NP,1);
+for pp = 1:NP
+    zptmp = sum(A(pp,:));
+    if zptmp > 1
+        Atmp(pp,:) = A(pp,:);
+        zp(pp) = zptmp;
+    end
+end
+Aprune = Atmp(zp>0,zp>0);
+
 % create graph of whole periodic boundary
-G = graph(A);
+G = graph(Aprune);
 
 % get spatial graphs
 fprintf('\t ** Getting spatial graph...\n');
-obj = spatialgraph2D(G,P(:,1),P(:,2));
+obj = spatialgraph2D(G,P(zp>0,1),P(zp>0,2));
 pgon = polyshape(obj);
 
 

@@ -385,13 +385,13 @@ for ff = 1:NFRAMES
     cx = cellfun(@mean,x(ff,:))';
     cy = cellfun(@mean,y(ff,:))';
     L = LList(ff,1);
-    [mainTiling, NFMAIN] = getMesoVoidPolygons(cx,cy,cijtmp,L);
+    [mainTiling, ~] = getMesoVoidPolygons(cx,cy,cijtmp,L);
     polys{ff} = mainTiling;
     NPOLYS(ff) = size(polys{ff},1);
-    if NPOLYS(ff) >= 5
-        fprintf('* On frame %d / %d, got %d void polygons...\n',ff,NFRAMES,NFMAIN);
+    if NPOLYS(ff) >= 6
+        fprintf('* On frame %d / %d, got %d void polygons...\n',ff,NFRAMES,NPOLYS(ff));
     else
-        fprintf('* On frame %d / %d, got %d void polygons, so ending here...\n',ff,NFRAMES,NFMAIN);
+        fprintf('* On frame %d / %d, got %d void polygons, so ending here...\n',ff,NFRAMES,NPOLYS(ff));
         polys(ff+1:end) = [];
         break;
     end

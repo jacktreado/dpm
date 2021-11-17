@@ -5,7 +5,7 @@ close all;
 clc;
 
 % create file name
-fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb05e-4_be10_da0.02_dl10_P1e-4_h0.5_cL0_cB0_seed14.posctc';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb01e-3_be10_da0.02_dl2_P1e-4_h0.5_cL0_cB0_seed13.posctc';
 % fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
@@ -96,10 +96,18 @@ for ff = 1:NFRAMES
     cx = cellfun(@mean,x(ff,:))';
     cy = cellfun(@mean,y(ff,:))';
     L = LList(ff,1);
-    [mainTiling, NFMAIN] = getMesoVoidPolygons(cx,cy,cijtmp,L);
+    [mainTiling, ~] = getMesoVoidPolygons(cx,cy,cijtmp,L);
     polys{ff} = mainTiling;
-    NPOLYS(ff) = NFMAIN;
+    NPOLYS(ff) = size(polys{ff},1);
+    if NPOLYS(ff) >= 6
+        fprintf('* On frame %d / %d, got %d void polygons...\n',ff,NFRAMES,NPOLYS(ff));
+    else
+        fprintf('* On frame %d / %d, got %d void polygons, so ending here...\n',ff,NFRAMES,NPOLYS(ff));
+        polys(ff+1:end) = [];
+        break;
+    end
 end
+NFRAMES = size(polys,1);
 
 
 %% Draw cells with void polygons
@@ -131,10 +139,10 @@ end
 
 % get frames to plot
 if showverts == 0
-    FSTART = 14;
+    FSTART = 1;
     FSTEP = 1;
-%     FEND = NFRAMES;
-    FEND = FSTART;
+    FEND = NFRAMES-1;
+%     FEND = FSTART;
 else
     FSTART = NFRAMES;
     FSTEP = 1;
