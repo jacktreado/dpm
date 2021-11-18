@@ -154,7 +154,7 @@ fprintf('Computing ensemble averages\n');
 NFRAMESList = saveStruct.NFRAMESList;
 
 % number of porosity bins
-nporobins = 15;
+nporobins = 25;
 
 % polygon type info
 minpoly = 3;
@@ -191,8 +191,8 @@ for ss = 1:NSIMS
     porotmp = 1 - phitmp;
     
     % get min and max
-    minporotmp = min(porotmp(2:end));
-    maxporotmp = max(porotmp(2:end));
+    minporotmp = min(porotmp(1:end));
+    maxporotmp = max(porotmp(1:end));
     if minporotmp < minPoro
         minPoro = minporotmp;
     end
