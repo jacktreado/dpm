@@ -150,11 +150,11 @@ else
 end
 
 % make a movie
-makeAMovie = 0;
+makeAMovie = 1;
 ctccopy = 0;
 if makeAMovie == 1
 %     moviestr = [fpattern '.mp4'];
-    moviestr = 'mesoHMin2D_N32_n32_ca1.14_kb01e-3_be100_da1e-3_dl1.5_P1e-6_h0.5_cL1_cB1_seed4.mp4';
+    moviestr = 'mesoHMin2D_N64_n32_ca1.14_kb01e-3_be100_da0.02_dl5_P1e-4_h0.5_cL0_cB0_seed12.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);

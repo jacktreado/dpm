@@ -2472,6 +2472,35 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 			printMesoNetworkCTCS2D();
 		}
 
+		// output to console
+		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
+		cout << "===============================================" << endl << endl;
+		cout << "												" << endl;
+		cout << " 	M E S O P H Y L L 							" << endl;
+		cout << "	 											" << endl;
+		cout << " 	N E T W O R K   							" << endl;
+		cout << "												" << endl;
+		cout << "	E X T E N S I O N 							" << endl;
+		cout << " 												" << endl;
+		cout << "===============================================" << endl;
+		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
+		cout << endl;
+		cout << "	* k 			= " << k << endl;
+		cout << "	* phi0 			= " << phi0 << endl;
+		cout << "	* phi 			= " << vertexPackingFraction2D() << endl;
+		cout << "	* phi0 w/ verts = " << vertexPreferredPackingFraction2D() << endl;
+		cout << "	* P 			= " << 0.5*(stress[0] + stress[1]) << endl;
+		cout << "	* U 		 	= " << U << endl << endl;
+		cout << "	* Contacts:" << endl;
+		cout << "	* Nvv 			= " << vvContacts() << endl;
+		cout << "	* Ncc 			= " << ccContacts() << endl << endl;
+		cout << "	* Aging:" << endl;
+		cout << "	* meanl0 		= " << meanl0() << endl;
+		cout << "	* meancalA0 	= " << meancalA0() << endl;
+		cout << "	* meant0 		= " << meant0() << endl;
+		cout << "	* meankb 		= " << meankb() << endl;
+		cout << endl << endl;
+
 		// break contact network
 		updateMesophyllBondNetwork(CTCMIN,PAIRMIN);
 
@@ -2505,35 +2534,6 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 				gi++;
 			}
 		}
-
-		// output to console
-		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
-		cout << "===============================================" << endl << endl;
-		cout << "												" << endl;
-		cout << " 	M E S O P H Y L L 							" << endl;
-		cout << "	 											" << endl;
-		cout << " 	N E T W O R K   							" << endl;
-		cout << "												" << endl;
-		cout << "	E X T E N S I O N 							" << endl;
-		cout << " 												" << endl;
-		cout << "===============================================" << endl;
-		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
-		cout << endl;
-		cout << "	* k 			= " << k << endl;
-		cout << "	* phi0 			= " << phi0 << endl;
-		cout << "	* phi 			= " << vertexPackingFraction2D() << endl;
-		cout << "	* phi0 w/ verts = " << vertexPreferredPackingFraction2D() << endl;
-		cout << "	* P 			= " << 0.5*(stress[0] + stress[1]) << endl;
-		cout << "	* U 		 	= " << U << endl << endl;
-		cout << "	* Contacts:" << endl;
-		cout << "	* Nvv 			= " << vvContacts() << endl;
-		cout << "	* Ncc 			= " << ccContacts() << endl << endl;
-		cout << "	* Aging:" << endl;
-		cout << "	* meanl0 		= " << meanl0() << endl;
-		cout << "	* meancalA0 	= " << meancalA0() << endl;
-		cout << "	* meant0 		= " << meant0() << endl;
-		cout << "	* meankb 		= " << meankb() << endl;
-		cout << endl << endl;
 
 		// increase particle size, radii size
 		for (ci=0; ci<NCELLS; ci++)

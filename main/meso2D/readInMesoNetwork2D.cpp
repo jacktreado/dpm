@@ -4,7 +4,7 @@
 
 // Compilation command:
 // g++ -O3 --std=c++11 -I src main/meso2D/readInMesoNetwork2D.cpp src/*.cpp -o meso.o
-// ./meso.o meso.input 1e-2 100 1e-3 1.5 1e-6 0.5 1 1 1 pos.test
+// ./meso.o meso_n32.input 1e-3 50 0.02 5 1e-4 0.5 0 0 1 pos.test
 //
 //
 // Parameter input list
@@ -53,7 +53,7 @@ const double dPtol = 1e-10;			// pressure change tolerance
 const double phiMin = 0.3;			// minimum packing fraction in decompression algorithm
 const double kl = 0.5; 				// perimeter spring constant
 const double aL = 1.0; 				// distribution of aging to boundary (when = 1)
-const double kc = 1.0; 				// interaction spring constant
+const double kc = 0.5; 				// interaction spring constant
 const double cKb = 0; 				// change in bending energy
 const int NMINSKIP = 1;				// number of frames to skip output
 const int NVMAXMAG = 5; 			// scale of max number of vertices

@@ -6,8 +6,8 @@ close all;
 clc;
 
 % create file name
-fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb01e-3_be100_da0.02_dl5_P1e-4_h0.5_cL0_cB0_seed13.posctc';
-% fstr = '~/Jamming/CellSim/dpm/pos.test';
+% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb02e-2_be50_da0.02_dl10_P1e-4_h0.5_cL0_cB0_seed10.posctc';
+fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);
@@ -314,7 +314,7 @@ makeAMovie = 0;
 ctccopy = 0;
 if makeAMovie == 1
 %     moviestr = 'debug.mp4';
-    moviestr = 'mesoHMin2D_N64_n32_ca1.14_kb05e-3_be50_da0.02_dl5_P1e-4_h0.5_cL0_cB0_seed10.mp4';
+    moviestr = 'mesoHMin2D_N64_n32_ca1.14_kb02e-2_be50_da0.02_dl10_P1e-4_h0.5_cL0_cB0_seed10.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
