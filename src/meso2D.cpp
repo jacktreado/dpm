@@ -2510,27 +2510,27 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 
 		// add vertices
 		if (NVTOT < NVMAX)
-			addMesophyllCellMaterial(0.0);
+			addMesophyllCellMaterial(da0*dl0);
 
-		// // increase lengths of void segments bordered by contact-less vertices
-		// for (gi=0; gi<NVTOT; gi++){
-		// 	if (zv[gi] <= 0 && zv[ip1[gi]] <= 0)
-		// 		l0[gi] *= (1.0 + da0*dl0);
-		// 	// else
-		// 		// l0[gi] *= (1.0 + 0.5*da0);
-		// }
+		// increase lengths of void segments bordered by contact-less vertices
+		for (gi=0; gi<NVTOT; gi++){
+			if (zv[gi] <= 0 && zv[ip1[gi]] <= 0)
+				l0[gi] *= (1.0 + da0*dl0);
+			// else
+				// l0[gi] *= (1.0 + 0.5*da0);
+		}
 
 		// increase lengths of void segments bordered by contact-less vertices (IF shape is below max, otherwise normal growth)
 		gi = 0;
 		for (ci=0; ci<NCELLS; ci++){
 			calAtmp = getCalA(ci);
 			for (vi=0; vi<nv[ci]; vi++){
-				if (zv[gi] <= 0 && zv[ip1[gi]] <= 0){
-					if (calAtmp < calAmax)
+				if (calAtmp < calAmax){
+					if (zv[gi] <= 0 && zv[ip1[gi]] <= 0)
 						l0[gi] *= (1.0 + da0*dl0);
-					else
-						l0[gi] *= (1.0 + da0);
 				}
+				else
+					l0[gi] *= (1.0 + da0);
 				gi++;
 			}
 		}
@@ -2542,13 +2542,6 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 			// r[gi] *= L[0]/Lold;
 			r[gi] *= (1.0 + da0);
 		}
-
-		// increase box size
-		// Lold = L[0];
-		// L[0] *= (1 + da0);
-		// L[1] *= (1 + da0);
-		// for (d = 0; d < NDIM; d++)
-		// 	lb[d] = L[d] / sb[d];
 
 		// update packing fraction
 		phi0 = vertexPreferredPackingFraction2D();
