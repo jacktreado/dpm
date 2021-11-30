@@ -2510,7 +2510,7 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 
 		// add vertices
 		if (NVTOT < NVMAX)
-			addMesophyllCellMaterial(da0*dl0);
+			addMesophyllCellMaterial(0.0);
 
 		// increase lengths of void segments bordered by contact-less vertices
 		for (gi=0; gi<NVTOT; gi++){
