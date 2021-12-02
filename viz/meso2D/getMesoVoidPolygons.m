@@ -102,6 +102,8 @@ Aprune = Atmp(zp>0,zp>0);
 % create graph of whole periodic boundary
 fprintf('\t ** Creating graph, A size = %d, Aprune size = %d\n',length(A),length(Aprune));
 help(nonzeros(tril(Aprune)));
+tbltmp = table(nonzeros(tril(Aprune)),'VariableNames',{'Weights'});
+disp(tbltmp);
 G = graph(Aprune);
 
 % get spatial graphs
