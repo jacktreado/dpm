@@ -25,7 +25,7 @@ seed = 5;
 seedstr = num2str(seed);
 
 % file name str
-fstr = '~/Jamming/CellSim/dpm/shear.test';
+fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoShearConfig2D(fstr);
@@ -76,100 +76,30 @@ calA = p.^2./(4.0*pi*a);
 S = mesoData.S(idx,:);
 P = 0.5*(S(:,1) + S(:,2));
 
-% print if multiple frames
-if NFRAMES > 5
-    Sxx = S(:,1);
-    Syy = S(:,2);
-    Sxy = S(:,3);
-    
-    figure(10), clf, hold on, box on;
-    
-    plot(find(Sxx<0),abs(Sxx(Sxx<0)),'ks','markersize',10,'MarkerFaceColor','r');
-    plot(find(Sxx>0),Sxx(Sxx>0),'rs','markersize',10);
-    
-    plot(find(Syy<0),abs(Syy(Syy<0)),'ko','markersize',10,'MarkerFaceColor','b');
-    plot(find(Syy>0),Syy(Syy>0),'bo','markersize',10);
-    
-    xlabel('frame id. ','Interpreter','latex');
-    ylabel('$\Sigma_{xx}$, $\Sigma_{yy}$','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;
-    
-    figure(11), clf, hold on, box on;
-    
-    plot(phi(Sxy<0),abs(Sxy(Sxy<0)),'ks','markersize',10,'MarkerFaceColor','k');
-    plot(phi(Sxy>0),Sxy(Sxy>0),'ko','markersize',10);
-    
-    xlabel('$1-\phi$','Interpreter','latex');
-    ylabel('$\Sigma_{xy}$','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;
-    
-    figure(12), clf, hold on, box on;
-    plot(1:NFRAMES,calA,'-','color',[0.5 0.5 0.5],'linewidth',1.2);
-    plot(1:NFRAMES,mean(calA,2),'k-','linewidth',3);
-    xlabel('frame id','Interpreter','latex');
-    ylabel('$\mathcal{A}$','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;
-    
-    
-    
-    % compute shear anisotropy
-    P = 0.5*(Sxx + Syy);
-    sN = (Syy - Sxx)./P;
-    sXY = -Sxy./P;
-    tau = sqrt(sN.^2 + sXY.^2);
-    figure(13), clf, hold on, box on;
-    plot(phi,tau,'k-','linewidth',2);
-    plot(phi,abs(sN),'b--','linewidth',2);
-    plot(phi,abs(sXY),'r--','linewidth',2);
-    xlabel('$1-\phi$','Interpreter','latex');
-    ylabel('$\hat{\tau}$','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;
-    
-    
-    % plot contact network
-    figure(14), clf, hold on, box on;
-    plot(1:NFRAMES,zc,'-','color',[0.5 0.5 0.5],'linewidth',1.2);
-    plot(1:NFRAMES,mean(zc,2),'k--','linewidth',2.5);
-    xlabel('frame id.','Interpreter','latex');
-    ylabel('$z$','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;
-    
-    % plot area deviations
-    ea = 0.5*(a./a0 - 1).^2;
-    figure(15), clf, hold on, box on;
-    plot(phi,ea,'-','color',[0.5 0.5 0.5],'linewidth',1.2);
-    errorbar(phi,mean(ea,2),std(ea,0,2),'k--','linewidth',2);
-    xlabel('$\phi$','Interpreter','latex');
-    ylabel('$U_a$','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;
-    ax.YScale = 'log';
-    
-     % plot packing fractions
-    figure(16), clf, hold on, box on;
-    yyaxis left
-    plot(1:NFRAMES,phi,'ko','markersize',10);
-    ylabel('$\phi$','Interpreter','latex');
-    yyaxis right
-    plot(1:NFRAMES,P,'ks','markersize',10);
-    ylabel('$P$','Interpreter','latex');
-    xlabel('frame','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;
-    
-     % plot p0 vs phi0
-    figure(17), clf, hold on, box on;
-    plot(mean(calA0,2),phi,'ko','markersize',10);
-    xlabel('$\mathcal{A}_0$','Interpreter','latex');
-    ylabel('$\phi$','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;
-end
+% print shear stress
+Sxy = S(:,3);
+dgamma = gamma(2) - gamma(1);
+
+% get linear approx
+m = (Sxy(2)-Sxy(1))/dgamma;
+b = Sxy(1) - m*gamma(1);
+yfit = m*gamma + b;
+
+figure(11), clf, hold on, box on;
+plot(gamma,Sxy,'-ks','markersize',10);
+plot(gamma,yfit,'k-','linewidth',2);
+xlabel('$\gamma$','Interpreter','latex');
+ylabel('$\Sigma_{xy}$','Interpreter','latex');
+ax = gca;
+ax.FontSize = 22;
+
+G = -0.5*(Sxy(3:end) - Sxy(1:end-2))/dgamma;
+figure(12), clf, hold on, box on;
+plot(gamma(2:end-1),G,'-ks','markersize',10);
+xlabel('$\gamma$','Interpreter','latex');
+ylabel('$G$','Interpreter','latex');
+ax = gca;
+ax.FontSize = 22;
 
 %% Draw cells
 
@@ -238,9 +168,9 @@ if showverts == 0
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
-    FSTART = NFRAMES;
+    FSTART = 1;
     FSTEP = 1;
-    FEND = FSTART;
+    FEND = NFRAMES;
 end
 
 % make a movie
@@ -288,11 +218,7 @@ for ff = FSTART:FSTEP:FEND
                 yplot = ytmp(vv) - rv;
                 for xx = -1:1
                     for yy = -1:1
-                        if nn == 1
-                            rectangle('Position',[xplot + xx*L + gamtmp*yy*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',0.2);
-                        else
-                            rectangle('Position',[xplot + xx*L + gamtmp*yy*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','none');
-                        end
+                        rectangle('Position',[xplot + xx*L + gamtmp*yy*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',0.2);
                     end
                 end
             end
@@ -319,8 +245,6 @@ for ff = FSTART:FSTEP:FEND
     ax = gca;
     ax.XTick = [];
     ax.YTick = [];
-    ax.XLim = [0.95 1.05]*L;
-    ax.YLim = [0.95 1.05]*L;
     
     % if making a movie, save frame
     if makeAMovie == 1

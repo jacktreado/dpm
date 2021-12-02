@@ -18,6 +18,8 @@ phitmp      = textscan(fid,'PACKF %f',1);
 fline       = fgetl(fid);
 gammatmp    = textscan(fid,'GAMMA %f',1);
 fline       = fgetl(fid);
+ctcs_str    = fgetl(fid);
+ctcstmp     = sscanf(ctcs_str(6:end),'%f');
 Ltmp        = textscan(fid,'BOXSZ %f %f',1);
 fline       = fgetl(fid);
 Stmp        = textscan(fid,'STRSS %f %f %f',1);
@@ -27,6 +29,7 @@ NFRAMES = 1e6;
 
 phi     = zeros(NFRAMES,1);
 gamma   = zeros(NFRAMES,1);
+ctcs    = cell(NFRAMES,1);
 L       = zeros(NFRAMES,2);
 S       = zeros(NFRAMES,3);
 
@@ -55,6 +58,9 @@ while ~feof(fid)
     
     % get shear strain
     gamma(nf) = gammatmp{1};
+    
+    % save contact info
+    ctcs{nf} = ctcstmp;
     
     % get box length
     L(nf,1) = Ltmp{1};
@@ -122,6 +128,10 @@ while ~feof(fid)
         % read in shear strain
         gammatmp        = textscan(fid,'GAMMA %f',1);
         fline           = fgetl(fid);
+        
+        % update contact info
+        ctcs_str        = fgetl(fid);
+        ctcstmp         = sscanf(ctcs_str(6:end),'%f');
         
         % update box size
         Ltmp            = textscan(fid,'BOXSZ %f %f',1);

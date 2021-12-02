@@ -4,7 +4,7 @@
 
 // Compilation command:
 // g++ -O3 --std=c++11 -I src main/meso2D/readInMesoDynMat2D.cpp src/*.cpp -o meso.o
-// ./meso.o meso.input 1e-3 50 0.02 5 1e-4 0.5 0 0 1 pos.test hess.test
+// ./meso.o meso.input 1e-3 50 0.05 2 1e-4 0.5 0 0 1 pos.test hess.test
 
 // header files
 #include "meso2D.h"

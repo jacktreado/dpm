@@ -112,13 +112,13 @@ public:
 	void mesoShapeForces(double gamma);
 	double mesoEnthalpyForce();
 	void mesoNetworkForceUpdate();
-	void mesoNetworkForceUpdate(double gamma);
+	void mesoNetworkForceUpdate(double gamma, std::vector<bool> &gijtmp);
 	void mesoPinForceUpdate(std::vector<double>& xpin, double kcspring);
 
 	// integrators
 	void mesoFIRE(meso2DMemFn forceCall, double Ftol, double dt0);
 	void mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, double P0, double dt0);
-	void mesoShearStrainFIRE(double gamma, double Ftol, double dt0);
+	void mesoShearStrainFIRE(double gamma, double Ftol, double dt0, std::vector<bool> &gijtmp);
 	void mesoPinFIRE(std::vector<double> &xpin, double Ftol, double dt0, double kcspring);
 	void mesoNetworkNVE(std::ofstream &enout, meso2DMemFn forceCall, double T, double dt0, int NT, int NPRINTSKIP);
 
@@ -138,6 +138,7 @@ public:
 	void addVertex(int gi, double newl0);
 	void t0ToCurrent();
 	void t0ToReg();
+	void getMesoVVContactNetwork(std::vector<bool> &gijtmp);
 
 	// hessian computation & linear response
 	void mesoBendingHessian(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb);
@@ -152,7 +153,7 @@ public:
 	void printMesoNetworkCTCS2D();
 	void printMesoPin2D(std::vector<double> &xpin, double h);
 	void printMesoBondNetwork();
-	void printMesoShearConfig2D(double gamma);
+	void printMesoShearConfigCTCS2D(double gamma);
 };
 
 #endif
