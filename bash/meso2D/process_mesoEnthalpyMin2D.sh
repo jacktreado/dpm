@@ -69,7 +69,7 @@ echo \#SBATCH -p $partition >> $slurmf
 echo \#SBATCH -J $job_name >> $slurmf
 echo \#SBATCH -o $runout >> $slurmf
 echo \#SBATCH --mem-per-cpu=10G >> $slurmf
-echo module load MATLAB >> $slurmf
+echo module load MATLAB/2021a >> $slurmf
 echo matlab -nodisplay -r \""$MCODE"\" >> $slurmf
 cat $slurmf
 
