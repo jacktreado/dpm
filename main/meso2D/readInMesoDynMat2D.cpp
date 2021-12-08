@@ -108,9 +108,9 @@ int main(int argc, char const *argv[])
 	meso2Dobj.initializeMesophyllBondNetwork();
 	meso2Dobj.t0ToCurrent();
 	meso2Dobj.mesoFIRE(&meso2D::mesoNetworkForceUpdate, Ftol, dt0);
-	meso2Dobj.t0ToCurrent();
 	meso2Dobj.printMesoNetworkCTCS2D();
 	meso2Dobj.mesoPrintLinearResponse(&meso2D::mesoNetworkForceUpdate, Ftol, dt0);
+	meso2Dobj.t0ToCurrent();
 
 	// run stretching simulation to create network
 	meso2Dobj.mesoNetworkEnthalpyMin(&meso2D::mesoNetworkForceUpdate, Ftol, dPtol, dt0, da0, dl0, P0, phiMin, NMINSKIP);

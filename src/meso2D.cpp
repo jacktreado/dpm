@@ -553,6 +553,7 @@ void meso2D::mesoShapeForces(){
 	// local variables
 	int ci, gi, vi, nvtmp;
 	double fa, fli, flim1, fbi, fbim1, cx, cy, xi, yi;
+	double flx, fly, fbx, fby;
 	double rho0, l0im1, l0i, a0tmp, atmp;
 	double dx, dy, da, dli, dlim1, dtim1, dti, dtip1;
 	double lim2x, lim2y, lim1x, lim1y, lix, liy, lip1x, lip1y, li, lim1;
@@ -674,8 +675,15 @@ void meso2D::mesoShapeForces(){
 		fli 	= kl*(rho0/l0i);
 
 		// add to forces
-		F[NDIM*gi] 		+= (fli*dli*lix/li) - (flim1*dlim1*lim1x/lim1);
-		F[NDIM*gi + 1] 	+= (fli*dli*liy/li) - (flim1*dlim1*lim1y/lim1);
+		flx 			= (fli*dli*lix/li) - (flim1*dlim1*lim1x/lim1);
+		fly 			= (fli*dli*liy/li) - (flim1*dlim1*lim1y/lim1);
+		F[NDIM*gi] 		+= flx;
+		F[NDIM*gi + 1] 	+= fly;
+
+		// add perimeter contribution to virial stress
+		stress[0] += (rix*flx)/(L[0]*L[1]);
+		stress[1] += (riy*fly)/(L[0]*L[1]);
+		stress[2] += 0.5*((rix*fly) + (riy*flx))/(L[0]*L[1]);
 		
 		// update potential energy
 		U += 0.5 * kl *(dli * dli);
@@ -724,8 +732,15 @@ void meso2D::mesoShapeForces(){
 			ddti = (dti - dtip1)/(li*li);
 
 			// add to force
-			F[NDIM*gi] 		+= fbim1*ddtim1*nim1x + fbi*ddti*nix;
-			F[NDIM*gi + 1] 	+= fbim1*ddtim1*nim1y + fbi*ddti*niy;
+			fbx 			= fbim1*ddtim1*nim1x + fbi*ddti*nix;
+			fby 			= fbim1*ddtim1*nim1y + fbi*ddti*niy;
+			F[NDIM*gi] 		+= fbx;
+			F[NDIM*gi + 1] 	+= fby;
+
+			// add bending contribution to virial stress
+			stress[0] += (rix*fbx)/(L[0]*L[1]);
+			stress[1] += (riy*fby)/(L[0]*L[1]);
+			stress[2] += 0.5*((rix*fby) + (riy*fbx))/(L[0]*L[1]);
 
 			// update potential energy
 			U += 0.5 * kbi[gi] * (dti * dti);
@@ -760,6 +775,7 @@ void meso2D::mesoShapeForces(double gamma){
 	// local variables
 	int ci, gi, vi, nvtmp, im;
 	double fa, fli, flim1, fbi, fbim1, cx, cy, xi, yi;
+	double flx, fly, fbx, fby;
 	double rho0, l0im1, l0i, a0tmp, atmp;
 	double dx, dy, da, dli, dlim1, dtim1, dti, dtip1;
 	double lim2x, lim2y, lim1x, lim1y, lix, liy, lip1x, lip1y, li, lim1;
@@ -894,8 +910,15 @@ void meso2D::mesoShapeForces(double gamma){
 		fli 	= kl*(rho0/l0i);
 
 		// add to forces
-		F[NDIM*gi] 		+= (fli*dli*lix/li) - (flim1*dlim1*lim1x/lim1);
-		F[NDIM*gi + 1] 	+= (fli*dli*liy/li) - (flim1*dlim1*lim1y/lim1);
+		flx 			= (fli*dli*lix/li) - (flim1*dlim1*lim1x/lim1);
+		fly 			= (fli*dli*liy/li) - (flim1*dlim1*lim1y/lim1);
+		F[NDIM*gi] 		+= flx;
+		F[NDIM*gi + 1] 	+= fly;
+
+		// add perimeter contribution to virial stress
+		stress[0] += (rix*flx)/(L[0]*L[1]);
+		stress[1] += (riy*fly)/(L[0]*L[1]);
+		stress[2] += 0.5*((rix*fly) + (riy*flx))/(L[0]*L[1]);
 		
 		// update potential energy
 		U += 0.5 * kl * (dli * dli);
@@ -946,13 +969,19 @@ void meso2D::mesoShapeForces(double gamma){
 			ddti = (dti - dtip1)/(li*li);
 
 			// add to force
-			F[NDIM*gi] 		+= fbim1*ddtim1*nim1x + fbi*ddti*nix;
-			F[NDIM*gi + 1] 	+= fbim1*ddtim1*nim1y + fbi*ddti*niy;
+			fbx 			= fbim1*ddtim1*nim1x + fbi*ddti*nix;
+			fby 			= fbim1*ddtim1*nim1y + fbi*ddti*niy;
+			F[NDIM*gi] 		+= fbx;
+			F[NDIM*gi + 1] 	+= fby;
+
+			// add bending contribution to virial stress
+			stress[0] += (rix*fbx)/(L[0]*L[1]);
+			stress[1] += (riy*fby)/(L[0]*L[1]);
+			stress[2] += 0.5*((rix*fby) + (riy*fbx))/(L[0]*L[1]);
 
 			// update potential energy
 			U += 0.5 * kbi[gi] * (dti * dti);
 		}
-		
 
 		// update old coordinates
 		rim2x = rim1x;
@@ -2517,13 +2546,13 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 		if (NVTOT < NVMAX)
 			addMesophyllCellMaterial(0.0);
 
-		// increase lengths of void segments bordered by contact-less vertices
-		for (gi=0; gi<NVTOT; gi++){
-			if (zv[gi] <= 0 && zv[ip1[gi]] <= 0)
-				l0[gi] *= (1.0 + da0*dl0);
-			// else
-				// l0[gi] *= (1.0 + 0.5*da0);
-		}
+		// // increase lengths of void segments bordered by contact-less vertices
+		// for (gi=0; gi<NVTOT; gi++){
+		// 	if (zv[gi] <= 0 && zv[ip1[gi]] <= 0)
+		// 		l0[gi] *= (1.0 + da0*dl0);
+		// 	// else
+		// 		// l0[gi] *= (1.0 + 0.5*da0);
+		// }
 
 		// increase lengths of void segments bordered by contact-less vertices (IF shape is below max, otherwise normal growth)
 		gi = 0;

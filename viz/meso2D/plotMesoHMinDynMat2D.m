@@ -5,7 +5,7 @@ close all;
 clc;
 
 
-% fname = 'mesoDM2D_N64_n32_ca1.14_kb01e-3_be25_da0.02_dl5_P1e-4_h0.5_cL0_cB0_seed11';
+% fname = 'mesoDM2D_N64_n32_ca1.14_kb01e-3_be35_da0.05_dl3_P1e-4_h0.5_cL0_cB0_seed12';
 % fstr = ['local/mesoDM2D_data/' fname '.posctc'];
 % hessstr = ['local/mesoDM2D_data/' fname '.hess'];
 
@@ -244,23 +244,29 @@ ax.FontSize = 22;
 
 
 figure(5), clf, hold on, box on;
+
+yyaxis left;
 plot(phi(2) - phi(2:end),B(2:end),'ko','markersize',10,'markerfacecolor','b');
-xlabel('$\varphi - \varphi_{\rm min}$','Interpreter','latex');
-ylabel('$B$','Interpreter','latex');
+h = ylabel('$B$','Interpreter','latex');
+h.Color = 'b';
 ax = gca;
 ax.FontSize = 22;
+ax.YColor = 'b';
+
+yyaxis right;
+plot(phi(2) - phi(2:end),G(2:end),'kd','markersize',10,'markerfacecolor','r');
+h = ylabel('$G$','Interpreter','latex');
+h.Color = 'r';
+ax = gca;
+ax.FontSize = 22;
+ax.YColor = 'r';
+
+xlabel('$\varphi - \varphi_{\rm min}$','Interpreter','latex');
+
+
 
 
 figure(6), clf, hold on, box on;
-plot(phi(2) - phi(2:end),G(2:end),'kd','markersize',10,'markerfacecolor','r');
-xlabel('$\varphi - \varphi_{\rm min}$','Interpreter','latex');
-ylabel('$G$','Interpreter','latex');
-ax = gca;
-ax.FontSize = 22;
-
-
-
-figure(7), clf, hold on, box on;
 plot(phi(2) - phi(2:end),poissonRatio(2:end),'-kd','markersize',10,'markerfacecolor','g');
 xlabel('$\varphi - \varphi_{\rm min}$','Interpreter','latex');
 ylabel('$\nu$','Interpreter','latex');

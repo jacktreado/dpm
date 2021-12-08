@@ -6,15 +6,16 @@ close all;
 clc;
 
 % create file name
-fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb01e-3_be25_da0.05_dl2_P1e-4_h0.5_cL0_cB0_seed49.posctc';
-% fstr = '~/Jamming/CellSim/dpm/pos.test';
+% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb01e-3_be35_da0.05_dl3_P1e-4_h0.5_cL0_cB0_seed67.posctc';
+% fstr = 'local/mesoDM2D_data/mesoDM2D_N64_n32_ca1.14_kb01e-3_be35_da0.05_dl3_P1e-4_h0.5_cL0_cB0_seed12.posctc';
+fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
-idx = phi > 0.3 & phi < 1.0;
+idx = phi > 0.4 & phi < 1.0;
 phi = phi(idx);
 
 % number of frames
@@ -306,17 +307,17 @@ if showverts == 0
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
-    FSTART = 13;
+    FSTART = 1;
     FSTEP = 1;
-    FEND = FSTART;
+    FEND = NFRAMES;
 end
 
 % make a movie
-makeAMovie = 0;
+makeAMovie = 1;
 ctccopy = 0;
 if makeAMovie == 1
 %     moviestr = 'debug.mp4';
-    moviestr = 'mesoHMin2D_N64_n32_ca1.14_kb01e-3_be100_da0.02_dl5_P1e-4_h0.5_cL0_cB0_seed100.mp4';
+    moviestr = 'mesoHMin2D_N64_n32_ca1.14_kb01e-3_be35_da0.05_dl3_P1e-4_h0.5_cL0_cB0_seed67.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -359,9 +360,9 @@ for ff = FSTART:FSTEP:FEND
                 rv = rtmp(vv);
                 xplot = xtmp(vv) - rv;
                 yplot = ytmp(vv) - rv;
-                for xx = 0
-                    for yy = 0
-                        if nn == 19
+                for xx = -1:1
+                    for yy = -1:1
+                        if nn > 0
                             rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',2);
                         else
                             rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','w','LineWidth',2);
