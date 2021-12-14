@@ -5,12 +5,12 @@ close all;
 clc;
 
 
-% fname = 'mesoDM2D_N64_n32_ca1.14_kb01e-3_be35_da0.05_dl3_P1e-4_h0.5_cL0_cB0_seed12';
-% fstr = ['local/mesoDM2D_data/' fname '.posctc'];
-% hessstr = ['local/mesoDM2D_data/' fname '.hess'];
+fname = 'mesoDM2D_N64_n32_ca1.14_kb02e-2_be200_da0.05_dl5_P1e-4_h0.5_cL0_cB0_seed27';
+fstr = ['local/mesoDM2D_data/' fname '.posctc'];
+hessstr = ['local/mesoDM2D_data/' fname '.hess'];
 
-fstr = '~/Jamming/CellSim/dpm/pos.test';
-hessstr = '~/Jamming/CellSim/dpm/hess.test';
+% fstr = '~/Jamming/CellSim/dpm/pos.test';
+% hessstr = '~/Jamming/CellSim/dpm/hess.test';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);
@@ -119,37 +119,6 @@ for ff = 1:NFRAMES
     fprintf('%s\n',endfrstr);
 end
 poissonRatio = (B-G)./(B+G);
-
-%% Tmp G and B
-
-Gdata = [0	7.956465e-12
-1e-07	7.9346299e-12
-2e-07	8.2236345e-12
-3e-07	8.7892621e-12
-4e-07	9.6084346e-12
-5e-07	1.0668356e-11];
-
-Bdata = [0	37.545542	4.8534972e-06
-1e-07	37.545535	4.85704e-06
-2e-07	37.545527	4.8605841e-06
-3e-07	37.54552	4.8641294e-06
-4e-07	37.545512	4.8676761e-06
-5e-07	37.545505	4.871224e-06];
-
-dgamma = Gdata(2,1) - Gdata(1,1);
-
-G_Ukp1 = Gdata(3:end,2);
-G_Uk = Gdata(2:end-1,2);
-G_Ukm1 = Gdata(1:end-2,2);
-Gtmp = mean((G_Ukp1 + G_Ukm1 - 2.0*G_Uk)./(dgamma*dgamma))
-
-B_Ukp1 = Bdata(3:end,3);
-B_Uk = Bdata(2:end-1,3);
-B_Ukm1 = Bdata(1:end-2,3);
-Vall = Bdata(:,2);
-dVall = Vall(2:end) - Vall(1:end-1);
-dV = mean(dVall);
-Btmp = mean(Vall(2:end-1).*((B_Ukp1 + B_Ukm1 - 2.0*B_Uk)./(dV*dV)))
 
 %% Plot
 

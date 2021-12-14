@@ -5,7 +5,7 @@ close all;
 clc;
 
 % create file name
-fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb01e-3_be100_da0.02_dl5_P1e-4_h0.5_cL0_cB0_seed12.posctc';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb01e-3_be50_da0.05_dl7_P1e-4_h0.5_cL0_cB2_seed59.posctc';
 % fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
@@ -13,7 +13,7 @@ mesoData = readMesoNetworkCTCS2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
-idx = phi > 0.1;
+idx = phi > 0.3;
 phi = phi(idx);
 
 % number of frames
@@ -154,7 +154,7 @@ makeAMovie = 1;
 ctccopy = 0;
 if makeAMovie == 1
 %     moviestr = [fpattern '.mp4'];
-    moviestr = 'mesoHMin2D_N64_n32_ca1.14_kb01e-3_be100_da0.02_dl5_P1e-4_h0.5_cL0_cB0_seed12.mp4';
+    moviestr = 'mesoHMin2D_N64_n32_ca1.14_kb01e-3_be50_da0.05_dl7_P1e-4_h0.5_cL0_cB2_seed59.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -311,7 +311,7 @@ for cc = 1:4
     end
 end
 xlabel('$\varphi=1-\phi$','Interpreter','latex');
-ylabel('$f_z(\varphi)$','Interpreter','latex');
+ylabel('$f_e(\varphi)$','Interpreter','latex');
 ax = gca;
 ax.FontSize = 24;
 legend({'$3$','$4$','$5-7$','$\geq 8$'},'Interpreter','latex','FontSize',14,'location','best');

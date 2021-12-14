@@ -3743,23 +3743,23 @@ void meso2D::mesoPrintLinearResponse(meso2DMemFn forceCall, double Ftol, double 
 		exit(1);
 	}
 	else
-		cout << "** In mesoPrintLinearResponse, computing and printing G and eigenvales... " << endl;
+		cout << "** In mesoPrintLinearResponse, computing and printing G and B... " << endl;
 
-	// components of dynamical matrix
-	Eigen::MatrixXd M(vertDOF, vertDOF);  
-	Eigen::MatrixXd H(vertDOF, vertDOF);  
-	Eigen::MatrixXd S(vertDOF, vertDOF);
+	// // components of dynamical matrix
+	// Eigen::MatrixXd M(vertDOF, vertDOF);  
+	// Eigen::MatrixXd H(vertDOF, vertDOF);  
+	// Eigen::MatrixXd S(vertDOF, vertDOF);
 
-	// compute
-	mesoDynamicalMatrix(M,H,S);
+	// // compute
+	// mesoDynamicalMatrix(M,H,S);
 
-	// compute eigenvalues from matrix, plot
-	Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> meig(M);
-	Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> heig(H);
-	Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> seig(S);
+	// // compute eigenvalues from matrix, plot
+	// Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> meig(M);
+	// Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> heig(H);
+	// Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> seig(S);
 
-	// eigenvalues
-	Eigen::VectorXd evals = meig.eigenvalues();
+	// // eigenvalues
+	// Eigen::VectorXd evals = meig.eigenvalues();
 
 	// // also get shear & bulk modulus using numerical derivatives
 	G = numericalShearModulus(forceCall, Ftol, dt0);
@@ -3785,25 +3785,25 @@ void meso2D::mesoPrintLinearResponse(meso2DMemFn forceCall, double Ftol, double 
 	hessout << setw(wnum) << setprecision(pnum) << left << B;
 	hessout << endl;
 
-	// print dynamical matrix eigenvalues
-	hessout << setw(w) << left << "MEVAL";
-	for (k=0; k<vertDOF; k++)
-		hessout << evals(k) << " ";
-	hessout << endl;
+	// // print dynamical matrix eigenvalues
+	// hessout << setw(w) << left << "MEVAL";
+	// for (k=0; k<vertDOF; k++)
+	// 	hessout << evals(k) << " ";
+	// hessout << endl;
 
-	// print stiffness matrix eigenvalues
-	evals = heig.eigenvalues();
-	hessout << setw(w) << left << "HEVAL";
-	for (k=0; k<vertDOF; k++)
-		hessout << evals(k) << " ";
-	hessout << endl;
+	// // print stiffness matrix eigenvalues
+	// evals = heig.eigenvalues();
+	// hessout << setw(w) << left << "HEVAL";
+	// for (k=0; k<vertDOF; k++)
+	// 	hessout << evals(k) << " ";
+	// hessout << endl;
 
-	// print stiffness matrix eigenvalues
-	evals = seig.eigenvalues();
-	hessout << setw(w) << left << "SEVAL";
-	for (k=0; k<vertDOF; k++)
-		hessout << evals(k) << " ";
-	hessout << endl;
+	// // print stiffness matrix eigenvalues
+	// evals = seig.eigenvalues();
+	// hessout << setw(w) << left << "SEVAL";
+	// for (k=0; k<vertDOF; k++)
+	// 	hessout << evals(k) << " ";
+	// hessout << endl;
 
 	// print end frame
 	hessout << setw(w) << left << "ENDFR" << " " << endl;
@@ -3816,9 +3816,9 @@ double meso2D::numericalShearModulus(meso2DMemFn forceCall, double Ftol, double 
 	double sxyold, sxycurr; 
 
 	// shear strain
-	double dgamma = 1e-7;
+	double dgamma = 1e-8;
 	double gamma = 0.0;
-	int NGAMMA = 10;
+	int NGAMMA = 5;
 
 	// save shear stress
 	vector<double> sxyList(NGAMMA+1,0.0);
@@ -3904,7 +3904,7 @@ double meso2D::numericalBulkModulus(meso2DMemFn forceCall, double Ftol, double d
 	double pold, pcurr; 
 
 	// shear strain
-	double dgamma = 1e-7;
+	double dgamma = 1e-8;
 	double gamma = 0.0;
 	int NGAMMA = 5;
 

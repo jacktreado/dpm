@@ -11,14 +11,13 @@ clc;
 Nstr = '32';
 nstr = '32';
 castr = '1.08';
-kb0str = '1e-4';
-bestr = '4.5';
+kb0str = '1e-3';
+bestr = '6';
 hstr = '0.2';
 cLstr = '5';
 aLstr = '1';
 cBstr = '0';
 cKbstr = '0';
-
 
 % seed
 seed = 5;
@@ -30,7 +29,7 @@ floc = '~/Jamming/CellSim/dpm/viz/meso2D/local/meso2D_data';
 % fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_kb0' kb0str '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_seed' seedstr];
 fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_kb0' kb0str '_be' bestr '_h' hstr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_cKb' cKbstr '_seed' seedstr];
 fstr = [floc '/' fpattern '.pos'];
-fstr = '~/Jamming/CellSim/dpm/meso.input';
+% fstr = '~/Jamming/CellSim/dpm/meso.input';
 
 % read in data
 mesoData = readMesoNetwork2D(fstr);
@@ -85,17 +84,14 @@ if NFRAMES > 5
     Sxx = S(:,1);
     Syy = S(:,2);
     Sxy = S(:,3);
+    P = 0.5*(Sxx + Syy);
     
     figure(10), clf, hold on, box on;
     
-    plot(find(Sxx<0),abs(Sxx(Sxx<0)),'ks','markersize',10,'MarkerFaceColor','r');
-    plot(find(Sxx>0),Sxx(Sxx>0),'rs','markersize',10);
-    
-    plot(find(Syy<0),abs(Syy(Syy<0)),'ko','markersize',10,'MarkerFaceColor','b');
-    plot(find(Syy>0),Syy(Syy>0),'bo','markersize',10);
-    
-    xlabel('frame id. ','Interpreter','latex');
-    ylabel('$\Sigma_{xx}$, $\Sigma_{yy}$','Interpreter','latex');
+    plot(1-phi,P,'ko','markersize',10,'markerfacecolor','b');
+%     plot(1-phi,P,'-b','linewidth',2);
+    xlabel('$1-\phi$','Interpreter','latex');
+    ylabel('$P$','Interpreter','latex');
     ax = gca;
     ax.FontSize = 22;
     
@@ -120,7 +116,6 @@ if NFRAMES > 5
     
     
     % compute shear anisotropy
-    P = 0.5*(Sxx + Syy);
     sN = (Syy - Sxx)./P;
     sXY = -Sxy./P;
     tau = sqrt(sN.^2 + sXY.^2);
@@ -185,16 +180,26 @@ ey = sin(th);
 
 
 % show vertices or not
-showverts = 1;
+showverts = 0;
 
 % color by shape or size
-colorOpt = 0;
+colorOpt = 1;
 
 if colorOpt == 1
     % color by real shape
     NCLR = 100;
     calABins = linspace(0.999*min(calA(:)),1.001*max(calA(:)),NCLR+1);
+    calA_bc = 0.5*(calABins(1:end-1) + calABins(2:end));
     cellCLR = jet(NCLR);
+    NCLRBAR = 5;
+    CLRINDS = 1:round(NCLR/NCLRBAR):NCLR;
+    cbTickCell = cell(NCLRBAR+1,1);
+    cbTickCell{1} = '$1$';
+    for cc = 2:NCLRBAR
+        calAtmp = calA_bc(CLRINDS(cc));
+        cbTickCell{cc} = ['$' sprintf('%0.3g',calAtmp) '$'];
+    end
+    cbTickCell{end} = ['$' sprintf('%0.3g',calA_bc(end)) '$'];
 elseif colorOpt == 2
     % color by preferred shape
     NCLR = 100;
@@ -238,7 +243,7 @@ end
 % get frames to plot
 if showverts == 0
     FSTART = 1;
-    FSTEP = 10;
+    FSTEP = 1;
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
@@ -248,20 +253,21 @@ else
 end
 
 % make a movie
-makeAMovie = 0;
+makeAMovie = 1;
 if makeAMovie == 1
-%     moviestr = [fpattern '.mp4'];
-    moviestr = 'meso2D_enthalpy.mp4';
+    moviestr = [fpattern '.mp4'];
+%     moviestr = 'meso2D_enthalpy.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
 end
 
 fnum = 1;
-figure(fnum), clf, hold on, box on;
 for ff = FSTART:FSTEP:FEND
     % reset figure for this frame
-    figure(fnum), clf, hold on, box on;
+    f = figure(fnum);
+    f.Color = 'w';
+    clf, hold on, box on;
     fprintf('printing frame ff = %d/%d, phi=%0.3g, phi0=%0.3g\n',ff,FEND,phi(ff),phi0(ff));
     
     % get geometric info
@@ -336,9 +342,19 @@ for ff = FSTART:FSTEP:FEND
 %         quiver(cx,cy,lambda(1)*V(1,1),lambda(1)*V(2,1),'-w','linewidth',2);
 %         quiver(cx,cy,lambda(2)*V(1,2),lambda(2)*V(2,2),'-w','linewidth',2);
     end
+    
+    % make colorbar
+    if colorOpt == 1
+        colormap(jet(NCLR));
+        cb = colorbar;
+        cb.Ticks = linspace(0,1,NCLRBAR+1);
+        cb.TickLabels = cbTickCell;
+        cb.TickLabelInterpreter = 'latex';
+        cb.FontSize = 18;
+    end
         
     % plot box
-%     plot([0 L L 0 0], [0 0 L L 0], 'k-', 'linewidth', 1.5);
+    plot([0 L L 0 0], [0 0 L L 0], 'k-', 'linewidth', 1.5);
     axis equal;
     ax = gca;
     ax.XTick = [];
