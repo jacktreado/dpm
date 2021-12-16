@@ -6,8 +6,8 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb01e-3_be50_da0.05_dl7_P1e-4_h0.5_cL0_cB0_seed72.posctc';
-fstr = 'local/mesoDM2D_data/mesoDM2D_N64_n32_ca1.14_kb02e-2_be200_da0.05_dl5_P1e-4_h0.5_cL0_cB0_seed27.posctc';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb01e-3_be50_da0.05_dl7_P1e-4_h0.5_cL0_cB0_seed1.posctc';
+% fstr = 'local/mesoDM2D_data/mesoDM2D_N64_n32_ca1.14_kb02e-2_be200_da0.05_dl5_P1e-4_h0.5_cL0_cB0_seed27.posctc';
 % fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
@@ -175,13 +175,14 @@ if NFRAMES > 2
     
     % plot shape vs porosity
     ambroseData = load('/Users/jacktreado/Jamming/Flowers/structure/plant/ambroseMesoCells/ambroseData.mat');
-    porosity = ambroseData.porosity;
-    calAMean = ambroseData.calAMean;
-    calAMin = ambroseData.calAMin;
-    calAMax = ambroseData.calAMax;
-    calAMeas = ambroseData.calAMeas;
-    dCalAMin = ambroseData.dCalAMin;
-    dCalAMax = ambroseData.dCalAMax;
+    totalData = load('/Users/jacktreado/Jamming/Flowers/structure/plant/ambroseMesoCells/totalData.mat');
+    porosity = totalData.porosity;
+    calAMean = totalData.calAMean;
+    calAMin = totalData.calAMin;
+    calAMax = totalData.calAMax;
+    calAMeas = totalData.calAMeas;
+    dCalAMin = totalData.dCalAMin;
+    dCalAMax = totalData.dCalAMax;
     
     figure(17), clf, hold on, box on;
     errorbar(phi(2)-phi(2:end),mean(calA(2:end,:),2),std(calA(2:end,:),0,2),'-k','linewidth',1.75);
@@ -192,6 +193,7 @@ if NFRAMES > 2
     ax = gca;
     ax.FontSize = 22;
     
+    porosity = ambroseData.porosity;
     aMean = ambroseData.areaMeanY;
     aSim = mean(a,2);
     a0Sim = mean(a0,2);
@@ -221,7 +223,7 @@ ey = sin(th);
 showverts = 0;
 
 % color by shape or size
-colorOpt = 0;
+colorOpt = 1;
 
 if colorOpt == 1
     % color by real shape
@@ -304,8 +306,8 @@ if showverts == 0
     elseif NFRAMES > 150
         FSTEP = 10;
     end
-    FEND = NFRAMES;
-%     FEND = FSTART;
+%     FEND = NFRAMES;
+    FEND = FSTART;
 else
     FSTART = 1;
     FSTEP = 1;
@@ -313,11 +315,11 @@ else
 end
 
 % make a movie
-makeAMovie = 1;
+makeAMovie = 0;
 ctccopy = 0;
 if makeAMovie == 1
 %     moviestr = 'debug.mp4';
-    moviestr = 'mesoDM2D_N64_n32_ca1.14_kb02e-2_be200_da0.05_dl5_P1e-4_h0.5_cL0_cB0_seed27.mp4';
+    moviestr = 'mesoHMin2D_N64_n32_ca1.14_kb01e-3_be50_da0.05_dl7_P1e-4_h0.5_cL0_cB0_seed1.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);

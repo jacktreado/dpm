@@ -3818,7 +3818,7 @@ double meso2D::numericalShearModulus(meso2DMemFn forceCall, double Ftol, double 
 	// shear strain
 	double dgamma = 1e-8;
 	double gamma = 0.0;
-	int NGAMMA = 5;
+	int NGAMMA = 4;
 
 	// save shear stress
 	vector<double> sxyList(NGAMMA+1,0.0);
@@ -3906,7 +3906,7 @@ double meso2D::numericalBulkModulus(meso2DMemFn forceCall, double Ftol, double d
 	// shear strain
 	double dgamma = 1e-8;
 	double gamma = 0.0;
-	int NGAMMA = 5;
+	int NGAMMA = 4;
 
 	// save shear stress
 	vector<double> pList(NGAMMA+1,0.0);

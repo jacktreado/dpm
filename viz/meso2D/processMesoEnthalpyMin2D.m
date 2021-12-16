@@ -73,6 +73,11 @@ for ss = 1:NSIMS
     polyList{ss} = polyListTmp(2:NFRAMES);
     
     NFRAMES = NFRAMES - 1;
+    if NFRAMES == 0
+        fprintf('** %s has 0 frames, skipping...\n',fname);
+        fskip(ss) = true;
+        continue;
+    end
     NFRAMESList(ss) = NFRAMES;
     fnameList{ss} = fname;
     
@@ -166,6 +171,8 @@ NPOLYCHECK = length(polycheck);
 phiList = saveStruct.phiList;
 calAList = saveStruct.calAList;
 polyList = saveStruct.polyList;
+LList = saveStruct.LList;
+zList = saveStruct.zList;
 
 % lists for later ensemble averaging
 NFRAMETOT = sum(NFRAMESList);

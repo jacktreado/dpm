@@ -5,7 +5,7 @@ close all;
 clc;
 
 % create file name
-fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb01e-3_be50_da0.05_dl7_P1e-4_h0.5_cL0_cB2_seed59.posctc';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb01e-3_be50_da0.05_dl7_P1e-4_h0.5_cL0_cB0_seed1.posctc';
 % fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
@@ -69,7 +69,7 @@ ey = sin(th);
 showverts = 0;
 
 % color by shape or size
-colorOpt = 0;
+colorOpt = 1;
 
 if colorOpt == 1
     % color by real shape
@@ -145,15 +145,15 @@ end
 
 % get frames to plot
 if showverts == 0
-    FSTART = 1;
+    FSTART = 14;
     FSTEP = 1;
     if NFRAMES > 50
         FSTEP = 2;
     elseif NFRAMES > 150
         FSTEP = 10;
     end
-    FEND = NFRAMES;
-%     FEND = FSTART;
+%     FEND = NFRAMES;
+    FEND = FSTART;
 else
     FSTART = 2;
     FSTEP = 1;
@@ -161,7 +161,7 @@ else
 end
 
 % make a movie
-makeAMovie = 1;
+makeAMovie = 0;
 ctccopy = 0;
 if makeAMovie == 1
     moviestr = 'mesoHMin2D_N64_n32_ca1.14_kb01e-3_be50_da0.05_dl7_P1e-4_h0.5_cL0_cB2_seed59_free.mp4';
