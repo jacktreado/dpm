@@ -3818,7 +3818,7 @@ double meso2D::numericalShearModulus(meso2DMemFn forceCall, double Ftol, double 
 	// shear strain
 	double dgamma = 1e-8;
 	double gamma = 0.0;
-	int NGAMMA = 4;
+	int NGAMMA = 5;
 
 	// save shear stress
 	vector<double> sxyList(NGAMMA+1,0.0);
@@ -3900,13 +3900,13 @@ double meso2D::numericalShearModulus(meso2DMemFn forceCall, double Ftol, double 
 // function to compute bulk modulus numerically
 double meso2D::numericalBulkModulus(meso2DMemFn forceCall, double Ftol, double dt0){
 	// local variables
-	int k, gi, d;
+	int k, gi, d, NVVCTS;
 	double pold, pcurr; 
 
 	// shear strain
 	double dgamma = 1e-8;
 	double gamma = 0.0;
-	int NGAMMA = 4;
+	int NGAMMA = 5;
 
 	// save shear stress
 	vector<double> pList(NGAMMA+1,0.0);
@@ -3939,6 +3939,13 @@ double meso2D::numericalBulkModulus(meso2DMemFn forceCall, double Ftol, double d
 	// UList.at(0) = U;
 	AList.at(0) = L[0]*L[1];
 
+	// initial vertex-vertex contact network
+	NVVCTS = 0.5*NVTOT*(NVTOT-1);
+	vector<bool> gijtmp(NVVCTS,0);
+
+	// initialize contact network
+	getMesoVVContactNetwork(gijtmp);
+
 	// loop over shear strains gamma, relax using FIRE, compute change in Sxy
 	for (k=0; k<NGAMMA; k++){
 		// update gamma for this iteration
@@ -3954,8 +3961,8 @@ double meso2D::numericalBulkModulus(meso2DMemFn forceCall, double Ftol, double d
 			x[NDIM*gi + 1] = (1.0 - gamma)*xsave[NDIM*gi + 1];
 		}
 
-		// relax at fixed volume
-		mesoFIRE(forceCall, Ftol, dt0);
+		// relax at fixed shear strain + volume, FIXED CONTACT NETWORK
+		mesoShearStrainFIRE(0.0, Ftol, dt0, gijtmp);
 
 		// save shear stress
 		pList.at(k+1) = 0.5*(stress[0] + stress[1]);
