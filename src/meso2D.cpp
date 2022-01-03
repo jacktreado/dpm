@@ -3877,7 +3877,7 @@ double meso2D::numericalShearModulus(meso2DMemFn forceCall, double Ftol, double 
 	for (k=1; k<NGAMMA-1; k++){
 		Gtmp = -0.5*(sxyList.at(k+2) - sxyList.at(k))/dgamma;
 		G += Gtmp;
-		cout << "k = " << k << ", gamma = " << gamma << ", Gtmp = " << Gtmp << endl;
+		cout << " * * k = " << k << ", gamma = " << gamma << ", Gtmp = " << Gtmp << endl;
 		gamma += dgamma;
 	}
 	G /= (NGAMMA-2);
@@ -3974,9 +3974,14 @@ double meso2D::numericalBulkModulus(meso2DMemFn forceCall, double Ftol, double d
 
 	// compute numerical derivative, take average
 	double B = 0.0;
-	for (k=0; k<NGAMMA-1; k++)
-		B -= AList.at(k+1)*(0.5*(pList.at(k+2) - pList.at(k))/(AList.at(k+1)-AList.at(k)));
-	B /= (NGAMMA-1);
+	double Btmp = 0.0;
+	for (k=1; k<NGAMMA-1; k++){
+		Btmp = AList.at(k+1)*(0.5*(pList.at(k+2) - pList.at(k))/(AList.at(k+1)-AList.at(k)));
+		B -= Btmp;
+		cout << " * * k = " << k << ", p = " << pList.at(k) << ", dA = " << AList.at(k+1)-AList.at(k) << ", Btmp = " << -Btmp << endl;
+	}
+	B /= (NGAMMA-2);
+	cout << "on average, B = " << B << endl;
 
 	// reset system
 	L = Lsave;

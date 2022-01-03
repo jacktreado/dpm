@@ -5,7 +5,7 @@ close all;
 clc;
 
 % create file name
-fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb01e-3_be50_da0.05_dl7_P1e-4_h0.5_cL0_cB2_seed59.posctc';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb01e-3_be50_da0.05_dl7_P1e-4_h0.5_cL0_cB0_seed1.posctc';
 % fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
@@ -34,6 +34,15 @@ l0 = mesoData.l0(idx,:);
 t0 = mesoData.t0(idx,:);
 kb = mesoData.kb(idx,:);
 phi0 = sum(a0,2)./(LList(:,1).*LList(:,2));
+
+% particle shape data
+p = mesoData.p(idx,:);
+a = mesoData.a(idx,:);
+calA = p.^2./(4.0*pi*a);
+
+% stress data
+S = mesoData.S(idx,:);
+P = 0.5*(S(:,1) + S(:,2));
 
 % construct list of vv contacts
 gijList = cell(NFRAMES,1);
@@ -117,13 +126,20 @@ NFRAMES = size(polys,1);
 showverts = 0;
 
 % color by shape or size
-colorOpt = 0;
+colorOpt = 1;
 
 if colorOpt == 1
     % color by real shape
     NCLR = 100;
-    calABins = linspace(0.999*min(calA(:)),1.001*max(calA(:)),NCLR+1);
+    calABins = linspace(1,1.001*max(calA(:)),NCLR+1);
     cellCLR = jet(NCLR);
+    cbColorTicks = [0 0.2 0.4 0.6 0.8 1];
+    NTICKS = length(cbColorTicks);
+    cbTickInds = round(linspace(1,NCLR,NTICKS));
+    cbTickLabels = cell(NTICKS,1);
+    for tt = 1:NTICKS
+        cbTickLabels{tt} = sprintf('$%0.3g$',calABins(cbTickInds(tt)));
+    end
 elseif colorOpt == 2
     % color by preferred shape
     NCLR = 100;
@@ -139,10 +155,10 @@ end
 
 % get frames to plot
 if showverts == 0
-    FSTART = 1;
+    FSTART = 15;
     FSTEP = 1;
-    FEND = NFRAMES-1;
-%     FEND = FSTART;
+%     FEND = NFRAMES-1;
+    FEND = FSTART;
 else
     FSTART = NFRAMES;
     FSTEP = 1;
@@ -150,7 +166,7 @@ else
 end
 
 % make a movie
-makeAMovie = 1;
+makeAMovie = 0;
 ctccopy = 0;
 if makeAMovie == 1
 %     moviestr = [fpattern '.mp4'];
@@ -163,7 +179,7 @@ end
 
 fnum = 1;
 figure(fnum), clf, hold on, box on;
-pclr = winter(14);
+pclr = jet(7);
 for ff = FSTART:FSTEP:FEND
     % reset figure for this frame
     figure(fnum), clf, hold on, box on;
@@ -222,16 +238,50 @@ for ff = FSTART:FSTEP:FEND
         end
     end
     
-    % plot polygons
-    for pp = 1:length(polys{ff})
-        ptmp = polys{ff}{pp};
-        NE = length(ptmp);
-        if NE < 17
-            patch('Faces',[1:NE 1],'vertices',ptmp,'FaceColor',pclr(NE-2,:),'EdgeColor','k','FaceAlpha',0.75);
-        else
-            patch('Faces',[1:NE 1],'vertices',ptmp,'FaceColor','k','EdgeColor','k','FaceAlpha',0.75);
+    if colorOpt == 1
+        colormap('jet');
+        cb = colorbar;
+        cb.Ticks = cbColorTicks;
+        cb.TickLabels = cbTickLabels;
+        cb.TickLabelInterpreter = 'latex';
+        cb.FontSize = 24;
+    end
+    
+    % plot cell-cell contact network
+    cijtmp = cijList{ff};
+    for ci = 1:NCELLS
+        cxi = mean(xf{ci});
+        cyi = mean(yf{ci});
+        for cj = (ci+1):NCELLS
+            if cijtmp(ci,cj) == 1
+                cxj = mean(xf{cj});
+                cyj = mean(yf{cj});
+
+                dx = cxj - cxi;
+                dx = dx - L*round(dx/L);
+
+                dy = cyj - cyi;
+                dy = dy - L*round(dy/L);
+            
+                for xx = -1:1
+                    for yy = -1:1
+                        plot([cxi cxi + dx] + L*xx,[cyi cyi + dy] + L*yy,'k-','linewidth',2);
+                    end
+                end
+            end
         end
     end
+    
+%     % plot polygons
+%     for pp = 1:length(polys{ff})
+%         ptmp = polys{ff}{pp};
+%         NE = length(ptmp);
+%         if NE < 10
+%             patch('Faces',[1:NE 1],'vertices',ptmp,'FaceColor',pclr(NE-2,:),'EdgeColor','w','linewidth',2,'FaceAlpha',1);
+%         else
+%             patch('Faces',[1:NE 1],'vertices',ptmp,'FaceColor','k','EdgeColor','w','linewidth',2,'FaceAlpha',1);
+%         end
+%     end
         
     % plot box
     plot([0 L L 0 0], [0 0 L L 0], 'k-', 'linewidth', 1.5);
@@ -260,7 +310,7 @@ end
 
 % polygon area population
 minpoly = 3;
-maxpoly = 12;
+maxpoly = 10;
 polycheck = minpoly:maxpoly;
 NCHECK = length(polycheck);
 polyAreaPop = zeros(NFRAMES,NCHECK);
@@ -310,8 +360,8 @@ for cc = 1:4
         plot(1-phi(2:end),sum(polyAreaPop(2:end,6:end),2),'-ko','markerfacecolor',clr(cc,:),'markersize',10);
     end
 end
-xlabel('$\varphi=1-\phi$','Interpreter','latex');
-ylabel('$f_e(\varphi)$','Interpreter','latex');
+xlabel('$\varphi - \varphi_{\rm min}$','Interpreter','latex');
+ylabel('$f_E$','Interpreter','latex');
 ax = gca;
-ax.FontSize = 24;
-legend({'$3$','$4$','$5-7$','$\geq 8$'},'Interpreter','latex','FontSize',14,'location','best');
+ax.FontSize = 28;
+legend({'$E = 3$','$E = 4$','$E = 5-7$','$E \geq 8$'},'Interpreter','latex','FontSize',22,'location','best');

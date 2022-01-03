@@ -54,6 +54,12 @@ int main(){
 	meso2Dobj.t0ToCurrent();
 	meso2Dobj.printMesoShearConfigCTCS2D(0.0);
 
+
+	// get G and B from initial state
+	double G, B;
+	G = meso2Dobj.numericalShearModulus(&meso2D::mesoNetworkForceUpdate, Ftol, dt0);
+	B = meso2Dobj.numericalBulkModulus(&meso2D::mesoNetworkForceUpdate, Ftol, dt0);
+
 	// compute shear modulus numerically, using 1st and 2nd derivatives
 	int NVTOT = meso2Dobj.getNVTOT();
 	int NVVCTS = 0.5*NVTOT*(NVTOT-1);
@@ -70,9 +76,9 @@ int main(){
 	// -- Compute shear modulus numerically
 
 	// shear strain
-	double dgamma = 2e-8;
+	double dgamma = 1e-8;
 	double gamma = 0.0;
-	int NGAMMA = 50;
+	int NGAMMA = 20;
 	int k = 0;
 
 	// save shear stress and potential energy
@@ -123,6 +129,8 @@ int main(){
 		cout << "k = " << k << ", gamma = " << gamma << ";   sxy = " << sxyList.at(k) << ",  sxy_U = " << sxy_U_list.at(k) << ";   G_sxy = " << G_sxy_list.at(k) << ",  G_U = " << G_U_list.at(k) << endl;
 		gamma += dgamma;
 	}
+	cout << "G num. = " << G << endl;
+	cout << "B num. = " << B << endl;
 
 
 	// say goodbye
