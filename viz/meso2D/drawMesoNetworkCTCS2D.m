@@ -6,8 +6,8 @@ close all;
 clc;
 
 % create file name
-fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb01e-3_be50_da0.05_dl7_P1e-4_h0.5_cL0_cB0_seed1.posctc';
-% fstr = 'local/mesoDM2D_data/mesoDM2D_N64_n32_ca1.14_kb02e-2_be200_da0.05_dl5_P1e-4_h0.5_cL0_cB0_seed27.posctc';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb01e-3_be50_da0.05_dl7_P1e-4_h0.5_cL0_cB0_seed2.posctc';
+% fstr = 'local/mesoDM2D_data/mesoDM2D_N32_n32_ca1.14_kb01e-3_be50_da0.02_dl7_P1e-4_h0.5_cL0_cB0_seed12.posctc';
 % fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
@@ -184,10 +184,18 @@ if NFRAMES > 2
     dCalAMin = totalData.dCalAMin;
     dCalAMax = totalData.dCalAMax;
     
+    ct01CalAMean = totalData.ct01CalAMean;
+    ct01CalAStd = totalData.ct01CalAStd;
+    
+    ct17CalAMean = totalData.ct17CalAMean;
+    ct17CalAStd = totalData.ct17CalAStd;
+    
     figure(17), clf, hold on, box on;
     errorbar(phi(2)-phi(2:end),mean(calA(2:end,:),2),std(calA(2:end,:),0,2),'-k','linewidth',1.75);
 %     errorbar(porosity,calAMean,calAMin,calAMax,'k>','markersize',10,'markerfacecolor','b');
     errorbar(porosity,calAMeas,dCalAMin,dCalAMax,'k>','markersize',10,'markerfacecolor','r');
+    errorbar(porosity(end),ct01CalAMean,ct01CalAStd,'k>','markersize',10);
+    errorbar(porosity(end),ct17CalAMean,ct17CalAStd,'k>','markersize',10);
     ylabel('$\mathcal{A}$','Interpreter','latex');
     xlabel('$1-\phi$','Interpreter','latex');
     ax = gca;
@@ -228,7 +236,9 @@ colorOpt = 1;
 if colorOpt == 1
     % color by real shape
     NCLR = 100;
-    calABins = linspace(0.999*min(calA(:)),1.001*max(calA(:)),NCLR+1);
+%     calABins = linspace(0.999*min(calA(:)),1.001*max(calA(:)),NCLR+1);
+    calABins = linspace(0.99,2.86,NCLR);
+    calABins = [calABins 10];
     cellCLR = jet(NCLR);
 elseif colorOpt == 2
     % color by preferred shape
@@ -306,8 +316,8 @@ if showverts == 0
     elseif NFRAMES > 150
         FSTEP = 10;
     end
-%     FEND = NFRAMES;
-    FEND = FSTART;
+    FEND = NFRAMES;
+%     FEND = FSTART;
 else
     FSTART = 1;
     FSTEP = 1;

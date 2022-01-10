@@ -121,6 +121,7 @@ public:
 	void mesoShearStrainFIRE(double gamma, double Ftol, double dt0, std::vector<bool> &gijtmp);
 	void mesoPinFIRE(std::vector<double> &xpin, double Ftol, double dt0, double kcspring);
 	void mesoNetworkNVE(std::ofstream &enout, meso2DMemFn forceCall, double T, double dt0, int NT, int NPRINTSKIP);
+	void mesoShearStrainNVE(std::ofstream &enout, double gamma, double T, double dt0, int NT, int NPRINTSKIP, std::vector<bool> &gijtmp);
 
 	// protocols
 	void mesoNetworkExtension(meso2DMemFn forceCall, double Ftol, double dt0, double delShrink, double dphiPrint, double phiMin);

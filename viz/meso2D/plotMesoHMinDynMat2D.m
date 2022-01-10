@@ -5,7 +5,7 @@ close all;
 clc;
 
 
-fname = 'mesoDM2D_N32_n32_ca1.14_kb01e-2_be75_da0.02_dl7_P1e-4_h0.5_cL0_cB0_seed12';
+fname = 'mesoDM2D_N32_n32_ca1.14_kb01e-3_be50_da0.02_dl7_P1e-4_h0.5_cL0_cB0_seed12';
 fstr = ['local/mesoDM2D_data/' fname '.posctc'];
 hessstr = ['local/mesoDM2D_data/' fname '.hess'];
 
@@ -98,21 +98,21 @@ for ff = 1:NFRAMES
     emptystr = fgetl(fid);
     B(ff) = Btmp{1};
     
-    % read in dynamical matrix eigenvalues
-    mevalsstr = fgetl(fid);
-    mvals{ff} = sscanf(mevalsstr(6:end),'%f');
-    NMVALS = length(mvals{ff});
-    fprintf('%s, %d mvals found\n',mevalsstr(1:5),NMVALS);
-    
-    hevalsstr = fgetl(fid);
-    hvals{ff} = sscanf(hevalsstr(6:end),'%f');
-    NHVALS = length(hvals{ff});
-    fprintf('%s, %d hvals found\n',hevalsstr(1:5),NHVALS);
-    
-    sevalsstr = fgetl(fid);
-    svals{ff} = sscanf(sevalsstr(6:end),'%f');
-    NSVALS = length(svals{ff});
-    fprintf('%s, %d hvals found\n',sevalsstr(1:5),NSVALS);
+%     % read in dynamical matrix eigenvalues
+%     mevalsstr = fgetl(fid);
+%     mvals{ff} = sscanf(mevalsstr(6:end),'%f');
+%     NMVALS = length(mvals{ff});
+%     fprintf('%s, %d mvals found\n',mevalsstr(1:5),NMVALS);
+%     
+%     hevalsstr = fgetl(fid);
+%     hvals{ff} = sscanf(hevalsstr(6:end),'%f');
+%     NHVALS = length(hvals{ff});
+%     fprintf('%s, %d hvals found\n',hevalsstr(1:5),NHVALS);
+%     
+%     sevalsstr = fgetl(fid);
+%     svals{ff} = sscanf(sevalsstr(6:end),'%f');
+%     NSVALS = length(svals{ff});
+%     fprintf('%s, %d hvals found\n',sevalsstr(1:5),NSVALS);
     
     % read in newfr
     endfrstr = fgetl(fid);
@@ -125,91 +125,91 @@ poissonRatio = (B-G)./(B+G);
 % color for frames
 plotClr = jet(NFRAMES-1);
 
-% dyn mat spectra
-figure(1), clf, hold on, box on;
-for ff = 2:NFRAMES
-    mvtmp = mvals{ff};
-    mvtmp = mvtmp(3:end);
-    NV = length(mvtmp);
-    idx = (1:NV)./NV;
-    plot(idx,mvtmp,'-','linewidth',2,'color',plotClr(ff-1,:));
-end
-xlabel('$k/N_{\rm dof}$','Interpreter','latex');
-ylabel('$m_k$','Interpreter','latex');
-ax = gca;
-ax.FontSize = 22;
-ax.YScale = 'log';
-
-
-% stiffness matrix spectra
-figure(2), clf, hold on, box on;
-for ff = 2:NFRAMES
-    hvtmp = hvals{ff};
-    hvtmp = hvtmp(3:end);
-    NV = length(hvtmp);
-    idx = (1:NV)./NV;
-    plot(idx,hvtmp,'-','linewidth',2,'color',plotClr(ff-1,:));
-end
-xlabel('$k/N_{\rm dof}$','Interpreter','latex');
-ylabel('$h_k$','Interpreter','latex');
-ax = gca;
-ax.FontSize = 22;
-ax.YScale = 'log';
-
-
-
-% density of states, mean frequency
-nbins = 30;
-figure(3), clf, hold on, box on;
-for ff = 2:NFRAMES
-    % read in eigenvalues
-    mvtmp = mvals{ff};
-    mvtmp = mvtmp(3:end);
-    mvtmp = mvtmp(mvtmp > 0);
-    wtmp = sqrt(mvtmp);
-    
-    % build bins
-    be = logspace(log10(0.99*min(wtmp)),log10(1.05*max(wtmp)),nbins+1);
-    bc = 0.5*(be(2:end) + be(1:end-1));
-    
-    
-    % get DoS
-    figure(101), clf;
-    hobj = histogram(wtmp,'Normalization','pdf','BinEdges',be);
-    hy = hobj.Values;
-    
-    % plot to figure
-    figure(3),
-    plot(bc,hy,'-','linewidth',2,'color',plotClr(ff-1,:));
-end
-xlabel('$\omega$','Interpreter','latex');
-ylabel('$D(\omega)$','Interpreter','latex');
-ax = gca;
-ax.FontSize = 22;
-ax.XScale = 'log';
+% % dyn mat spectra
+% figure(1), clf, hold on, box on;
+% for ff = 2:NFRAMES
+%     mvtmp = mvals{ff};
+%     mvtmp = mvtmp(3:end);
+%     NV = length(mvtmp);
+%     idx = (1:NV)./NV;
+%     plot(idx,mvtmp,'-','linewidth',2,'color',plotClr(ff-1,:));
+% end
+% xlabel('$k/N_{\rm dof}$','Interpreter','latex');
+% ylabel('$m_k$','Interpreter','latex');
+% ax = gca;
+% ax.FontSize = 22;
+% ax.YScale = 'log';
+% 
+% 
+% % stiffness matrix spectra
+% figure(2), clf, hold on, box on;
+% for ff = 2:NFRAMES
+%     hvtmp = hvals{ff};
+%     hvtmp = hvtmp(3:end);
+%     NV = length(hvtmp);
+%     idx = (1:NV)./NV;
+%     plot(idx,hvtmp,'-','linewidth',2,'color',plotClr(ff-1,:));
+% end
+% xlabel('$k/N_{\rm dof}$','Interpreter','latex');
+% ylabel('$h_k$','Interpreter','latex');
+% ax = gca;
+% ax.FontSize = 22;
+% ax.YScale = 'log';
 
 
 
-% compare mean dyn mat and stiff mat eigenvalues
-mmean = zeros(NFRAMES-1,1);
-hmean = zeros(NFRAMES-1,1);
-for ff = 2:NFRAMES
-    hvtmp = hvals{ff};
-    hvtmp = hvtmp(3:end);
-    
-    mvtmp = mvals{ff};
-    mvtmp = mvtmp(3:end);
-    
-    mmean(ff-1) = mean(mvtmp);
-    hmean(ff-1) = mean(hvtmp);
-end
-figure(4), clf, hold on, box on;
-plot(phi(2) - phi(3:end),mmean(2:end),'ko','markersize',10,'markerfacecolor','b');
-plot(phi(2) - phi(3:end),hmean(2:end),'ko','markersize',10,'markerfacecolor','r');
-xlabel('$\varphi - \varphi_{\rm min}$','Interpreter','latex');
-ylabel('mean eigenvalue','Interpreter','latex');
-ax = gca;
-ax.FontSize = 22;
+% % density of states, mean frequency
+% nbins = 30;
+% figure(3), clf, hold on, box on;
+% for ff = 2:NFRAMES
+%     % read in eigenvalues
+%     mvtmp = mvals{ff};
+%     mvtmp = mvtmp(3:end);
+%     mvtmp = mvtmp(mvtmp > 0);
+%     wtmp = sqrt(mvtmp);
+%     
+%     % build bins
+%     be = logspace(log10(0.99*min(wtmp)),log10(1.05*max(wtmp)),nbins+1);
+%     bc = 0.5*(be(2:end) + be(1:end-1));
+%     
+%     
+%     % get DoS
+%     figure(101), clf;
+%     hobj = histogram(wtmp,'Normalization','pdf','BinEdges',be);
+%     hy = hobj.Values;
+%     
+%     % plot to figure
+%     figure(3),
+%     plot(bc,hy,'-','linewidth',2,'color',plotClr(ff-1,:));
+% end
+% xlabel('$\omega$','Interpreter','latex');
+% ylabel('$D(\omega)$','Interpreter','latex');
+% ax = gca;
+% ax.FontSize = 22;
+% ax.XScale = 'log';
+
+
+
+% % compare mean dyn mat and stiff mat eigenvalues
+% mmean = zeros(NFRAMES-1,1);
+% hmean = zeros(NFRAMES-1,1);
+% for ff = 2:NFRAMES
+%     hvtmp = hvals{ff};
+%     hvtmp = hvtmp(3:end);
+%     
+%     mvtmp = mvals{ff};
+%     mvtmp = mvtmp(3:end);
+%     
+%     mmean(ff-1) = mean(mvtmp);
+%     hmean(ff-1) = mean(hvtmp);
+% end
+% figure(4), clf, hold on, box on;
+% plot(phi(2) - phi(3:end),mmean(2:end),'ko','markersize',10,'markerfacecolor','b');
+% plot(phi(2) - phi(3:end),hmean(2:end),'ko','markersize',10,'markerfacecolor','r');
+% xlabel('$\varphi - \varphi_{\rm min}$','Interpreter','latex');
+% ylabel('mean eigenvalue','Interpreter','latex');
+% ax = gca;
+% ax.FontSize = 22;
 
 
 figure(5), clf, hold on, box on;

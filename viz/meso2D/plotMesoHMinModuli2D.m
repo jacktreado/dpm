@@ -6,7 +6,7 @@ close all;
 clc;
 
 
-fname = 'mesoDM2D_N32_n32_ca1.14_kb01e-3_be50_da0.05_dl7_P1e-4_h0.5_cL0_cB0_seed100';
+fname = 'mesoDM2D_N32_n32_ca1.14_kb01e-2_be50_da0.02_dl7_P1e-6_h0.5_cL0_cB0_seed100';
 fstr = ['local/mesoDM2D_data/' fname '.posctc'];
 hessstr = ['local/mesoDM2D_data/' fname '.hess'];
 
@@ -137,3 +137,16 @@ xlabel('$\varphi - \varphi_{\rm min}$','Interpreter','latex');
 ylabel('$\nu$','Interpreter','latex');
 ax = gca;
 ax.FontSize = 22;
+
+
+% save curves
+Gplot = G(2:end);
+Bplot = B(2:end);
+prPlot = poissonRatio(2:end);
+poroPlot = phi(2) - phi(2:end);
+
+kbstr = '1e-2';
+bestr = '50';
+Pstr = '1e-6';
+svstr = ['modCurves_kb' kbstr '_be' bestr '_P' Pstr '.mat'];
+save(['local/moduliCurves/' svstr],'Gplot','Bplot','prPlot','poroPlot');

@@ -1164,6 +1164,10 @@ void meso2D::mesoNetworkForceUpdate(double gamma, vector<bool> &gijtmp){
 		for (gj=gi+1; gj<NVTOT; gj++){
 			if (gijtmp[NVTOT*gi + gj - (gi+1)*(gi+2)/2]){
 
+				// get cell indices
+				cindices(ci,vi,gi);
+				cindices(cj,vj,gj);
+
 				// contact distance
 				sij = r[gi] + r[gj];
 
@@ -1178,10 +1182,6 @@ void meso2D::mesoNetworkForceUpdate(double gamma, vector<bool> &gijtmp){
 
 				// get true distance
 				rij = sqrt(dx*dx + dy*dy);
-
-				// get cell indices
-				cindices(ci,vi,gi);
-				cindices(cj,vj,gj);
 
 				// compute forces and potential
 				if (rij < sij){
@@ -1686,7 +1686,7 @@ void meso2D::mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, 
 }
 
 
-// FIRE minimization at fixed strain
+// FIRE minimization at fixed shear strain
 void meso2D::mesoShearStrainFIRE(double gamma, double Ftol, double dt0, vector<bool> &gijtmp){
 	// local variables
 	int i;
@@ -1739,6 +1739,7 @@ void meso2D::mesoShearStrainFIRE(double gamma, double Ftol, double dt0, vector<b
 			cout << "   L E E S  E D W A R D S      			" << endl;
 			cout << "===========================================" << endl;
 			cout << endl;
+			cout << "	** gamma 	= " << gamma << endl;
 			cout << "	** fireit 	= " << fireit << endl;
 			cout << "	** fcheck 	= " << fcheck << endl;
 			cout << "	** U 		= " << U << endl;
@@ -1784,6 +1785,9 @@ void meso2D::mesoShearStrainFIRE(double gamma, double Ftol, double dt0, vector<b
 			for (i=0; i<vertDOF; i++){
 				// take half step backwards
 				x[i] -= 0.5*dt*v[i];
+				x[i] -= L[i % NDIM]*floor(x[i]/L[i % NDIM]);
+				if (i % NDIM == 0)
+					x[i] -= floor(x[i+1]/L[1])*gamma*L[0];
 
 				// reset vertex velocities
 				v[i] = 0.0;
@@ -2138,7 +2142,75 @@ void meso2D::mesoNetworkNVE(ofstream &enout, meso2DMemFn forceCall, double T, do
 }
 
 
+// NVE at fixed shear strain
+void meso2D::mesoShearStrainNVE(ofstream &enout, double gamma, double T, double dt0, int NT, int NPRINTSKIP, vector<bool> &gijtmp){
+	// local variables
+	int t, i;
+	double K, simclock;
 
+	// set time step magnitude
+	setdt(dt0);
+
+	// initialize time keeper
+	simclock = 0.0;
+
+	// initialize velocities
+	drawVelocities2D(T);
+
+	// loop over time, print energy
+	for (t=0; t<NT; t++){
+
+		// VV VELOCITY UPDATE #1
+		for (i=0; i<vertDOF; i++)
+			v[i] += 0.5*dt*F[i];
+
+		// VV POSITION UPDATE
+		for (i=0; i<vertDOF; i++)
+			x[i] += dt*v[i];
+
+		// FORCE UPDATE
+		mesoNetworkForceUpdate(gamma, gijtmp);
+
+		// compute kinetic energy
+		K = vertexKineticEnergy();
+
+		// VV VELOCITY UPDATE #2
+		for (i=0; i<vertDOF; i++)
+			v[i] += 0.5*F[i]*dt;
+
+		// update sim clock
+		simclock += dt;
+
+		// print to console and file
+		if (t % NPRINTSKIP == 0){
+
+			// print to console
+			cout << endl << endl;
+			cout << "===========================================" << endl;
+			cout << "		M E S O P H Y L L 			" << endl;
+			cout << " 			 						" << endl;
+			cout << "		N V E 						" << endl;
+			cout << "===========================================" << endl;
+			cout << endl;
+			cout << "	** t / NT	= " << t << " / " << NT << endl;
+			cout << "	** U 		= " << setprecision(12) << U << endl;
+			cout << "	** K 		= " << setprecision(12) << K << endl;
+			cout << "	** E 		= " << setprecision(12) << U + K << endl;
+
+			// print to energy file
+			cout << "** printing energy" << endl;
+			enout << setw(w) << left << t;
+			enout << setw(wnum) << left << simclock;
+			enout << setw(wnum) << setprecision(12) << U;
+			enout << setw(wnum) << setprecision(12) << K;
+			enout << endl;
+
+			// print to configuration only if position file is open
+			if (posout.is_open())
+				printMesoShearConfigCTCS2D(gamma);
+		}
+	}
+}
 
 
 
@@ -3335,12 +3407,12 @@ void meso2D::t0ToReg(){
 
 // return meso vertex-vertex contact network
 void meso2D::getMesoVVContactNetwork(vector<bool> &gijtmp){
-	int gi, gj, NVVCTS;
+	int ci, cj, gi, gj, vi, vj, ctcidx, NVVCTS;
 	double rij, sij, dx, dy;
 
 	// check size'
 	NVVCTS = 0.5*NVTOT*(NVTOT-1);
-	if (gijtmp.size() != NVVCTS){
+	if (gijtmp.size() != NVVCTS || gijtmp.size() != gij.size()){
 		cout << "** ERROR: in getMesoVVContactNetwork, input &gijtmp not initialized. Ending. " << endl;
 		exit(1);
 	}
@@ -3348,28 +3420,38 @@ void meso2D::getMesoVVContactNetwork(vector<bool> &gijtmp){
 	// update bonded forces
 	for (gi=0; gi<NVTOT; gi++){
 		for (gj=gi+1; gj<NVTOT; gj++){
-			// if bonded, set tmp to 1
-			if (gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2])
-				gijtmp[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 1;
+			// contact index
+			ctcidx = NVTOT*gi + gj - (gi+1)*(gi+2)/2;
 
-			// else, check overlap
-			else {
-				// contact distance
-				sij = r[gi] + r[gj];
+			// get cell indices
+			cindices(ci,vi,gi);
+			cindices(cj,vj,gj);
 
-				// get vertex-vertex distance
-				dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
-				dy -= L[1]*round(dy/L[1]);
+			// only add to connections if on different cells
+			if (ci != cj){
+				// if bonded, set tmp to 1
+				if (gij[ctcidx])
+					gijtmp[ctcidx] = 1;
 
-				dx = x[NDIM*gj] - x[NDIM*gi];
-				dx -= L[0]*round(dx/L[0]);
+				// else, check overlap
+				else {
+					// contact distance
+					sij = r[gi] + r[gj];
 
-				// get true distance
-				rij = sqrt(dx*dx + dy*dy);
+					// get vertex-vertex distance
+					dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
+					dy -= L[1]*round(dy/L[1]);
 
-				// compute forces and potential
-				if (rij < sij)
-					gijtmp[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 1;
+					dx = x[NDIM*gj] - x[NDIM*gi];
+					dx -= L[0]*round(dx/L[0]);
+
+					// get true distance
+					rij = sqrt(dx*dx + dy*dy);
+
+					// compute forces and potential
+					if (rij < sij)
+						gijtmp[ctcidx] = 1;
+				}
 			}
 		}
 	}

@@ -1,7 +1,9 @@
 // test main file for meso shear modulus
 
 // Compilation command:
-// g++ -O3 --std=c++11 -I src main/test/mesoShearModulusTest.cpp src/*.cpp -o test.o
+// g++ -O3 --std=c++11 -I src main/test/mesoShearStrainNVETest.cpp src/*.cpp -o test.o
+// 
+// NOTE: write matlab to read in shear at fixed strain, to visualize NVE with sheared box
 
 // header files
 #include "meso2D.h"
@@ -14,7 +16,7 @@ using namespace std;
 int main(){
 	// local variables
 	int seed = 1;
-	double Ftol = 1e-12, Ptol = 1e-6, dt0 = 0.01, dphi0 = 0.01;
+	double Ftol = 1e-12, dt0 = 0.02, dphi0 = 0.01;
 	double boxLengthScale = 2.5, betaEff = 50.0, ctcdel = 1.0, ctch = 0.5, cL = 0, aL = 1.0, cB = 0.0, cKb = 0.0, kl = 1.0, kc = 1.0, kb0 = 1e-3;
 
 	// pointer to dpm member function (should pt to null)
@@ -23,9 +25,9 @@ int main(){
 
 	string inputf = "meso.input";
 	string posf = "pos.test";
-	string shearf = "shear.test";
+	string enf = "energy.test";
 
-	// instantiate object
+	// instantiate
 	meso2D meso2Dobj(inputf,seed);
 
 	// initialize neighbor linked list
@@ -33,7 +35,11 @@ int main(){
 
 	// open config, hessian and shear file
 	meso2Dobj.openPosObject(posf);
-	meso2Dobj.openHessObject(shearf);
+	ofstream enout(enf.c_str());
+	if (!enout.is_open()){
+		cout << "** ERROR: in mesoShearStrainNVETest.cpp, en out file " << enf << " does not open. Ending. " << endl;
+		return 1;
+	}
 
 	// set parameters
 	meso2Dobj.setbetaEff(betaEff);
@@ -51,15 +57,35 @@ int main(){
 	meso2Dobj.initializeMesophyllBondNetwork();
 	meso2Dobj.t0ToCurrent();
 	meso2Dobj.mesoFIRE(&meso2D::mesoNetworkForceUpdate, Ftol, dt0);
-	meso2Dobj.t0ToCurrent();
-	meso2Dobj.printMesoShearConfigCTCS2D(0.0);
+
+	// initial vertex-vertex contact network
+	int NVTOT = meso2Dobj.getNVTOT();
+	int NVVCTS = 0.5*NVTOT*(NVTOT-1);
+	vector<bool> gijtmp(NVVCTS,0);
+
+	// initialize contact network
+	meso2Dobj.getMesoVVContactNetwork(gijtmp);
+
+	// set gamma and temperature
+	double gamma = 0.01;
+	double dgamma = 0.001;
+	int NGAMMA = 2;
+	double T = 5e-2;
+
+	// relax at that gamma
+	for (int gg = 0; gg < NGAMMA; gg++){
+		meso2Dobj.mesoShearStrainFIRE(gamma, Ftol, dt0, gijtmp);
+		gamma += dgamma;
+	}
 
 	// run NVE protocol at fixed shear strain
-	
+	int NT = 1e6;
+	int NPRINTSKIP = 5e3;
+	meso2Dobj.mesoShearStrainNVE(enout, gamma, T, dt0, NT, NPRINTSKIP, gijtmp);
 
 
 	// say goodbye
-	cout << "\n** Finished mesoShearStrainNVE.cpp, ending. " << endl;
-
+	cout << "\n** Finished mesoShearStrainNVETest.cpp, ending. " << endl;
+	enout.close();
 	return 0;
 }

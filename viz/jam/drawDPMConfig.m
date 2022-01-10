@@ -42,7 +42,7 @@ end
 vizdir = pwd;
 fname = [fpattern '.pos'];
 % fstr = [vizdir '/' datadir '/' fname];
-fstr = '../../pos.test';
+fstr = '../../monodisperse.test';
 
 % read in data
 dpmData = readDPMConfig(fstr);
