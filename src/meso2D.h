@@ -118,7 +118,7 @@ public:
 	// integrators
 	void mesoFIRE(meso2DMemFn forceCall, double Ftol, double dt0);
 	void mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, double P0, double dt0);
-	void mesoShearStrainFIRE(double gamma, double Ftol, double dt0, std::vector<bool> &gijtmp);
+	void mesoShearStrainEnthalpyFIRE(double gamma, double Ftol, double P0, double dt0, std::vector<bool> &gijtmp);
 	void mesoPinFIRE(std::vector<double> &xpin, double Ftol, double dt0, double kcspring);
 	void mesoNetworkNVE(std::ofstream &enout, meso2DMemFn forceCall, double T, double dt0, int NT, int NPRINTSKIP);
 	void mesoShearStrainNVE(std::ofstream &enout, double gamma, double T, double dt0, int NT, int NPRINTSKIP, std::vector<bool> &gijtmp);
@@ -145,9 +145,9 @@ public:
 	void mesoBendingHessian(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb);
 	void mesoSpringNetworkHessian(Eigen::MatrixXd &Hs, Eigen::MatrixXd &Ss);
 	void mesoDynamicalMatrix(Eigen::MatrixXd &M, Eigen::MatrixXd &H, Eigen::MatrixXd &S);
-	void mesoPrintLinearResponse(meso2DMemFn forceCall, double Ftol, double dt0);
-	double numericalShearModulus(meso2DMemFn forceCall, double Ftol, double dt0);
-	double numericalBulkModulus(meso2DMemFn forceCall, double Ftol, double dt0);
+	void mesoPrintLinearResponse(meso2DMemFn forceCall, double Ftol, double P0, double dt0);
+	double numericalShearModulus(meso2DMemFn forceCall, double Ftol, double P0, double dt0);
+	double numericalBulkModulus(meso2DMemFn forceCall, double Ftol, double P0, double dt0);
 
 	// printing functions
 	void printMesoNetwork2D();

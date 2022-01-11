@@ -68,6 +68,8 @@ fid = fopen(hessstr);
 % loop over frames, save moduli +  eigenvalues
 G = zeros(NFRAMES,1);
 B = zeros(NFRAMES,1);
+sxylast = zeros(NFRAMES,1);
+plast = zeros(NFRAMES,1);
 mvals = cell(NFRAMES,1);
 hvals = cell(NFRAMES,1);
 svals = cell(NFRAMES,1);
@@ -97,6 +99,13 @@ for ff = 1:NFRAMES
     fprintf('BLKMD %0.5g\n',Btmp{1});
     emptystr = fgetl(fid);
     B(ff) = Btmp{1};
+    
+    % read in last stress states during measurement
+    stlasttmp = textscan(fid,'STRSS %f %f',1);
+    fprintf('STRSS %0.5g %0.5g\n',stlasttmp{1},stlasttmp{2});
+    emptystr = fgetl(fid);
+    sxylast(ff) = stlasttmp{1};
+    plast(ff) = stlasttmp{2};
     
 %     % read in dynamical matrix eigenvalues
 %     mevalsstr = fgetl(fid);
@@ -215,7 +224,7 @@ plotClr = jet(NFRAMES-1);
 figure(5), clf, hold on, box on;
 
 yyaxis left;
-plot(phi(2) - phi(2:end),B(2:end),'ko','markersize',10,'markerfacecolor','b');
+plot(phi(2) - phi(2:end),B(2:end),'-ko','markersize',10,'markerfacecolor','b');
 h = ylabel('$B$','Interpreter','latex');
 h.Color = 'b';
 ax = gca;
@@ -223,7 +232,7 @@ ax.FontSize = 22;
 ax.YColor = 'b';
 
 yyaxis right;
-plot(phi(2) - phi(2:end),G(2:end),'kd','markersize',10,'markerfacecolor','r');
+plot(phi(2) - phi(2:end),G(2:end),'-kd','markersize',10,'markerfacecolor','r');
 h = ylabel('$G$','Interpreter','latex');
 h.Color = 'r';
 ax = gca;
@@ -241,3 +250,27 @@ xlabel('$\varphi - \varphi_{\rm min}$','Interpreter','latex');
 ylabel('$\nu$','Interpreter','latex');
 ax = gca;
 ax.FontSize = 22;
+
+
+
+
+
+figure(7), clf, hold on, box on;
+
+yyaxis left;
+plot(phi(2) - phi(2:end),plast(2:end),'-ko','markersize',14,'markerfacecolor','b');
+h = ylabel('$P$ after B meas. ','Interpreter','latex');
+h.Color = 'b';
+ax = gca;
+ax.FontSize = 22;
+ax.YColor = 'b';
+
+yyaxis right;
+plot(phi(2) - phi(2:end),sxylast(2:end),'-kd','markersize',10,'markerfacecolor','r');
+h = ylabel('$P$ after G meas. ','Interpreter','latex');
+h.Color = 'r';
+ax = gca;
+ax.FontSize = 22;
+ax.YColor = 'r';
+
+xlabel('$\varphi - \varphi_{\rm min}$','Interpreter','latex');

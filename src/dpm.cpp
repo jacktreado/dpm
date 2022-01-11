@@ -1546,9 +1546,9 @@ void dpm::vertexRepulsiveForces2D() {
 							U += 0.5 * kc * pow((1 - (rij / sij)), 2.0);
 
 							// add to virial stress
-							stress[0] += dx * fx;
-							stress[1] += dy * fy;
-							stress[2] += 0.5 * (dx * fy + dy * fx);
+							stress[0] += (dx * fx)/(L[0] * L[1]);
+							stress[1] += (dy * fy)/(L[0] * L[1]);;
+							stress[2] += (0.5 * (dx * fy + dy * fx))/(L[0] * L[1]);
 
 							// add to contacts
 							cindices(ci, vi, gi);
@@ -1614,9 +1614,9 @@ void dpm::vertexRepulsiveForces2D() {
 								U += 0.5 * kc * pow((1 - (rij / sij)), 2.0);
 
 								// add to virial stress
-								stress[0] += dx * fx;
-								stress[1] += dy * fy;
-								stress[2] += 0.5 * (dx * fy + dy * fx);
+								stress[0] += (dx * fx)/(L[0] * L[1]);
+								stress[1] += (dy * fy)/(L[0] * L[1]);;
+								stress[2] += (0.5 * (dx * fy + dy * fx))/(L[0] * L[1]);
 
 								// add to contacts
 								cindices(ci, vi, gi);
@@ -1641,9 +1641,9 @@ void dpm::vertexRepulsiveForces2D() {
 	}
 
 	// normalize stress by box area, make dimensionless
-	stress[0] *= (1.0 / (L[0] * L[1]));
-	stress[1] *= (1.0 / (L[0] * L[1]));
-	stress[2] *= (1.0 / (L[0] * L[1]));
+	// stress[0] *= (1.0 / (L[0] * L[1]));
+	// stress[1] *= (1.0 / (L[0] * L[1]));
+	// stress[2] *= (1.0 / (L[0] * L[1]));
 	// stress[0] *= (rho0 / (L[0] * L[1]));
 	// stress[1] *= (rho0 / (L[0] * L[1]));
 	// stress[2] *= (rho0 / (L[0] * L[1]));

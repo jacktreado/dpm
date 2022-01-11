@@ -542,11 +542,6 @@ void meso2D::initializeMesophyllBondNetwork(){
 	}
 }
 
-// add for Lees-Edwards
-// * area
-// * all distances in shape forces
-// * all distances in interaction forces
-
 
 // mesophyll specific shape forces
 void meso2D::mesoShapeForces(){
@@ -680,10 +675,10 @@ void meso2D::mesoShapeForces(){
 		F[NDIM*gi] 		+= flx;
 		F[NDIM*gi + 1] 	+= fly;
 
-		// add perimeter contribution to virial stress
-		stress[0] += (rix*flx)/(L[0]*L[1]);
-		stress[1] += (riy*fly)/(L[0]*L[1]);
-		stress[2] += 0.5*((rix*fly) + (riy*flx))/(L[0]*L[1]);
+		// // add perimeter contribution to virial stress
+		// stress[0] += (rix*flx)/(L[0]*L[1]);
+		// stress[1] += (riy*fly)/(L[0]*L[1]);
+		// stress[2] += 0.5*((rix*fly) + (riy*flx))/(L[0]*L[1]);
 		
 		// update potential energy
 		U += 0.5 * kl *(dli * dli);
@@ -737,17 +732,14 @@ void meso2D::mesoShapeForces(){
 			F[NDIM*gi] 		+= fbx;
 			F[NDIM*gi + 1] 	+= fby;
 
-			// add bending contribution to virial stress
-			stress[0] += (rix*fbx)/(L[0]*L[1]);
-			stress[1] += (riy*fby)/(L[0]*L[1]);
-			stress[2] += 0.5*((rix*fby) + (riy*fbx))/(L[0]*L[1]);
+			// // add bending contribution to virial stress
+			// stress[0] += (rix*fbx)/(L[0]*L[1]);
+			// stress[1] += (riy*fby)/(L[0]*L[1]);
+			// stress[2] += 0.5*((rix*fby) + (riy*fbx))/(L[0]*L[1]);
 
 			// update potential energy
 			U += 0.5 * kbi[gi] * (dti * dti);
 		}
-		
-		
-		
 
 		// update old coordinates
 		rim2x = rim1x;
@@ -915,10 +907,10 @@ void meso2D::mesoShapeForces(double gamma){
 		F[NDIM*gi] 		+= flx;
 		F[NDIM*gi + 1] 	+= fly;
 
-		// add perimeter contribution to virial stress
-		stress[0] += (rix*flx)/(L[0]*L[1]);
-		stress[1] += (riy*fly)/(L[0]*L[1]);
-		stress[2] += 0.5*((rix*fly) + (riy*flx))/(L[0]*L[1]);
+		// // add perimeter contribution to virial stress
+		// stress[0] += (rix*flx)/(L[0]*L[1]);
+		// stress[1] += (riy*fly)/(L[0]*L[1]);
+		// stress[2] += 0.5*((rix*fly) + (riy*flx))/(L[0]*L[1]);
 		
 		// update potential energy
 		U += 0.5 * kl * (dli * dli);
@@ -974,10 +966,10 @@ void meso2D::mesoShapeForces(double gamma){
 			F[NDIM*gi] 		+= fbx;
 			F[NDIM*gi + 1] 	+= fby;
 
-			// add bending contribution to virial stress
-			stress[0] += (rix*fbx)/(L[0]*L[1]);
-			stress[1] += (riy*fby)/(L[0]*L[1]);
-			stress[2] += 0.5*((rix*fby) + (riy*fbx))/(L[0]*L[1]);
+			// // add bending contribution to virial stress
+			// stress[0] += (rix*fbx)/(L[0]*L[1]);
+			// stress[1] += (riy*fby)/(L[0]*L[1]);
+			// stress[2] += 0.5*((rix*fby) + (riy*fbx))/(L[0]*L[1]);
 
 			// update potential energy
 			U += 0.5 * kbi[gi] * (dti * dti);
@@ -1138,9 +1130,6 @@ void meso2D::mesoNetworkForceUpdate(){
 					stress[0] += (dx*fx)/(L[0]*L[1]);
 					stress[1] += (dy*fy)/(L[0]*L[1]);
 					stress[2] += (0.5*(dx*fy + dy*fx))/(L[0]*L[1]);
-					// stress[0] += (dx*fx*rho0)/(L[0]*L[1]);
-					// stress[1] += (dy*fy*rho0)/(L[0]*L[1]);
-					// stress[2] += (0.5*(dx*fy + dy*fx)*rho0)/(L[0]*L[1]);
 				}
 			}
 		}
@@ -1220,12 +1209,18 @@ void meso2D::mesoNetworkForceUpdate(double gamma, vector<bool> &gijtmp){
 					cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]++; 
 
 				// add to virial stress tensor
+				// stress[0] += dx*fx;
+				// stress[1] += dy*fy;
+				// stress[2] += 0.5*(dx*fy + dy*fx);
 				stress[0] += (dx*fx)/(L[0]*L[1]);
 				stress[1] += (dy*fy)/(L[0]*L[1]);
-				stress[2] += (0.5*(dx*fy + dy*fx))/(L[0]*L[1]);
+				stress[2] += 0.5*((dx*fy) + (dy*fx))/(L[0]*L[1]);
 			}
 		}
 	}
+	// stress[0] *= (1.0/(L[0]*L[1]));
+	// stress[1] *= (1.0/(L[0]*L[1]));
+	// stress[2] *= (1.0/(L[0]*L[1]));
 }
 
 
@@ -1482,7 +1477,7 @@ void meso2D::mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, 
 
 	// check to see if cell linked-list has been initialized
 	if (NBX == -1){
-		cerr << "	** ERROR: In meso2D::mesoNetworkFIRE, NBX = -1, so cell linked-list has not yet been initialized. Ending here.\n";
+		cerr << "	** ERROR: In meso2D::mesoEnthalpyFIRE, NBX = -1, so cell linked-list has not yet been initialized. Ending here.\n";
 		exit(1);
 	}
 
@@ -1673,39 +1668,51 @@ void meso2D::mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, 
 		cout << endl;
 		cout << "	** fireit 	= " << fireit << endl;
 		cout << "	** fcheck 	= " << fcheck << endl;
-		cout << "	** fcheckFrc 	= " << fcheckFrc << endl;
+		cout << " 	** fcheckFrc 	= " << fcheckFrc << endl;
 		cout << "	** U 		= " << U << endl;
-
-		cout << "	** fnorm	= " << fnorm << endl;
-		cout << "	** vnorm 	= " << vnorm << endl;
 		cout << "	** dt 		= " << dt << endl;
-		cout << "	** P 		= " << P << endl;
+		cout << "	** PFIRE 	= " << PFIRE << endl;
 		cout << "	** alpha 	= " << alpha << endl;
+		cout << "	** npPos 	= " << npPos << endl;
+		cout << "	** npNeg 	= " << npNeg << endl;
+		cout << "	** V  		= " << V << endl;
+		cout << "	** P 		= " << P << endl;
+		cout << "	** Pi 		= " << Pi << endl;
 		cout << endl << endl;
 	}
 }
 
 
 // FIRE minimization at fixed shear strain
-void meso2D::mesoShearStrainFIRE(double gamma, double Ftol, double dt0, vector<bool> &gijtmp){
+void meso2D::mesoShearStrainEnthalpyFIRE(double gamma, double Ftol, double P0, double dt0, vector<bool> &gijtmp){
 	// local variables
-	int i;
+	int i, d;
 	double rho0;
+	const double dPtol = 1e-10;
+
+	// box size, momentum, and internal virial pressure
+	double V=L[0]*L[1], Pi=0.0, P=0.0;
+
+	// check to see if cell linked-list has been initialized
+	if (NBX == -1){
+		cerr << "	** ERROR: In meso2D::mesoShearStrainEnthalpyFIRE, NBX = -1, so cell linked-list has not yet been initialized. Ending here.\n";
+		exit(1);
+	}
 
 	// FIRE variables
-	double P, fnorm, fcheck, vnorm, alpha, dtmax, dtmin;
+	double PFIRE, fnorm, fcheck, fcheckFrc, dPcheck, vnorm, alpha, dtmax, dtmin;
 	int npPos, npNeg, fireit;
 
 	// set dt based on geometric parameters
 	setdt(dt0);
 
 	// Initialize FIRE variables
-	P  			= 0;	
+	PFIRE  		= 0;	
 	fnorm 		= 0;
 	vnorm 		= 0;
 	alpha   	= alpha0;
 
-	dtmax   	= 10.0*dt;
+	dtmax   	= 20.0*dt;
 	dtmin   	= 1e-1*dt;
 
 	npPos      	= 0;
@@ -1713,6 +1720,8 @@ void meso2D::mesoShearStrainFIRE(double gamma, double Ftol, double dt0, vector<b
 
 	fireit    	= 0;
 	fcheck  	= 10*Ftol;
+	fcheckFrc 	= fcheck;
+
 
 	// reset forces and velocities
 	resetForcesAndEnergy();
@@ -1722,36 +1731,47 @@ void meso2D::mesoShearStrainFIRE(double gamma, double Ftol, double dt0, vector<b
 	rho0 = sqrt(a0.at(0));
 
 	// relax forces using FIRE
-	while ((fcheck > Ftol || fireit < NDELAY) && fireit < itmax){
-		// compute P
-		P = 0.0;
+	while ((fcheck > Ftol || dPcheck > dPtol || fireit < NDELAY) && fireit < itmax){
+		// VV VELOCITY UPDATE #1
 		for (i=0; i<vertDOF; i++)
-			P += v[i]*F[i];
+			v[i] += 0.5*dt*(F[i] - 0.5*v[i]*(Pi/V));
+		Pi += 0.5*dt*(P-P0);
+
+		// compute PFIRE
+		PFIRE = 0.0;
+		for (i=0; i<vertDOF; i++)
+			PFIRE += v[i]*(F[i] - 0.5*v[i]*(Pi/V));
+		PFIRE += Pi*(P-P0);
 
 		// print to console
 		if (fireit % NSKIP == 0){
 			cout << endl << endl;
 			cout << "===========================================" << endl;
-			cout << "	M E S O P H Y L L 						" << endl;
+			cout << "		M E S O P H Y L L 					" << endl;
 			cout << " 	F I R E 								" << endl;
+			cout << "		E N T H A L P Y 					" << endl;
 			cout << "	M I N I M I Z A T I O N 				" << endl;
-			cout << "	W I T H   								" << endl;
+			cout << "		W I T H   							" << endl;
 			cout << "   L E E S  E D W A R D S      			" << endl;
 			cout << "===========================================" << endl;
 			cout << endl;
-			cout << "	** gamma 	= " << gamma << endl;
 			cout << "	** fireit 	= " << fireit << endl;
 			cout << "	** fcheck 	= " << fcheck << endl;
+			cout << " 	** fcheckFrc 	= " << fcheckFrc << endl;
 			cout << "	** U 		= " << U << endl;
 			cout << "	** dt 		= " << dt << endl;
-			cout << "	** P 		= " << P << endl;
+			cout << "	** PFIRE 	= " << PFIRE << endl;
 			cout << "	** alpha 	= " << alpha << endl;
 			cout << "	** npPos 	= " << npPos << endl;
 			cout << "	** npNeg 	= " << npNeg << endl;
+			cout << "	** V  		= " << V << endl;
+			cout << "	** P 		= " << P << endl;
+			cout << "	** Pi 		= " << Pi << endl;
+			cout << "	** gamma 	= " << gamma << endl;
 		}
 
 		// Adjust simulation based on net motion of degrees of freedom
-		if (P > 0){
+		if (PFIRE > 0){
 			// increase positive counter
 			npPos++;
 
@@ -1784,7 +1804,7 @@ void meso2D::mesoShearStrainFIRE(double gamma, double Ftol, double dt0, vector<b
 			// take half step backwards, reset velocities
 			for (i=0; i<vertDOF; i++){
 				// take half step backwards
-				x[i] -= 0.5*dt*v[i];
+				x[i] -= 0.5*dt*(v[i] + 0.5*x[i]*(Pi/V));
 				x[i] -= L[i % NDIM]*floor(x[i]/L[i % NDIM]);
 				if (i % NDIM == 0)
 					x[i] -= floor(x[i+1]/L[1])*gamma*L[0];
@@ -1792,6 +1812,7 @@ void meso2D::mesoShearStrainFIRE(double gamma, double Ftol, double dt0, vector<b
 				// reset vertex velocities
 				v[i] = 0.0;
 			}
+			V -= 0.5*dt*Pi;
 
 			// decrease time step if past initial delay
 			if (fireit > NDELAY){
@@ -1804,30 +1825,29 @@ void meso2D::mesoShearStrainFIRE(double gamma, double Ftol, double dt0, vector<b
 			}
 		}
 
-		// VV VELOCITY UPDATE #1
-		for (i=0; i<vertDOF; i++)
-			v[i] += 0.5*dt*F[i];
-
 		// compute fnorm, vnorm and P
 		fnorm = 0.0;
 		vnorm = 0.0;
 		for (i=0; i<vertDOF; i++){
-			fnorm 	+= F[i]*F[i];
+			fnorm 	+= pow(F[i] - 0.5*v[i]*(Pi/V),2.0);
 			vnorm 	+= v[i]*v[i];
 		}
+		fnorm += pow(P - P0,2.0);
+		vnorm += Pi*Pi;
 		fnorm = sqrt(fnorm);
 		vnorm = sqrt(vnorm);
 
 		// update velocities (s.d. vs inertial dynamics) only if forces are acting
 		if (fnorm > 0){
 			for (i=0; i<vertDOF; i++)
-				v[i] = (1 - alpha)*v[i] + alpha*(F[i]/fnorm)*vnorm;
+				v[i] = (1 - alpha)*v[i] + alpha*((F[i] - 0.5*v[i]*(Pi/V))/fnorm)*vnorm;
+			Pi = (1 - alpha)*Pi + alpha*((P - P0)/fnorm)*vnorm;
 		}
 
 		// VV POSITION UPDATE
 		for (i=0; i<vertDOF; i++){
 			// update position
-			x[i] += dt*v[i];
+			x[i] += dt*(v[i] + 0.5*x[i]*(Pi/V));
 
 			// box replacement because of Lees Edwards
 			x[i] -= L[i % NDIM]*floor(x[i]/L[i % NDIM]);
@@ -1836,18 +1856,29 @@ void meso2D::mesoShearStrainFIRE(double gamma, double Ftol, double dt0, vector<b
 			if (i % NDIM == 0)
 				x[i] -= floor(x[i+1]/L[1])*gamma*L[0];
 		}
+		V += dt*Pi;
+		L[0] = sqrt(V);
+		L[1] = sqrt(V);
+		for (d = 0; d < NDIM; d++)
+			lb[d] = L[d] / sb[d];
 
 		// update forces at fixed shear strain, FIXED CONTACT NETWORK
 		mesoNetworkForceUpdate(gamma, gijtmp);
 
+		// update instantaneous pressure
+		P = 0.5*(stress[0] + stress[1]);
+
 		// VV VELOCITY UPDATE #2
 		for (i=0; i<vertDOF; i++)
-			v[i] += 0.5*F[i]*dt;
+			v[i] += 0.5*dt*(F[i] - 0.5*v[i]*(Pi/V));
+		Pi += 0.5*dt*(P - P0);
 
 		// update fcheck based on fnorm (= force per degree of freedom)
-		fcheck = 0.0;
+		fcheckFrc = 0.0;
 		for (i=0; i<vertDOF; i++)
-			fcheck += F[i]*F[i];
+			fcheckFrc += pow(F[i] - 0.5*v[i]*(Pi/V),2.0);
+		fcheck = fcheckFrc + pow(P - P0,2.0);
+		fcheckFrc = sqrt(fcheckFrc/vertDOF);
 		fcheck = sqrt(fcheck/vertDOF);
 
 		// update iterator
@@ -1861,23 +1892,28 @@ void meso2D::mesoShearStrainFIRE(double gamma, double Ftol, double dt0, vector<b
 	else{
 		cout << endl;
 		cout << "===========================================" << endl;
-		cout << "	M E S O P H Y L L 						" << endl;
+		cout << "		M E S O P H Y L L 					" << endl;
 		cout << " 	F I R E 								" << endl;
+		cout << "		E N T H A L P Y 					" << endl;
 		cout << "	M I N I M I Z A T I O N 				" << endl;
-		cout << "	W I T H   								" << endl;
+		cout << "		W I T H   							" << endl;
 		cout << "   L E E S  E D W A R D S      			" << endl;
-		cout << "	C O N V E R G E D! 						" << endl;
+		cout << "		C O N V E R G E D! 					" << endl;
 		cout << "===========================================" << endl;
 		cout << endl;
 		cout << "	** fireit 	= " << fireit << endl;
 		cout << "	** fcheck 	= " << fcheck << endl;
+		cout << " 	** fcheckFrc 	= " << fcheckFrc << endl;
 		cout << "	** U 		= " << U << endl;
-
-		cout << "	** fnorm	= " << fnorm << endl;
-		cout << "	** vnorm 	= " << vnorm << endl;
 		cout << "	** dt 		= " << dt << endl;
-		cout << "	** P 		= " << P << endl;
+		cout << "	** PFIRE 	= " << PFIRE << endl;
 		cout << "	** alpha 	= " << alpha << endl;
+		cout << "	** npPos 	= " << npPos << endl;
+		cout << "	** npNeg 	= " << npNeg << endl;
+		cout << "	** V  		= " << V << endl;
+		cout << "	** P 		= " << P << endl;
+		cout << "	** Pi 		= " << Pi << endl;
+		cout << "	** gamma 	= " << gamma << endl;
 		cout << endl << endl;
 	}
 }
@@ -2575,7 +2611,7 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 		if (k % NMINSKIP == 0){
 			printMesoNetworkCTCS2D();
 			if (hessout.is_open())
-				mesoPrintLinearResponse(forceCall, Ftol, dt0);
+				mesoPrintLinearResponse(forceCall, Ftol, dt0, P0);
 		}
 
 		// output to console
@@ -3813,10 +3849,10 @@ void meso2D::mesoDynamicalMatrix(Eigen::MatrixXd &M, Eigen::MatrixXd &H, Eigen::
 
 
 // function to use dynamical matrix to compute shear modulus, and prints w/ eigenvalues
-void meso2D::mesoPrintLinearResponse(meso2DMemFn forceCall, double Ftol, double dt0){
+void meso2D::mesoPrintLinearResponse(meso2DMemFn forceCall, double Ftol, double P0, double dt0){
 	// local variables
 	int ci, cj, vi, vj, gi, gj, k, l, kx, ky, lx, ly;
-	double zij, sij, dx, dy, rij, uy;
+	double zij, sij, dx, dy, rij, uy, pglast, pblast;
 	double G=0.0, B=0.0;
 
 	// check that hess object is open
@@ -3844,8 +3880,8 @@ void meso2D::mesoPrintLinearResponse(meso2DMemFn forceCall, double Ftol, double 
 	// Eigen::VectorXd evals = meig.eigenvalues();
 
 	// // also get shear & bulk modulus using numerical derivatives
-	G = numericalShearModulus(forceCall, Ftol, dt0);
-	B = numericalBulkModulus(forceCall, Ftol, dt0);
+	G = numericalShearModulus(forceCall, Ftol, dt0, P0);
+	B = numericalBulkModulus(forceCall, Ftol, dt0, P0);
 
 	// print eigenvectors
 	hessout << setw(w) << left << "NEWFR" << " " << endl;
@@ -3866,6 +3902,12 @@ void meso2D::mesoPrintLinearResponse(meso2DMemFn forceCall, double Ftol, double 
 	hessout << setw(w) << left << "BLKMD";
 	hessout << setw(wnum) << setprecision(pnum) << left << B;
 	hessout << endl;
+
+	// // print last stress during measurements
+	// hessout << setw(w) << left << "STRSS";
+	// hessout << setw(wnum) << setprecision(pnum) << left << pglast;
+	// hessout << setw(wnum) << setprecision(pnum) << left << pblast;
+	// hessout << endl;
 
 	// // print dynamical matrix eigenvalues
 	// hessout << setw(w) << left << "MEVAL";
@@ -3892,7 +3934,7 @@ void meso2D::mesoPrintLinearResponse(meso2DMemFn forceCall, double Ftol, double 
 }
 
 // function to compute shear modulus numerically
-double meso2D::numericalShearModulus(meso2DMemFn forceCall, double Ftol, double dt0){
+double meso2D::numericalShearModulus(meso2DMemFn forceCall, double Ftol, double P0, double dt0){
 	// local variables
 	int k, NVVCTS;
 	double sxyold, sxycurr; 
@@ -3904,99 +3946,6 @@ double meso2D::numericalShearModulus(meso2DMemFn forceCall, double Ftol, double 
 
 	// save shear stress
 	vector<double> sxyList(NGAMMA+1,0.0);
-	// vector<double> UList(NGAMMA+1,0.0);
-
-	// initialize saved variables
-	vector<double> Lsave(NDIM,0.0);
-	vector<double> stresssave(NDIM + 1,0.0);
-	vector<double> xsave(vertDOF, 0.0);
-	vector<double> vsave(vertDOF, 0.0);
-	vector<double> Fsave(vertDOF, 0.0);
-	vector<double> rsave(vertDOF, 0.0);
-	vector<double> l0save(vertDOF, 0.0);
-	vector<double> t0save(vertDOF, 0.0);
-	vector<double> a0save(vertDOF, 0.0);
-
-	Lsave = L;
-	stresssave = stress;
-	xsave = x;
-	vsave = v;
-	Fsave = F;
-	rsave = r;
-	l0save = l0;
-	t0save = t0;
-	a0save = a0;
-
-	// initial relaxation at 0 strain
-	// mesoFIRE(forceCall, Ftol, dt0);
-	sxyList.at(0) = stress[2];
-	// UList.at(0) = U;
-
-	// initial vertex-vertex contact network
-	NVVCTS = 0.5*NVTOT*(NVTOT-1);
-	vector<bool> gijtmp(NVVCTS,0);
-
-	// initialize contact network
-	getMesoVVContactNetwork(gijtmp);
-
-	// loop over shear strains gamma, relax using FIRE, compute change in Sxy
-	for (k=0; k<NGAMMA; k++){
-		// update gamma for this iteration
-		gamma += dgamma;
-
-		// relax at fixed shear strain + volume, FIXED CONTACT NETWORK
-		mesoShearStrainFIRE(gamma, Ftol, dt0, gijtmp);
-
-		// save shear stress
-		sxyList.at(k+1) = stress[2];
-
-		// save total potential energy
-		// UList.at(k+1) = U;
-	}
-
-	// compute numerical derivative, take average
-	double Gtmp;
-	double G = 0.0;
-	gamma = dgamma;
-	for (k=1; k<NGAMMA-1; k++){
-		Gtmp = -0.5*(sxyList.at(k+2) - sxyList.at(k))/dgamma;
-		G += Gtmp;
-		cout << " * * k = " << k << ", gamma = " << gamma << ", Gtmp = " << Gtmp << endl;
-		gamma += dgamma;
-	}
-	G /= (NGAMMA-2);
-	cout << "on average, G = " << G << endl;
-
-	// reset system
-	L = Lsave;
-	stress = stresssave;
-	x = xsave;
-	v = vsave;
-	F = Fsave;
-	r = rsave;
-	l0 = l0save;
-	t0 = t0save;
-	a0 = a0save;
-
-	// return numerical result
-	return G;
-}
-
-// function to compute bulk modulus numerically
-double meso2D::numericalBulkModulus(meso2DMemFn forceCall, double Ftol, double dt0){
-	// local variables
-	int k, gi, d, NVVCTS;
-	double pold, pcurr; 
-
-	// shear strain
-	double dgamma = 1e-8;
-	double gamma = 0.0;
-	int NGAMMA = 5;
-
-	// save shear stress
-	vector<double> pList(NGAMMA+1,0.0);
-	// vector<double> UList(NGAMMA+1,0.0);
-	vector<double> AList(NGAMMA+1,0.0);
 
 	// initialize saved variables
 	vector<double> Lsave(NDIM,0.0);
@@ -4021,11 +3970,9 @@ double meso2D::numericalBulkModulus(meso2DMemFn forceCall, double Ftol, double d
 	t0save = t0;
 	a0save = a0;
 
-	// initial relaxation at 0 strain
-	// mesoFIRE(forceCall, Ftol, dt0);
-	pList.at(0) = 0.5*(stress[0] + stress[1]);
-	// UList.at(0) = U;
-	AList.at(0) = L[0]*L[1];
+	// initial stress at 0 strain
+	// mesoShearStrainEnthalpyFIRE(0.0, Ftol, P0, dt0, gijtmp);
+	sxyList.at(0) = stress[2];
 
 	// initial vertex-vertex contact network
 	NVVCTS = 0.5*NVTOT*(NVTOT-1);
@@ -4034,42 +3981,30 @@ double meso2D::numericalBulkModulus(meso2DMemFn forceCall, double Ftol, double d
 	// initialize contact network
 	getMesoVVContactNetwork(gijtmp);
 
-	// loop over shear strains gamma, relax using FIRE, compute change in Sxy
+	// loop over shear strains gamma, relax at constant pressure using enthalpy FIRE, compute change in Sxy
 	for (k=0; k<NGAMMA; k++){
 		// update gamma for this iteration
 		gamma += dgamma;
 
-		// affine displacement
-		for (d = 0; d < NDIM; d++){
-			L[d] = (1.0 - gamma)*Lsave[d];
-			lb[d] = L[d] / sb[d];
-		}
-		for(gi=0; gi<NVTOT; gi++){
-			x[NDIM*gi] = (1.0 - gamma)*xsave[NDIM*gi];
-			x[NDIM*gi + 1] = (1.0 - gamma)*xsave[NDIM*gi + 1];
-		}
-
 		// relax at fixed shear strain + volume, FIXED CONTACT NETWORK
-		mesoShearStrainFIRE(0.0, Ftol, dt0, gijtmp);
+		mesoShearStrainEnthalpyFIRE(gamma, Ftol, P0, dt0, gijtmp);
 
 		// save shear stress
-		pList.at(k+1) = 0.5*(stress[0] + stress[1]);
-
-		// save total potential energy + box 
-		// UList.at(k+1) = U;
-		AList.at(k+1) = L[0]*L[1];
+		sxyList.at(k+1) = stress[2];
 	}
 
 	// compute numerical derivative, take average
-	double B = 0.0;
-	double Btmp = 0.0;
-	for (k=1; k<NGAMMA-1; k++){
-		Btmp = AList.at(k+1)*(0.5*(pList.at(k+2) - pList.at(k))/(AList.at(k+1)-AList.at(k)));
-		B -= Btmp;
-		cout << " * * k = " << k << ", p = " << pList.at(k) << ", dA = " << AList.at(k+1)-AList.at(k) << ", Btmp = " << -Btmp << endl;
+	double Gtmp;
+	double G = 0.0;
+	gamma = dgamma;
+	for (k=0; k<NGAMMA-1; k++){
+		Gtmp = -0.5*(sxyList.at(k+2) - sxyList.at(k))/dgamma;
+		G += Gtmp;
+		cout << " * * k = " << k << ", gamma = " << gamma << ", Gtmp = " << Gtmp << endl;
+		gamma += dgamma;
 	}
-	B /= (NGAMMA-2);
-	cout << "on average, B = " << B << endl;
+	G /= (NGAMMA-1);
+	cout << "on average, G = " << G << endl;
 
 	// reset system
 	L = Lsave;
@@ -4083,13 +4018,107 @@ double meso2D::numericalBulkModulus(meso2DMemFn forceCall, double Ftol, double d
 	t0 = t0save;
 	a0 = a0save;
 
-	// // print energy for numerical check
-	// cout << "computing B: List of U during strain:" << endl;
-	// gamma = 0.0;
-	// for (k=0; k<NGAMMA+1; k++){
-	// 	cout << setprecision(8) << gamma << "\t" << AList.at(k) << "\t" << UList.at(k) << endl;
-	// 	gamma += dgamma;
-	// }
+	// return numerical result
+	return G;
+}
+
+// function to compute bulk modulus numerically
+// NOTE: need to edit gamma to be strain to CONSTANT PRESSURE!
+double meso2D::numericalBulkModulus(meso2DMemFn forceCall, double Ftol, double P0, double dt0){
+	// local variables
+	int k, gi, d, NVVCTS;
+	double Ptmp;
+
+	// shear strain
+	double dgamma = 1e-4;
+	double gamma = 0.0;
+	int NGAMMA = 5;
+
+	// save shear stress
+	vector<double> VList(NGAMMA+1,0.0);
+
+	// initialize saved variables
+	vector<double> Lsave(NDIM,0.0);
+	vector<double> stresssave(NDIM + 1,0.0);
+	vector<double> lbsave(NDIM,0.0);
+	vector<double> xsave(vertDOF, 0.0);
+	vector<double> vsave(vertDOF, 0.0);
+	vector<double> Fsave(vertDOF, 0.0);
+	vector<double> rsave(vertDOF, 0.0);
+	vector<double> l0save(vertDOF, 0.0);
+	vector<double> t0save(vertDOF, 0.0);
+	vector<double> a0save(vertDOF, 0.0);
+
+	Lsave = L;
+	stresssave = stress;
+	lbsave = lb;
+	xsave = x;
+	vsave = v;
+	Fsave = F;
+	rsave = r;
+	l0save = l0;
+	t0save = t0;
+	a0save = a0;
+
+	// initial stress values at 0 pressure strain
+	VList.at(0) = L[0]*L[1];
+
+	// initial vertex-vertex contact network
+	NVVCTS = 0.5*NVTOT*(NVTOT-1);
+	vector<bool> gijtmp(NVVCTS,0);
+
+	// initialize contact network
+	getMesoVVContactNetwork(gijtmp);
+
+	// loop over shear strains gamma, relax using FIRE, compute change in Sxy
+	for (k=0; k<NGAMMA; k++){
+		// update gamma for this iteration
+		gamma += dgamma;
+
+		// update temporary pressure based on gamma
+		Ptmp = P0*(1 + gamma);
+
+		// relax at fixed shear strain + volume, FIXED CONTACT NETWORK
+		mesoShearStrainEnthalpyFIRE(0.0, Ftol, Ptmp, dt0, gijtmp);
+
+		// save total potential energy + box 
+		VList.at(k+1) = L[0]*L[1];
+	}
+
+	// compute numerical derivative, take average
+	double B = 0.0, Btmp = 0.0;
+	double dP, Vtmp, V1, V2, dV, Vavg;
+	for (k=0; k<NGAMMA-1; k++){
+		// pressure difference between two points
+		dP = P0*dgamma;
+
+		// get volume information
+		V1 = VList.at(k);
+		V2 = VList.at(k+1);
+		dV = V2 - V1;
+		Vavg = 0.5*(V1 + V2);
+
+		// approximate B
+		Btmp = -Vavg*(dP/dV);
+		B += Btmp;
+
+		// print
+		cout << " * * k = " << k << ", V = " << V1 << ", Btmp = " << Btmp << endl;
+	}
+	B /= (NGAMMA-1);
+	cout << "on average, B = " << B << endl;
+
+	// reset system
+	L = Lsave;
+	stress = stresssave;
+	lb = lbsave;
+	x = xsave;
+	v = vsave;
+	F = Fsave;
+	r = rsave;
+	l0 = l0save;
+	t0 = t0save;
+	a0 = a0save;
 
 	// return numerical result
 	return B;

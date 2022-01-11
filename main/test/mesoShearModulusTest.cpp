@@ -95,7 +95,7 @@ int main(){
 		gamma += dgamma;
 
 		// relax at fixed shear strain + volume, FIXED CONTACT NETWORK
-		meso2Dobj.mesoShearStrainFIRE(gamma, Ftol, dt0, gijtmp);
+		meso2Dobj.mesoShearStrainFIRE(gamma, Ftol, 0.5*dt0, gijtmp);
 
 		// save shear stress
 		sxyList.at(k+1) = meso2Dobj.getstress(2);

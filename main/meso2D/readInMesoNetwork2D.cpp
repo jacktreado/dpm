@@ -4,32 +4,8 @@
 
 // Compilation command:
 // g++ -O3 --std=c++11 -I src main/meso2D/readInMesoNetwork2D.cpp src/*.cpp -o meso.o
-// ./meso.o meso_n32.input 1e-3 50 0.02 5 1e-4 0.5 0 0 1 pos.test
-//
-//
-// Parameter input list
-// 1. inputFile			file to 
-// 2. kb0: 				initial amount of bending energy
-// 3. betaEff: 			inverse bond breaking temperature
-// 4. ctcdel: 			cda (1) or not (0)
-// 5. cL: 				perimeter aging parameter
-// 6. aL: 				distribution of aging to either contacts (0) or void (1)
-// 7. cB: 				preferred angle aging parameter
-// 8. seed: 			seed for random number generator
-// 9. positionFile: 	string of path to output file with position/configuration data
+// ./meso.o meso.input 0.5 1e-3 50 0.02 5 1e-4 1 pos.test
 
-// 
-// 
-// NOTE (10/29):
-// ** Investigate chaging P0 further, preliminary (N=16) sims show that this has better early-time dynamics, no need to make kb > 1e-3
-// ** Also changing da0, dl0 ... can get dip (with kb = 1e-3) but return to calA = 1.15 more difficult, slower area growth?
-//  -- Making da0 = 1e-1, seems like cells become much more circular initially .. maybe bare rate of da0 matters as well as relative rate of dl0?
-//	-- I think, DIP OCCURS BECAUSE THERE IS NOT ENOUGH VOID PERIMETER!!! So tuning da0 / dl0 will tune rate of decrease as well as rate of contact breaking
-// 	-- Need to look into calA0 vs porosity to figure out, when does (calA0 decrease, porosity increase) vs (calA0 increase, porosity increase) and other combinations
-// 
-// 
-// NOTE (11/03):
-// -- Increasing da0, P0 works! Also, need to keep dl0 on ctc vertices = 0, matches exp better in calA, and matches observation that ctc perimeter stays the same
 
 // header files
 #include "meso2D.h"
@@ -51,7 +27,9 @@ const double dt0 = 1e-2;		   	// initial magnitude of time step in units of MD t
 const double Ftol = 1e-12; 			// force tolerance
 const double dPtol = 1e-10;			// pressure change tolerance
 const double phiMin = 0.3;			// minimum packing fraction in decompression algorithm
-const double kl = 0.5; 				// perimeter spring constant
+const double cL = 0.0; 				// perimeter aging (set to 0, possibly deprecated)
+const double cB = 0.0; 				// bending aging (set to 0, possibly deprecated)
+const double ctch = 0.5; 			// sets magnitude of \Delta U in bond-breaking
 const double aL = 1.0; 				// distribution of aging to boundary (when = 1)
 const double kc = 0.5; 				// interaction spring constant
 const double cKb = 0; 				// change in bending energy
@@ -65,41 +43,35 @@ int main(int argc, char const *argv[])
 {
 	// local variables to be read in
 	int seed, NVMAX;
-	double kb0, betaEff, da0, dl0, P0, ctch, cL, cB;
+	double kl, kb0, betaEff, da0, dl0, P0;
 
 	// read in parameters from command line input
 	string inputFile 		= argv[1];
-	string kb0_str 			= argv[2];
-	string betaEff_str 		= argv[3];
-	string da0_str 			= argv[4];
-	string dl0_str 			= argv[5];
-	string P0_str 			= argv[6];
-	string ctch_str 		= argv[7];
-	string cL_str 			= argv[8];
-	string cB_str 			= argv[9];
-	string seed_str 		= argv[10];
-	string positionFile 	= argv[11];
+	string kl_str 			= argv[2];
+	string kb0_str 			= argv[3];
+	string betaEff_str 		= argv[4];
+	string da0_str 			= argv[5];
+	string dl0_str 			= argv[6];
+	string P0_str 			= argv[7];
+	string seed_str 		= argv[8];
+	string positionFile 	= argv[9];
 
 	// using sstreams to get parameters
+	stringstream klss(kl_str);
 	stringstream kb0ss(kb0_str);
 	stringstream betaEffss(betaEff_str);
 	stringstream da0ss(da0_str);
 	stringstream dl0ss(dl0_str);
 	stringstream P0ss(P0_str);
-	stringstream ctchss(ctch_str);
-	stringstream cLss(cL_str);
-	stringstream cBss(cB_str);
 	stringstream seedss(seed_str);
 
 	// read into data
+	klss >> kl;
 	kb0ss >> kb0;
 	betaEffss >> betaEff;
 	da0ss >> da0;
 	dl0ss >> dl0;
 	P0ss >> P0;
-	ctchss >> ctch;
-	cLss >> cL;
-	cBss >> cB;
 	seedss >> seed;
 
 	// instantiate object
