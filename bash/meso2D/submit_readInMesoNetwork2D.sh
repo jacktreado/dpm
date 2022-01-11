@@ -29,27 +29,25 @@ n1=$2
 calA0=$3
 
 # inputs about network formation simulation
-kb0=$4
-betaEff=$5
-da0=$6
-dl0=$7
-P0=$8
-ctch=$9
-cL="${10}"
-cB="${11}"
+kl=$4
+kb0=$5
+betaEff=$6
+da0=$7
+dl0=$8
+P0=$9
 
 # inputs about cluster
-partition="${12}"
-time="${13}"
-startSeed="${14}"
-numSeeds="${15}"
+partition="${10}"
+time="${11}"
+startSeed="${12}"
+numSeeds="${13}"
 
 # compute number of seeds
 let endSeed=$startSeed+$numSeeds-1
 
 # name strings
 inputstr=mesoInput_N"$NCELLS"_n"$n1"_ca"$calA0"
-basestr=mesoHMin2D_N"$NCELLS"_n"$n1"_ca"$calA0"_kb0"$kb0"_be"$betaEff"_da"$da0"_dl"$dl0"_P"$P0"_h"$ctch"_cL"$cL"_cB"$cB"
+basestr=mesoHMin2D_N"$NCELLS"_n"$n1"_ca"$calA0"_kl"$kl"_kb0"$kb0"_be"$betaEff"_da"$da0"_dl"$dl0"_P"$P0"
 runstr="$basestr"_ns"$numSeeds"
 
 # make directory specific for this simulation
@@ -67,14 +65,12 @@ echo inputstr=$inputstr >> $paramf
 echo NCELLS=$NCELLS >> $paramf
 echo n1=$n1 >> $paramf
 echo calA0=$calA0 >> $paramf
+echo kl=$kl >> $paramf
 echo kb0=$kb0 >> $paramf
 echo betaEff=$betaEff >> $paramf
 echo da0=$da0 >> $paramf
 echo dl0=$dl0 >> $paramf
 echo P0=$P0 >> $paramf
-echo ctch=$ctch >> $paramf
-echo cL=$cL >> $paramf
-echo cB=$cB >> $paramf
 echo partition=$partition >> $paramf
 echo time=$time >> $paramf
 echo startSeed=$startSeed >> $paramf
@@ -157,7 +153,7 @@ for f in $flist; do
     outputf=$simdatadir/"$basestr"_seed"$seed".posctc
 
     # create runString
-    runString="./$binf $f $kb0 $betaEff $da0 $dl0 $P0 $ctch $cL $cB $seed $outputf"
+    runString="./$binf $f $kl $kb0 $betaEff $da0 $dl0 $P0 $seed $outputf"
 
     # echo to task file
     echo "$runString" >> $taskf
@@ -208,18 +204,16 @@ sbatch -t $time $slurmf
 # 1. NCELLS
 # 2. n
 # 3. calA0
-# 4. kb0
-# 5. betaEff
-# 6. da0
-# 7. dl0
-# 8. P0
-# 9. ctch
-# 10. cL (perimeter aging)
-# 11. cB (bending angle aging)
-# 12. partition
-# 13. time
-# 14. start seed (end seed determined by number of runs)
-# 25. number of seeds to use
+# 4. kl
+# 5. kb0
+# 6. betaEff
+# 7. da0
+# 8. dl0
+# 9. P0
+# 10. partition
+# 11. time
+# 12. start seed (end seed determined by number of runs)
+# 13. number of seeds to use
 
 
 
