@@ -2573,9 +2573,9 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 
 		// print MINIMIZED positions if change in packing fraction is large enough
 		if (k % NMINSKIP == 0){
+			printMesoNetworkCTCS2D();
 			if (hessout.is_open())
 				mesoPrintLinearResponse(forceCall, Ftol, dt0);
-			printMesoNetworkCTCS2D();
 		}
 
 		// output to console
@@ -3908,6 +3908,7 @@ double meso2D::numericalShearModulus(meso2DMemFn forceCall, double Ftol, double 
 
 	// initialize saved variables
 	vector<double> Lsave(NDIM,0.0);
+	vector<double> stresssave(NDIM + 1,0.0);
 	vector<double> xsave(vertDOF, 0.0);
 	vector<double> vsave(vertDOF, 0.0);
 	vector<double> Fsave(vertDOF, 0.0);
@@ -3917,6 +3918,7 @@ double meso2D::numericalShearModulus(meso2DMemFn forceCall, double Ftol, double 
 	vector<double> a0save(vertDOF, 0.0);
 
 	Lsave = L;
+	stresssave = stress;
 	xsave = x;
 	vsave = v;
 	Fsave = F;
@@ -3926,7 +3928,7 @@ double meso2D::numericalShearModulus(meso2DMemFn forceCall, double Ftol, double 
 	a0save = a0;
 
 	// initial relaxation at 0 strain
-	mesoFIRE(forceCall, Ftol, dt0);
+	// mesoFIRE(forceCall, Ftol, dt0);
 	sxyList.at(0) = stress[2];
 	// UList.at(0) = U;
 
@@ -3967,6 +3969,7 @@ double meso2D::numericalShearModulus(meso2DMemFn forceCall, double Ftol, double 
 
 	// reset system
 	L = Lsave;
+	stress = stresssave;
 	x = xsave;
 	v = vsave;
 	F = Fsave;
@@ -3997,6 +4000,7 @@ double meso2D::numericalBulkModulus(meso2DMemFn forceCall, double Ftol, double d
 
 	// initialize saved variables
 	vector<double> Lsave(NDIM,0.0);
+	vector<double> stresssave(NDIM + 1,0.0);
 	vector<double> lbsave(NDIM,0.0);
 	vector<double> xsave(vertDOF, 0.0);
 	vector<double> vsave(vertDOF, 0.0);
@@ -4007,6 +4011,8 @@ double meso2D::numericalBulkModulus(meso2DMemFn forceCall, double Ftol, double d
 	vector<double> a0save(vertDOF, 0.0);
 
 	Lsave = L;
+	stresssave = stress;
+	lbsave = lb;
 	xsave = x;
 	vsave = v;
 	Fsave = F;
@@ -4016,7 +4022,7 @@ double meso2D::numericalBulkModulus(meso2DMemFn forceCall, double Ftol, double d
 	a0save = a0;
 
 	// initial relaxation at 0 strain
-	mesoFIRE(forceCall, Ftol, dt0);
+	// mesoFIRE(forceCall, Ftol, dt0);
 	pList.at(0) = 0.5*(stress[0] + stress[1]);
 	// UList.at(0) = U;
 	AList.at(0) = L[0]*L[1];
@@ -4067,6 +4073,7 @@ double meso2D::numericalBulkModulus(meso2DMemFn forceCall, double Ftol, double d
 
 	// reset system
 	L = Lsave;
+	stress = stresssave;
 	lb = lbsave;
 	x = xsave;
 	v = vsave;
