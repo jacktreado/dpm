@@ -17,7 +17,7 @@ mesoData = readMesoNetworkCTCS2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
-idx = phi > 0.375;
+idx = phi > 0.1;
 phi = phi(idx);
 
 % number of frames
@@ -100,12 +100,12 @@ for ff = 1:NFRAMES
     emptystr = fgetl(fid);
     B(ff) = Btmp{1};
     
-    % read in last stress states during measurement
-    stlasttmp = textscan(fid,'STRSS %f %f',1);
-    fprintf('STRSS %0.5g %0.5g\n',stlasttmp{1},stlasttmp{2});
-    emptystr = fgetl(fid);
-    sxylast(ff) = stlasttmp{1};
-    plast(ff) = stlasttmp{2};
+%     % read in last stress states during measurement
+%     stlasttmp = textscan(fid,'STRSS %f %f',1);
+%     fprintf('STRSS %0.5g %0.5g\n',stlasttmp{1},stlasttmp{2});
+%     emptystr = fgetl(fid);
+%     sxylast(ff) = stlasttmp{1};
+%     plast(ff) = stlasttmp{2};
     
 %     % read in dynamical matrix eigenvalues
 %     mevalsstr = fgetl(fid);

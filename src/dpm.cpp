@@ -1535,6 +1535,8 @@ void dpm::vertexRepulsiveForces2D() {
 							fx = ftmp * (dx / rij);
 							fy = ftmp * (dy / rij);
 
+							// cout << 1 << "  " << gi << "  " << gj << "  " << setprecision(12) << fx << "  " << setprecision(12) << fy << "  " << rij << "  " << sij << endl;
+
 							// add to forces
 							F[NDIM * gi] -= fx;
 							F[NDIM * gi + 1] -= fy;
@@ -1602,6 +1604,8 @@ void dpm::vertexRepulsiveForces2D() {
 								ftmp = kc * (1 - (rij / sij)) * (rho0 / sij);
 								fx = ftmp * (dx / rij);
 								fy = ftmp * (dy / rij);
+
+								// cout << 1 << "  " << gi << "  " << gj << "  " << setprecision(12) << fx << "  " << setprecision(12) << fy << "  " << rij << "  " << sij << endl;
 
 								// add to forces
 								F[NDIM * gi] -= fx;

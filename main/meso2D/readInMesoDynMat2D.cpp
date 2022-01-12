@@ -20,7 +20,7 @@ using namespace std;
 const double dispersion = 0.1; 		// polydispersity (fixed)
 const double delShrink = 1e-3;		// fractional change in effective box length during extension
 const double dphiPrint = 0.01;	   	// packing fractions to skip between print steps
-const double boxLengthScale = 2.5; 	// neighbor list box size in units of initial l0
+const double boxLengthScale = 3.0; 	// neighbor list box size in units of initial l0
 const double phi0 = 0.5;		   	// initial packing fraction
 const double dt0 = 1e-2;		   	// initial magnitude of time step in units of MD time
 const double Ftol = 1e-12; 			// force tolerance

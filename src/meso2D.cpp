@@ -1117,6 +1117,8 @@ void meso2D::mesoNetworkForceUpdate(){
 					F[NDIM*gj] 			+= fx;
 					F[NDIM*gj + 1] 		+= fy;
 
+					// cout << 0 << "  " << gi << "  " << gj << "  " << setprecision(12) << fx << "  " << setprecision(12) << fy << "  " << rij << "  " << sij << endl;
+
 					// add to cell-cell contacts
 					if (ci > cj)
 						cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2]++;
@@ -1138,6 +1140,7 @@ void meso2D::mesoNetworkForceUpdate(){
 
 
 // update forces AT FIXED SHEAR STRAIN (assume Lees-Edwards boundary conditions, fixed contact network)
+// NOTE: Modulus computation issue is in this function, FIND!
 void meso2D::mesoNetworkForceUpdate(double gamma, vector<bool> &gijtmp){
 	// local variables
 	int gi, gj, ci, cj, vi, vj, im, NVVCTS;
@@ -1151,7 +1154,7 @@ void meso2D::mesoNetworkForceUpdate(double gamma, vector<bool> &gijtmp){
 	rho0 = sqrt(a0[0]);
 	for (gi=0; gi<NVTOT; gi++){
 		for (gj=gi+1; gj<NVTOT; gj++){
-			if (gijtmp[NVTOT*gi + gj - (gi+1)*(gi+2)/2]){
+			if (gijtmp[NVTOT*gi + gj - (gi+1)*(gi+2)/2] == 1){
 
 				// get cell indices
 				cindices(ci,vi,gi);
@@ -1173,16 +1176,7 @@ void meso2D::mesoNetworkForceUpdate(double gamma, vector<bool> &gijtmp){
 				rij = sqrt(dx*dx + dy*dy);
 
 				// compute forces and potential
-				if (rij < sij){
-					// forces
-					ftmp 	= kc*(1 - (rij/sij))*(rho0/sij);
-					fx 	 	= ftmp*(dx/rij);
-					fy 		= ftmp*(dy/rij);
-
-					// increae potential energy
-					U 		+= 0.5*kc*pow((1 - (rij/sij)),2.0);
-				}
-				else {
+				if (rij > sij){
 					// zij: determines strength of bond attraction
 					zij 	= 0.5*(zc[ci] + zc[cj])*ctcdel + 1.0;
 
@@ -1193,7 +1187,22 @@ void meso2D::mesoNetworkForceUpdate(double gamma, vector<bool> &gijtmp){
 
 					// increae potential energy
 					U 		+= 0.5*(kc/zij)*pow((1 - (rij/sij)),2.0);
+
+					// cout << 0 << "  " << gi << "  " << gj << "  " << setprecision(12) << fx << "  " << setprecision(12) << fy << "  " << rij << "  " << sij << endl;
 				}
+				else {
+					// forces
+					ftmp 	= kc*(1 - (rij/sij))*(rho0/sij);
+					fx 	 	= ftmp*(dx/rij);
+					fy 		= ftmp*(dy/rij);
+
+					// increae potential energy
+					U 		+= 0.5*kc*pow((1 - (rij/sij)),2.0);
+
+					// cout << 1 << "  " << gi << "  " << gj << "  " << setprecision(12) << fx << "  " << setprecision(12) << fy << "  " << rij << "  " << sij << endl;
+				}
+
+				
 
 				// add to total forces
 				F[NDIM*gi] 			-= fx;
@@ -1202,25 +1211,16 @@ void meso2D::mesoNetworkForceUpdate(double gamma, vector<bool> &gijtmp){
 				F[NDIM*gj] 			+= fx;
 				F[NDIM*gj + 1] 		+= fy;
 
-				// add to cell-cell contacts
-				if (ci > cj)
-					cij[NCELLS*cj + ci - (cj+1)*(cj+2)/2]++;
-				else if (ci < cj)
-					cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]++; 
-
 				// add to virial stress tensor
 				// stress[0] += dx*fx;
 				// stress[1] += dy*fy;
 				// stress[2] += 0.5*(dx*fy + dy*fx);
 				stress[0] += (dx*fx)/(L[0]*L[1]);
 				stress[1] += (dy*fy)/(L[0]*L[1]);
-				stress[2] += 0.5*((dx*fy) + (dy*fx))/(L[0]*L[1]);
+				stress[2] += (0.5*(dx*fy + dy*fx))/(L[0]*L[1]);
 			}
 		}
 	}
-	// stress[0] *= (1.0/(L[0]*L[1]));
-	// stress[1] *= (1.0/(L[0]*L[1]));
-	// stress[2] *= (1.0/(L[0]*L[1]));
 }
 
 
@@ -3161,10 +3161,10 @@ void meso2D::addMesophyllCellMaterial(double dl0){
 int meso2D::mesoBondedCTCS(int ci){
 	// local variables
 	bool bondfnd, isConnected;
-	int vi, gi, cj, vj, gj, zc;
+	int vi, gi, cj, vj, gj, zctmp;
 
 	// loop over pairs of vertices on pairs of cells
-	zc = 0;
+	zctmp = 0;
 	for (cj=0; cj<NCELLS; cj++){
 		// skip if same as ci
 		if (cj == ci)
@@ -3190,7 +3190,7 @@ int meso2D::mesoBondedCTCS(int ci){
 
 					// check if gi and gj bonded, if so, add to cell-cell bonded count, go to next cell
 					if (isConnected && !bondfnd){
-						zc++;
+						zctmp++;
 						bondfnd = 1;
 						break;
 					}
@@ -3209,7 +3209,7 @@ int meso2D::mesoBondedCTCS(int ci){
 	}
 	
 	// return number of contacts
-	return zc;
+	return zctmp;
 }
 
 
@@ -3452,6 +3452,8 @@ void meso2D::getMesoVVContactNetwork(vector<bool> &gijtmp){
 		cout << "** ERROR: in getMesoVVContactNetwork, input &gijtmp not initialized. Ending. " << endl;
 		exit(1);
 	}
+	else
+		cout << "gijtmp size = " << gijtmp.size() << ", gij size = " << gij.size() << endl;
 
 	// update bonded forces
 	for (gi=0; gi<NVTOT; gi++){
@@ -3459,38 +3461,65 @@ void meso2D::getMesoVVContactNetwork(vector<bool> &gijtmp){
 			// contact index
 			ctcidx = NVTOT*gi + gj - (gi+1)*(gi+2)/2;
 
-			// get cell indices
-			cindices(ci,vi,gi);
-			cindices(cj,vj,gj);
+			// only add to connections if non-adjacent
+			if (gj != ip1[gi] && gj != im1[gi]){
+				// contact distance
+				sij = r[gi] + r[gj];
 
-			// only add to connections if on different cells
-			if (ci != cj){
-				// if bonded, set tmp to 1
-				if (gij[ctcidx])
+				// get vertex-vertex distance
+				dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
+				dy -= L[1]*round(dy/L[1]);
+
+				dx = x[NDIM*gj] - x[NDIM*gi];
+				dx -= L[0]*round(dx/L[0]);
+
+				// get true distance
+				rij = sqrt(dx*dx + dy*dy);
+
+				// compute forces and potential
+				if (rij < sij)
+					gijtmp[ctcidx] = 1;
+				else if (gij[ctcidx])
 					gijtmp[ctcidx] = 1;
 
-				// else, check overlap
-				else {
-					// contact distance
-					sij = r[gi] + r[gj];
 
-					// get vertex-vertex distance
-					dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
-					dy -= L[1]*round(dy/L[1]);
+				// // if bonded, set tmp to 1
+				// if (gij[ctcidx]) 
+				// 	gijtmp[ctcidx] = 1;
+				// else {
+				// 	// contact distance
+				// 	sij = r[gi] + r[gj];
 
-					dx = x[NDIM*gj] - x[NDIM*gi];
-					dx -= L[0]*round(dx/L[0]);
+				// 	// get vertex-vertex distance
+				// 	dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
+				// 	dy -= L[1]*round(dy/L[1]);
 
-					// get true distance
-					rij = sqrt(dx*dx + dy*dy);
+				// 	dx = x[NDIM*gj] - x[NDIM*gi];
+				// 	dx -= L[0]*round(dx/L[0]);
 
-					// compute forces and potential
-					if (rij < sij)
-						gijtmp[ctcidx] = 1;
-				}
+				// 	// get true distance
+				// 	rij = sqrt(dx*dx + dy*dy);
+
+				// 	// compute forces and potential
+				// 	if (rij < sij)
+				// 		gijtmp[ctcidx] = 1;
+				// }
 			}
 		}
 	}
+
+	// sum total number of contacts
+	int totalTmpCtcs = 0, totalBndCtcs = 0, prodSum = 0;
+	for (gi=0; gi<NVVCTS; gi++){
+		if (gijtmp[gi])
+			totalTmpCtcs++;
+		if (gij[gi])
+			totalBndCtcs++;
+		if (gij[gi] && gijtmp[gi])
+			prodSum++;
+
+	}
+	cout << "** gijtmp has " << totalTmpCtcs << " total contacts, gij has " << totalBndCtcs << ", prodSum = " << prodSum << ", size = " << gijtmp.size() << endl;
 }
 
 
@@ -3971,7 +4000,6 @@ double meso2D::numericalShearModulus(meso2DMemFn forceCall, double Ftol, double 
 	a0save = a0;
 
 	// initial stress at 0 strain
-	// mesoShearStrainEnthalpyFIRE(0.0, Ftol, P0, dt0, gijtmp);
 	sxyList.at(0) = stress[2];
 
 	// initial vertex-vertex contact network
@@ -3980,6 +4008,92 @@ double meso2D::numericalShearModulus(meso2DMemFn forceCall, double Ftol, double 
 
 	// initialize contact network
 	getMesoVVContactNetwork(gijtmp);
+
+	// DEBUG: compare init and second relaxation
+	int totBndCtcs_real=0, totBndCtcs_test=0;
+	double sxx_real, syy_real, sxy_real, sxx_test, syy_test, sxy_test, Fnrm_real=0.0, Fnrm_test=0.0;
+	double Fshape_x_real=0.0, Fshape_x_test=0.0, Fshape_y_real=0.0, Fshape_y_test=0.0;
+	double Fctc_x_real=0.0, Fctc_x_test=0.0, Fctc_y_real=0.0, Fctc_y_test=0.0;
+	double Fnet_x=0.0, Fnet_y=0.0;
+
+	// // real version
+	// for (int ci=0; ci<NCELLS; ci++)
+	// 	totBndCtcs_real += mesoBondedCTCS(ci);
+	// for (int k=0; k<vertDOF; k++)
+	// 	Fnrm_real += F[k]*F[k];
+	// Fnrm_real = sqrt(Fnrm_real);
+
+	// cout << "=============================" << endl;
+	// cout << "COMPARE FORCES BELOW" << endl;
+	// cout << "=============================" << endl << endl << endl;
+
+
+
+	// real forces
+	resetForcesAndEnergy();
+	mesoShapeForces();
+	for (int gi=0; gi<NVTOT; gi++){
+		Fshape_x_real += F[NDIM*gi];
+		Fshape_y_real += F[NDIM*gi + 1];
+	}
+	mesoNetworkForceUpdate();
+	Fnet_x = 0.0; 
+	Fnet_y = 0.0;
+	for (int gi=0; gi<NVTOT; gi++){
+		Fnet_x += F[NDIM*gi];
+		Fnet_y += F[NDIM*gi + 1];
+	}
+	Fctc_x_real = Fnet_x - Fshape_x_real;
+	Fctc_y_real = Fnet_y - Fshape_y_real;
+	sxx_real = stress[0];
+	syy_real = stress[1];
+	sxy_real = stress[2];
+
+
+	// forces from shear strain
+	cout << endl << endl << endl;
+	resetForcesAndEnergy();
+	mesoShapeForces(0.0);
+	for (int gi=0; gi<NVTOT; gi++){
+		Fshape_x_test += F[NDIM*gi];
+		Fshape_y_test += F[NDIM*gi + 1];
+	}
+	mesoNetworkForceUpdate(0.0,gijtmp);
+	Fnet_x = 0.0; 
+	Fnet_y = 0.0;
+	for (int gi=0; gi<NVTOT; gi++){
+		Fnet_x += F[NDIM*gi];
+		Fnet_y += F[NDIM*gi + 1];
+	}
+	Fctc_x_test = Fnet_x - Fshape_x_test;
+	Fctc_y_test = Fnet_y - Fshape_y_test;
+	sxx_test = stress[0];
+	syy_test = stress[1];
+	sxy_test = stress[2];
+
+
+	// mesoShearStrainEnthalpyFIRE(0.0, Ftol, P0, dt0, gijtmp);
+	// for (int ci=0; ci<NCELLS; ci++)
+	// 	totBndCtcs_test += mesoBondedCTCS(ci);
+	// for (int k=0; k<vertDOF; k++)
+	// 	Fnrm_test += F[k]*F[k];
+	// Fnrm_test = sqrt(Fnrm_test);
+	
+
+	cout << " * * sxx_real = " << sxx_real << ",  sxx_test = " << sxx_test << endl;
+	cout << " * * syy_real = " << syy_real << ",  syy_test = " << syy_test << endl;
+	cout << " * * sxy_real = " << sxy_real << ",  sxy_test = " << sxy_test << endl;
+	// cout << " * * totBndCtcs_real = " << totBndCtcs_real << ",  totBndCtcs_test = " << totBndCtcs_test << endl;
+	// cout << " * * Fnrm_real = " << Fnrm_real << ",  Fnrm_test = " << Fnrm_test << endl;
+	cout << " * * Fshape_x_real = " << Fshape_x_real << ", Fshape_x_test = " << Fshape_x_test << endl;
+	cout << " * * Fshape_y_real = " << Fshape_y_real << ", Fshape_y_test = " << Fshape_y_test << endl;
+	cout << " * * Fctc_x_real = " << Fctc_x_real << ", Fctc_x_test = " << Fctc_x_test << endl;
+	cout << " * * Fctc_y_real = " << Fctc_y_real << ", Fctc_y_test = " << Fctc_y_test << endl;
+
+	// cout << "=============================" << endl;
+	// cout << "COMPARE FORCES ABOVE" << endl;
+	// cout << "=============================" << endl << endl << endl;
+
 
 	// loop over shear strains gamma, relax at constant pressure using enthalpy FIRE, compute change in Sxy
 	for (k=0; k<NGAMMA; k++){
