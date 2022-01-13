@@ -53,6 +53,7 @@ for ss = 1:NSIMS
     end
     mesoData = readMesoNetworkCTCS2D(fstr);
     NFRAMES = mesoData.NFRAMES;
+    NFRAMES = NFRAMES - 1;
     
     % also read in data from .hess (ASSUME THAT IT ONLY HAS MODULI DATA)
     hessname = [fname(1:end-7) '.hess'];
