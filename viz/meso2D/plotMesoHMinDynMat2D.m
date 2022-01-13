@@ -74,7 +74,7 @@ mvals = cell(NFRAMES,1);
 hvals = cell(NFRAMES,1);
 svals = cell(NFRAMES,1);
 fprintf('Reading in data from Hessian file %s\n',hessstr);
-for ff = 1:NFRAMES
+for ff = 1:NFRAMES-1
     % read in newfr
     newfrstr = fgetl(fid);
     fprintf('%s\n',newfrstr);
