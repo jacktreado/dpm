@@ -40,6 +40,11 @@ protected:
 	std::vector<int> zc;
 	std::vector<int> zv;
 
+	// pressure
+	// NOTE: force routines will compute the partial dUdL first, need to add \sum_i F_i * r_i 
+	// if you need instantaneous pressure contribution to minimized pressure
+	double Pinst; 
+
 	// adhesion parameters
 	double betaEff;			// probability to break contact
 	double ctcdel;			// influence of contact dependent adhesion
@@ -84,6 +89,9 @@ public:
 			std::cout << "** Opening ctc file " << str << " ..." << std::endl;
 	}
 
+	// getters
+	double getPinst() { return Pinst; };
+
 
 	// setters
 	void setNVMAX(int val) { NVMAX = val; };
@@ -108,9 +116,9 @@ public:
 
 	// mesophyll cell interactions
 	void initializeMesophyllBondNetwork();
+	void mesoRepulsiveVertexForces();
 	void mesoShapeForces();
 	void mesoShapeForces(double gamma);
-	double mesoEnthalpyForce();
 	void mesoNetworkForceUpdate();
 	void mesoNetworkForceUpdate(double gamma, std::vector<bool> &gijtmp);
 	void mesoPinForceUpdate(std::vector<double>& xpin, double kcspring);
@@ -140,6 +148,7 @@ public:
 	void t0ToCurrent();
 	void t0ToReg();
 	void getMesoVVContactNetwork(std::vector<bool> &gijtmp);
+	double mesoInstantaneousPressure(std::vector<bool> &gijtmp);
 
 	// hessian computation & linear response
 	void mesoBendingHessian(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb);

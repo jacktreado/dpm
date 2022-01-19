@@ -5,12 +5,12 @@ close all;
 clc;
 
 
-fname = 'mesoDM2D_N32_n32_ca1.14_kb01e-3_be50_da0.02_dl7_P1e-4_h0.5_cL0_cB0_seed12';
+fname = 'mesoDM2D_N32_n32_ca1.14_kl1_kb01e-3_be50_da0.02_dl2_P1e-4_seed27';
 fstr = ['local/mesoDM2D_data/' fname '.posctc'];
 hessstr = ['local/mesoDM2D_data/' fname '.hess'];
 
-fstr = '~/Jamming/CellSim/dpm/pos.test';
-hessstr = '~/Jamming/CellSim/dpm/hess.test';
+% fstr = '~/Jamming/CellSim/dpm/pos.test';
+% hessstr = '~/Jamming/CellSim/dpm/hess.test';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);

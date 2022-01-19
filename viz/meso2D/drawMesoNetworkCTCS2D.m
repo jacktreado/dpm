@@ -6,8 +6,8 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb02e-2_be25_da0.05_dl7_P1e-4_h0.5_cL0_cB0_seed22.posctc';
-% fstr = 'local/mesoDM2D_data/mesoDM2D_N32_n32_ca1.14_kb01e-3_be100_da0.02_dl7_P1e-4_h0.5_cL0_cB0_seed34.posctc';
+% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kl0.1_kb01e-3_be100_da0.02_dl5_P1e-4_seed11.posctc';
+% fstr = 'local/mesoDM2D_data/mesoDM2D_N32_n32_ca1.14_kl1_kb01e-3_be50_da0.02_dl10_P1e-4_seed27.posctc';
 fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
@@ -15,7 +15,7 @@ mesoData = readMesoNetworkCTCS2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
-idx = phi > 0.35 & phi < 1.0;
+idx = phi > 0.45;
 phi = phi(idx);
 
 % number of frames
@@ -186,16 +186,18 @@ if NFRAMES > 2
     
     ct01CalAMean = totalData.ct01CalAMean;
     ct01CalAStd = totalData.ct01CalAStd;
+    ct01Porosity = totalData.ct01Porosity;
     
     ct17CalAMean = totalData.ct17CalAMean;
     ct17CalAStd = totalData.ct17CalAStd;
+    ct17Porosity = totalData.ct17Porosity;
     
     figure(17), clf, hold on, box on;
     errorbar(phi(2)-phi(2:end),mean(calA(2:end,:),2),std(calA(2:end,:),0,2),'-k','linewidth',1.75);
 %     errorbar(porosity,calAMean,calAMin,calAMax,'k>','markersize',10,'markerfacecolor','b');
     errorbar(porosity,calAMeas,dCalAMin,dCalAMax,'k>','markersize',10,'markerfacecolor','r');
-    errorbar(porosity(end),ct01CalAMean,ct01CalAStd,'k>','markersize',10);
-    errorbar(porosity(end),ct17CalAMean,ct17CalAStd,'k>','markersize',10);
+    errorbar(ct01Porosity,ct01CalAMean,ct01CalAStd,'k>','markersize',10);
+    errorbar(ct17Porosity,ct17CalAMean,ct17CalAStd,'k>','markersize',10);
     ylabel('$\mathcal{A}$','Interpreter','latex');
     xlabel('$1-\phi$','Interpreter','latex');
     ax = gca;
@@ -309,15 +311,15 @@ end
 
 % get frames to plot
 if showverts == 0
-    FSTART = 2;
+    FSTART = 1;
     FSTEP = 1;
     if NFRAMES > 50
         FSTEP = 2;
     elseif NFRAMES > 150
         FSTEP = 10;
     end
-    FEND = NFRAMES;
-%     FEND = FSTART;
+%     FEND = NFRAMES;
+    FEND = FSTART;
 else
     FSTART = 1;
     FSTEP = 1;
@@ -325,15 +327,15 @@ else
 end
 
 % make a movie
-makeAMovie = 0;
+makeAMovie = 1;
 ctccopy = 0;
 if makeAMovie == 1
 %     moviestr = 'debug.mp4';
-    moviestr = 'mesoHMin2D_N64_n32_ca1.14_kb01e-3_be50_da0.05_dl7_P1e-4_h0.5_cL0_cB0_seed1.mp4';
+    moviestr = 'mesoHMin2D_N64_n32_ca1.14_kl0.1_kb01e-3_be100_da0.02_dl5_P1e-4_seed11.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
-    ctccopy = -1:1;
+    ctccopy = 0;
 end
 
 fnum = 1;

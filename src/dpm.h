@@ -182,6 +182,7 @@ public:
 	// Setters
 	void setpbc(int d, bool val) { pbc.at(d) = val; };
 	void setNCELLS(int val) { NCELLS = val; };
+	void setL(int d, double val) { L.at(d) = val; };
 	void setdt(double val);
 	void setka(double val) { ka = val; };
 	void setkl(double val) { kl = val; };

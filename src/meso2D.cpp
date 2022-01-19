@@ -84,6 +84,7 @@ meso2D::meso2D(string &inputFileStr,int seed) : dpm(2) {
 	stress.at(0) = s1;
 	stress.at(1) = s2;
 	stress.at(2) = s3;
+	Pinst = 0.0;
 
 	// szList and nv (keep track of global vertex indices)
 	nv.resize(NCELLS);
@@ -286,6 +287,9 @@ void meso2D::initializeMesophyllCells(double dispersion, double calA0, double ph
 	// initialize vertex-vertex contact list
 	zv.resize(NVTOT);
 	fill(zv.begin(), zv.end(), 0);
+
+	// just in case, initialize pressure to 0
+	Pinst = 0.0;
 }
 
 
@@ -543,13 +547,181 @@ void meso2D::initializeMesophyllBondNetwork(){
 }
 
 
+// mesophyll repulsive vertex forces
+void meso2D::mesoRepulsiveVertexForces(){
+	// local variables
+	int ci, cj, gi, gj, vi, vj, bi, bj, pi, pj, boxid, sbtmp;
+	double sij, rij, dx, dy;
+	double ftmp, fx, fy;
+
+	// sort particles
+	sortNeighborLinkedList2D();
+
+	// reset contact network
+	fill(cij.begin(), cij.end(), 0);
+
+	// loop over boxes in neighbor linked list
+	for (bi = 0; bi < NBX; bi++) {
+		// get start of list of vertices
+		pi = head[bi];
+
+		// loop over linked list
+		while (pi > 0) {
+			// real particle index
+			gi = pi - 1;
+
+			// next particle in list
+			pj = list[pi];
+
+			// loop down neighbors of pi in same cell
+			while (pj > 0) {
+				// real index of pj
+				gj = pj - 1;
+
+				if (gj == ip1[gi] || gj == im1[gi]) {
+					pj = list[pj];
+					continue;
+				}
+
+				// contact distance
+				sij = r[gi] + r[gj];
+
+				// particle distance
+				dx = x[NDIM * gj] - x[NDIM * gi];
+				if (pbc[0])
+					dx -= L[0] * round(dx / L[0]);
+				if (dx < sij) {
+					dy = x[NDIM * gj + 1] - x[NDIM * gi + 1];
+					if (pbc[1])
+						dy -= L[1] * round(dy / L[1]);
+					if (dy < sij) {
+						rij = sqrt(dx * dx + dy * dy);
+						if (rij < sij) {
+							// force scale
+							ftmp = (kc / sij) * (1 - (rij / sij));
+							fx = ftmp * (dx / rij);
+							fy = ftmp * (dy / rij);
+
+							// add to forces
+							F[NDIM * gi] -= fx;
+							F[NDIM * gi + 1] -= fy;
+
+							F[NDIM * gj] += fx;
+							F[NDIM * gj + 1] += fy;
+
+							// increase potential energy
+							U += 0.5 * kc * pow((1 - (rij / sij)), 2.0);
+
+							// add to dUdL contribution to pressure
+							Pinst -= ftmp*(rij/L[0]);
+
+							// add to virial stress
+							stress[0] += (dx * fx)/(L[0] * L[1]);
+							stress[1] += (dy * fy)/(L[0] * L[1]);;
+							stress[2] += (0.5 * (dx * fy + dy * fx))/(L[0] * L[1]);
+
+							// add to contacts
+							cindices(ci, vi, gi);
+							cindices(cj, vj, gj);
+
+							if (ci > cj)
+								cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2]++;
+							else if (ci < cj)
+								cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2]++;
+						}
+					}
+				}
+
+				// update pj
+				pj = list[pj];
+			}
+
+			// test overlaps with forward neighboring cells
+			for (bj = 0; bj < NNN; bj++) {
+				// only check if boundaries permit
+				if (nn[bi][bj] == -1)
+					continue;
+
+				// get first particle in neighboring cell
+				pj = head[nn[bi][bj]];
+
+				// loop down neighbors of pi in same cell
+				while (pj > 0) {
+					// real index of pj
+					gj = pj - 1;
+
+					if (gj == ip1[gi] || gj == im1[gi]) {
+						pj = list[pj];
+						continue;
+					}
+					// contact distance
+					sij = r[gi] + r[gj];
+
+					// particle distance
+					dx = x[NDIM * gj] - x[NDIM * gi];
+					if (pbc[0])
+						dx -= L[0] * round(dx / L[0]);
+					if (dx < sij) {
+						dy = x[NDIM * gj + 1] - x[NDIM * gi + 1];
+						if (pbc[1])
+							dy -= L[1] * round(dy / L[1]);
+						if (dy < sij) {
+							rij = sqrt(dx * dx + dy * dy);
+							if (rij < sij) {
+								// force scale
+								ftmp = (kc / sij) * (1 - (rij / sij));
+								fx = ftmp * (dx / rij);
+								fy = ftmp * (dy / rij);
+
+								// add to forces
+								F[NDIM * gi] -= fx;
+								F[NDIM * gi + 1] -= fy;
+
+								F[NDIM * gj] += fx;
+								F[NDIM * gj + 1] += fy;
+
+								// increae potential energy
+								U += 0.5 * kc * pow((1 - (rij / sij)), 2.0);
+
+								// add to dUdL contribution to pressure
+								Pinst -= ftmp*(rij/L[0]);
+
+								// add to virial stress
+								stress[0] += (dx * fx)/(L[0] * L[1]);
+								stress[1] += (dy * fy)/(L[0] * L[1]);;
+								stress[2] += (0.5 * (dx * fy + dy * fx))/(L[0] * L[1]);
+
+								// add to contacts
+								cindices(ci, vi, gi);
+								cindices(cj, vj, gj);
+
+								if (ci > cj)
+									cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2]++;
+								else if (ci < cj)
+									cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2]++;
+							}
+						}
+					}
+
+					// update pj
+					pj = list[pj];
+				}
+			}
+
+			// update pi index to be next
+			pi = list[pi];
+		}
+	}
+}
+
+
 // mesophyll specific shape forces
 void meso2D::mesoShapeForces(){
 	// local variables
 	int ci, gi, vi, nvtmp;
 	double fa, fli, flim1, fbi, fbim1, cx, cy, xi, yi;
 	double flx, fly, fbx, fby;
-	double rho0, l0im1, l0i, a0tmp, atmp;
+	double l0im1, l0i, a0tmp, atmp;
 	double dx, dy, da, dli, dlim1, dtim1, dti, dtip1;
 	double lim2x, lim2y, lim1x, lim1y, lix, liy, lip1x, lip1y, li, lim1;
 	double rim2x, rim2y, rim1x, rim1y, rix, riy, rip1x, rip1y, rip2x, rip2y;
@@ -557,7 +729,6 @@ void meso2D::mesoShapeForces(){
 	double ddtim1, ddti;
 
 	// loop over vertices, add to force
-	rho0 = sqrt(a0.at(0));
 	ci = 0;
 	for (gi=0; gi<NVTOT; gi++){
 
@@ -578,8 +749,11 @@ void meso2D::mesoShapeForces(){
 				// update potential energy
 				U += 0.5 * ka * (da * da);
 
+				// update pressure
+				Pinst += ((2.0 * ka * atmp)/(a0tmp * L[0])) * da;
+
 				// shape force parameters
-				fa = ka * da * (rho0 / a0tmp);
+				fa = ka * (da / a0tmp);
 
 				// compute cell center of mass
 				xi = x[NDIM*gi];
@@ -666,26 +840,24 @@ void meso2D::mesoShapeForces(){
 		dli 	= (li/l0i) - 1.0;
 
 		// segment forces
-		flim1 	= kl*(rho0/l0im1);
-		fli 	= kl*(rho0/l0i);
+		flim1 	= kl/l0im1;
+		fli 	= kl/l0i;
 
 		// add to forces
 		flx 			= (fli*dli*lix/li) - (flim1*dlim1*lim1x/lim1);
 		fly 			= (fli*dli*liy/li) - (flim1*dlim1*lim1y/lim1);
 		F[NDIM*gi] 		+= flx;
 		F[NDIM*gi + 1] 	+= fly;
-
-		// // add perimeter contribution to virial stress
-		// stress[0] += (rix*flx)/(L[0]*L[1]);
-		// stress[1] += (riy*fly)/(L[0]*L[1]);
-		// stress[2] += 0.5*((rix*fly) + (riy*flx))/(L[0]*L[1]);
 		
 		// update potential energy
 		U += 0.5 * kl *(dli * dli);
 
+		// update pressure
+		Pinst += ((kl * li)/(L[0] * l0i)) * dli;
+
 		// -- Bending force
-		fbi = kbi[gi] * rho0;
-		fbim1 = kbi[im1[gi]] * rho0;
+		fbi = kbi[gi];
+		fbim1 = kbi[im1[gi]];
 
 		if (fbi > 0 || fbim1 > 0){
 			// get ip2 for third angle
@@ -732,11 +904,6 @@ void meso2D::mesoShapeForces(){
 			F[NDIM*gi] 		+= fbx;
 			F[NDIM*gi + 1] 	+= fby;
 
-			// // add bending contribution to virial stress
-			// stress[0] += (rix*fbx)/(L[0]*L[1]);
-			// stress[1] += (riy*fby)/(L[0]*L[1]);
-			// stress[2] += 0.5*((rix*fby) + (riy*fbx))/(L[0]*L[1]);
-
 			// update potential energy
 			U += 0.5 * kbi[gi] * (dti * dti);
 		}
@@ -763,12 +930,13 @@ void meso2D::mesoShapeForces(){
 }
 
 // mesophyll specific shape forces WITH APPLIED SHEAR STRAIN GAMMA (assume pbcs)
+// NOTE: add Pinst contribution to pressure measurement, need to figure out Sinst (shear stress) from shape contribution
 void meso2D::mesoShapeForces(double gamma){
 	// local variables
 	int ci, gi, vi, nvtmp, im;
 	double fa, fli, flim1, fbi, fbim1, cx, cy, xi, yi;
 	double flx, fly, fbx, fby;
-	double rho0, l0im1, l0i, a0tmp, atmp;
+	double l0im1, l0i, a0tmp, atmp;
 	double dx, dy, da, dli, dlim1, dtim1, dti, dtip1;
 	double lim2x, lim2y, lim1x, lim1y, lix, liy, lip1x, lip1y, li, lim1;
 	double rim2x, rim2y, rim1x, rim1y, rix, riy, rip1x, rip1y, rip2x, rip2y;
@@ -776,7 +944,6 @@ void meso2D::mesoShapeForces(double gamma){
 	double ddtim1, ddti;
 
 	// loop over vertices, add to force
-	rho0 = sqrt(a0.at(0));
 	ci = 0;
 	for (gi=0; gi<NVTOT; gi++){
 
@@ -798,7 +965,7 @@ void meso2D::mesoShapeForces(double gamma){
 				U += 0.5 * ka * (da * da);
 
 				// shape force parameters
-				fa = ka * da * (rho0 / a0tmp);
+				fa = ka * (da / a0tmp);
 
 				// compute cell center of mass
 				xi = x[NDIM*gi];
@@ -898,8 +1065,8 @@ void meso2D::mesoShapeForces(double gamma){
 		dli 	= (li/l0i) - 1.0;
 
 		// segment forces
-		flim1 	= kl*(rho0/l0im1);
-		fli 	= kl*(rho0/l0i);
+		flim1 	= kl/l0im1;
+		fli 	= kl/l0i;
 
 		// add to forces
 		flx 			= (fli*dli*lix/li) - (flim1*dlim1*lim1x/lim1);
@@ -907,17 +1074,12 @@ void meso2D::mesoShapeForces(double gamma){
 		F[NDIM*gi] 		+= flx;
 		F[NDIM*gi + 1] 	+= fly;
 
-		// // add perimeter contribution to virial stress
-		// stress[0] += (rix*flx)/(L[0]*L[1]);
-		// stress[1] += (riy*fly)/(L[0]*L[1]);
-		// stress[2] += 0.5*((rix*fly) + (riy*flx))/(L[0]*L[1]);
-		
 		// update potential energy
 		U += 0.5 * kl * (dli * dli);
 
 		// -- Bending force
-		fbi = kbi[gi] * rho0;
-		fbim1 = kbi[im1[gi]] * rho0;
+		fbi = kbi[gi];
+		fbim1 = kbi[im1[gi]];
 
 		if (fbi > 0 || fbim1 > 0){
 			// get ip2 for third angle
@@ -966,11 +1128,6 @@ void meso2D::mesoShapeForces(double gamma){
 			F[NDIM*gi] 		+= fbx;
 			F[NDIM*gi + 1] 	+= fby;
 
-			// // add bending contribution to virial stress
-			// stress[0] += (rix*fbx)/(L[0]*L[1]);
-			// stress[1] += (riy*fby)/(L[0]*L[1]);
-			// stress[2] += 0.5*((rix*fby) + (riy*fbx))/(L[0]*L[1]);
-
 			// update potential energy
 			U += 0.5 * kbi[gi] * (dti * dti);
 		}
@@ -997,87 +1154,22 @@ void meso2D::mesoShapeForces(double gamma){
 }
 
 
-// mesophyll forces that control growth in const-enthalpy sims
-double meso2D::mesoEnthalpyForce(){
-	// force to return
-	double Frho = 0.0;
-
-	// cell indices
-	int gi, gj, ci, cj, vi, vj;
-	double dx, dy, rij, sij, dcx, dcy, cix, ciy, cjx, cjy, zij;
-
-	// loop over cell pairs
-	for (ci=0; ci<NCELLS; ci++){
-		// get center-of-mass position
-		com2D(ci,cix,ciy);
-
-		// loop over other cells
-		for (cj=(ci+1); cj<NCELLS; cj++){
-			if (cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2] > 0){
-				// get center of mass positions
-				com2D(cj,cjx,cjy);
-
-				// get center-to-center vector
-				dcx = cjx - cix;
-				dcy = cjy - ciy;
-				if (pbc[0])
-					dcx -= L[0]*round(dcx/L[0]);
-				if (pbc[1])
-					dcy -= L[1]*round(dcy/L[1]);
-
-				// loop over vertex pairs
-				gi = 0;
-				for (vi=0; vi<nv[ci]; vi++){
-					gj = 0;
-					for (vj=0; vj<nv[cj]; vj++){
-						// contact distance
-						sij = 0.5*(r[gi] + r[gj]);
-
-						// actual distance
-						dx = x[NDIM*gj] - x[NDIM*gi];
-						dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
-						if (pbc[0])
-							dx -= L[0]*round(dx/L[0]);
-						if (pbc[1])
-							dy -= L[1]*round(dy/L[1]);
-						rij = sqrt(dx*dx + dy*dy);
-
-						if (rij < sij)
-							Frho -= 0.5*(kc/sij)*(dx*dcx + dy*dcy)/rij;
-						else if (rij > sij && gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2]){
-							zij = 0.5*(zc[ci] + zc[cj])*ctcdel + 1.0;
-							Frho -= 0.5*(kc/(sij*zij))*(dx*dcx + dy*dcy)/rij;
-						}
-
-						// increment vertex
-						gj++;
-					}
-					gi++;
-				}
-			}
-		}
-	}
-
-	return Frho;
-}
-
-
 // update forces for bonded mesophyll cells
 // * Shape forces of individual cells
 // * Repulsive interactions between overlapping vertices
 // * Interactions between bonded vertices
 void meso2D::mesoNetworkForceUpdate(){
 	// local variables
-	int gi, gj, ci, cj, vi, vj;
-	double rij, sij, zij, dx, dy, fx, fy, ftmp, rho0;
+	int i, gi, gj, ci, cj, vi, vj;
+	double rij, sij, zij, dx, dy, fx, fy, ftmp, Fvirial;
 
 	// normal update (shape + repulsive forces) from base class
 	resetForcesAndEnergy();
+	Pinst = 0.0;
 	mesoShapeForces();
-	vertexRepulsiveForces2D();
+	mesoRepulsiveVertexForces();
 
 	// update bonded forces
-	rho0 = sqrt(a0[0]);
 	for (gi=0; gi<NVTOT; gi++){
 		for (gj=gi+1; gj<NVTOT; gj++){
 			if (gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2]){
@@ -1106,7 +1198,7 @@ void meso2D::mesoNetworkForceUpdate(){
 					zij = 0.5*(zc[ci] + zc[cj])*ctcdel + 1.0;
 
 					// force scale
-					ftmp 				= (kc/zij)*(1 - (rij/sij))*(rho0/sij);
+					ftmp 				= (kc/(sij * zij))*(1 - (rij/sij));
 					fx 					= ftmp*(dx/rij);
 					fy 					= ftmp*(dy/rij);
 
@@ -1116,8 +1208,6 @@ void meso2D::mesoNetworkForceUpdate(){
 
 					F[NDIM*gj] 			+= fx;
 					F[NDIM*gj + 1] 		+= fy;
-
-					// cout << 0 << "  " << gi << "  " << gj << "  " << setprecision(12) << fx << "  " << setprecision(12) << fy << "  " << rij << "  " << sij << endl;
 
 					// add to cell-cell contacts
 					if (ci > cj)
@@ -1132,26 +1222,37 @@ void meso2D::mesoNetworkForceUpdate(){
 					stress[0] += (dx*fx)/(L[0]*L[1]);
 					stress[1] += (dy*fy)/(L[0]*L[1]);
 					stress[2] += (0.5*(dx*fy + dy*fx))/(L[0]*L[1]);
+
+					// add to dUdL
+					Pinst -= ftmp*(rij/L[0]);
 				}
 			}
 		}
 	}
+
+	// virial force contribution to pressure
+	Fvirial = 0.0;
+	for (i=0; i<vertDOF; i++)
+		Fvirial += F[i]*x[i];
+	Fvirial /= 2.0*L[0]*L[1];
+
+	// finalize computation of pressure
+	Pinst = Fvirial - (Pinst/(2.0*L[0]));
 }
 
 
 // update forces AT FIXED SHEAR STRAIN (assume Lees-Edwards boundary conditions, fixed contact network)
-// NOTE: Modulus computation issue is in this function, FIND!
+// NOTE: add Pinst contribution to pressure measurement, need to figure out Sinst (shear stress) from shape contribution
 void meso2D::mesoNetworkForceUpdate(double gamma, vector<bool> &gijtmp){
 	// local variables
 	int gi, gj, ci, cj, vi, vj, im, NVVCTS;
-	double rij, sij, zij, dx, dy, fx, fy, ftmp, rho0;
+	double rij, sij, zij, dx, dy, fx, fy, ftmp;
 
 	// normal update (shape + repulsive forces) from base class
 	resetForcesAndEnergy();
 	mesoShapeForces(gamma);
 
 	// update bonded forces
-	rho0 = sqrt(a0[0]);
 	for (gi=0; gi<NVTOT; gi++){
 		for (gj=gi+1; gj<NVTOT; gj++){
 			if (gijtmp[NVTOT*gi + gj - (gi+1)*(gi+2)/2] == 1){
@@ -1181,28 +1282,22 @@ void meso2D::mesoNetworkForceUpdate(double gamma, vector<bool> &gijtmp){
 					zij 	= 0.5*(zc[ci] + zc[cj])*ctcdel + 1.0;
 
 					// force scale
-					ftmp 	= (kc/zij)*(1 - (rij/sij))*(rho0/sij);
+					ftmp 	= (kc/(sij * zij))*(1 - (rij/sij));
 					fx 		= ftmp*(dx/rij);
 					fy 		= ftmp*(dy/rij);
 
 					// increae potential energy
 					U 		+= 0.5*(kc/zij)*pow((1 - (rij/sij)),2.0);
-
-					// cout << 0 << "  " << gi << "  " << gj << "  " << setprecision(12) << fx << "  " << setprecision(12) << fy << "  " << rij << "  " << sij << endl;
 				}
 				else {
 					// forces
-					ftmp 	= kc*(1 - (rij/sij))*(rho0/sij);
+					ftmp 	= (kc/sij)*(1 - (rij/sij));
 					fx 	 	= ftmp*(dx/rij);
 					fy 		= ftmp*(dy/rij);
 
 					// increae potential energy
 					U 		+= 0.5*kc*pow((1 - (rij/sij)),2.0);
-
-					// cout << 1 << "  " << gi << "  " << gj << "  " << setprecision(12) << fx << "  " << setprecision(12) << fy << "  " << rij << "  " << sij << endl;
 				}
-
-				
 
 				// add to total forces
 				F[NDIM*gi] 			-= fx;
@@ -1212,9 +1307,6 @@ void meso2D::mesoNetworkForceUpdate(double gamma, vector<bool> &gijtmp){
 				F[NDIM*gj + 1] 		+= fy;
 
 				// add to virial stress tensor
-				// stress[0] += dx*fx;
-				// stress[1] += dy*fy;
-				// stress[2] += 0.5*(dx*fy + dy*fx);
 				stress[0] += (dx*fx)/(L[0]*L[1]);
 				stress[1] += (dy*fy)/(L[0]*L[1]);
 				stress[2] += (0.5*(dx*fy + dy*fx))/(L[0]*L[1]);
@@ -1228,7 +1320,7 @@ void meso2D::mesoNetworkForceUpdate(double gamma, vector<bool> &gijtmp){
 void meso2D::mesoPinForceUpdate(vector<double>& xpin, double kcspring){
 	// local variables
 	int gi, ci, vi, nvtmp;
-	double cx, cy, dcx, dcy, fx, fy, rho0=sqrt(a0[0]);
+	double cx, cy, dcx, dcy, fx, fy;
 
 	// update network forces
 	mesoNetworkForceUpdate();
@@ -1255,9 +1347,9 @@ void meso2D::mesoPinForceUpdate(vector<double>& xpin, double kcspring){
 		fy = -kcspring*dcy;
 
 		// add to virial stress tensor
-		stress[0] += (dcx*fx*rho0)/(L[0]*L[1]);
-		stress[1] += (dcy*fy*rho0)/(L[0]*L[1]);
-		stress[2] += (0.5*(dcx*fy + dcy*fx)*rho0)/(L[0]*L[1]);
+		stress[0] += (dcx*fx)/(L[0]*L[1]);
+		stress[1] += (dcy*fy)/(L[0]*L[1]);
+		stress[2] += (0.5*(dcx*fy + dcy*fx))/(L[0]*L[1]);
 
 
 		// add to forces 
@@ -1285,7 +1377,6 @@ void meso2D::mesoPinForceUpdate(vector<double>& xpin, double kcspring){
 void meso2D::mesoFIRE(meso2DMemFn forceCall, double Ftol, double dt0){
 	// local variables
 	int i;
-	double rho0;
 
 	// check to see if cell linked-list has been initialized
 	if (NBX == -1){
@@ -1318,9 +1409,6 @@ void meso2D::mesoFIRE(meso2DMemFn forceCall, double Ftol, double dt0){
 	// reset forces and velocities
 	resetForcesAndEnergy();
 	fill(v.begin(), v.end(), 0.0);
-
-	// length scale
-	rho0 = sqrt(a0.at(0));
 
 	// relax forces using FIRE
 	while ((fcheck > Ftol || fireit < NDELAY) && fireit < itmax){
@@ -1470,7 +1558,6 @@ void meso2D::mesoFIRE(meso2DMemFn forceCall, double Ftol, double dt0){
 void meso2D::mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, double P0, double dt0){
 	// local variables
 	int i, d;
-	double rho0; 
 
 	// box size, momentum, and internal virial pressure
 	double V=L[0]*L[1], Pi=0.0, P=0.0;
@@ -1507,9 +1594,9 @@ void meso2D::mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, 
 	// reset forces and velocities
 	resetForcesAndEnergy();
 	fill(v.begin(), v.end(), 0.0);
-
-	// initial length scale
-	rho0 = sqrt(a0.at(0));
+	Pinst = 0.0;
+	CALL_MEMBER_FN(*this, forceCall)();
+	P = Pinst;
 
 	// relax forces using FIRE
 	while ((fcheck > Ftol || dPcheck > dPtol || fireit < NDELAY) && fireit < itmax){
@@ -1629,10 +1716,11 @@ void meso2D::mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, 
 			lb[d] = L[d] / sb[d];
 
 		// update forces (function passed as argument)
+		Pinst = 0.0;
 		CALL_MEMBER_FN(*this, forceCall)();
 
 		// update instantaneous pressure
-		P = 0.5*(stress[0] + stress[1]);
+		P = Pinst;
 
 		// VV VELOCITY UPDATE #2
 		for (i=0; i<vertDOF; i++)
@@ -1687,7 +1775,6 @@ void meso2D::mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, 
 void meso2D::mesoShearStrainEnthalpyFIRE(double gamma, double Ftol, double P0, double dt0, vector<bool> &gijtmp){
 	// local variables
 	int i, d;
-	double rho0;
 	const double dPtol = 1e-10;
 
 	// box size, momentum, and internal virial pressure
@@ -1726,9 +1813,6 @@ void meso2D::mesoShearStrainEnthalpyFIRE(double gamma, double Ftol, double P0, d
 	// reset forces and velocities
 	resetForcesAndEnergy();
 	fill(v.begin(), v.end(), 0.0);
-
-	// length scale
-	rho0 = sqrt(a0.at(0));
 
 	// relax forces using FIRE
 	while ((fcheck > Ftol || dPcheck > dPtol || fireit < NDELAY) && fireit < itmax){
@@ -2316,7 +2400,7 @@ void meso2D::mesoNetworkExtension(meso2DMemFn forceCall, double Ftol, double dt0
 		cout << "	* phi 			= " << vertexPackingFraction2D() << endl;
 		cout << "	* phi0 w/ verts = " << vertexPreferredPackingFraction2D() << endl;
 		cout << "	* lastPrintPhi 	= " << lastPrintPhi << endl;
-		cout << "	* P 			= " << 0.5*(stress[0] + stress[1]) << endl;
+		cout << "	* P 			= " << Pinst << endl;
 		cout << "	* U 		 	= " << U << endl << endl;
 		cout << "	* Contacts:" << endl;
 		cout << "	* Nvv 			= " << vvContacts() << endl;
@@ -2355,7 +2439,7 @@ void meso2D::mesoNetworkExtension(meso2DMemFn forceCall, double Ftol, double dt0
 void meso2D::mesoPinExtension(double Ftol, double dt0, double hmax, double dh, double dhprint, double kcspring, int cellskip){
 	// local variables
 	int k=0, ci, gi, vi;
-	double phi0, cx, cy, dcx, dcy, rho0, h=0.0, lastPrinth=-10.0;
+	double phi0, cx, cy, dcx, dcy, h=0.0, lastPrinth=-10.0;
 	vector<double> th(NCELLS,0.0);
 	vector<double> xpin(NDIM*NCELLS,0.0);
 
@@ -2386,7 +2470,6 @@ void meso2D::mesoPinExtension(double Ftol, double dt0, double hmax, double dh, d
 	}
 
 	// loop over extension steps
-	rho0 = sqrt(a0[0]);
 	while (h < hmax && k < itmax){
 		// printMesoPin2D(xpin, h);
 		// printMesoBondNetwork();
@@ -2454,13 +2537,13 @@ void meso2D::mesoPinExtension(double Ftol, double dt0, double hmax, double dh, d
 		// move pins + affine displace
 		for (ci=0; ci<NCELLS; ci++){
 			if (ci > cellskip){
-				xpin[NDIM*ci] += dh*rho0*cos(th[ci]);
-				xpin[NDIM*ci + 1] += dh*rho0*sin(th[ci]);
+				xpin[NDIM*ci] += dh*cos(th[ci]);
+				xpin[NDIM*ci + 1] += dh*sin(th[ci]);
 
 				gi = szList[ci];
 				for (vi=0; vi<nv[ci]; vi++){
-					x[NDIM*gi] += dh*rho0*cos(th[ci]);
-					x[NDIM*gi + 1] += dh*rho0*sin(th[ci]);
+					x[NDIM*gi] += dh*cos(th[ci]);
+					x[NDIM*gi + 1] += dh*sin(th[ci]);
 					gi = gi + 1;
 				}
 			}
@@ -2631,7 +2714,7 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 		cout << "	* phi0 			= " << phi0 << endl;
 		cout << "	* phi 			= " << vertexPackingFraction2D() << endl;
 		cout << "	* phi0 w/ verts = " << vertexPreferredPackingFraction2D() << endl;
-		cout << "	* P 			= " << 0.5*(stress[0] + stress[1]) << endl;
+		cout << "	* P 			= " << Pinst << endl;
 		cout << "	* U 		 	= " << U << endl << endl;
 		cout << "	* Contacts:" << endl;
 		cout << "	* Nvv 			= " << vvContacts() << endl;
@@ -3523,6 +3606,318 @@ void meso2D::getMesoVVContactNetwork(vector<bool> &gijtmp){
 }
 
 
+// compute pressure across periodic boundary
+double meso2D::mesoInstantaneousPressure(vector<bool> &gijtmp){
+	// local variables
+	int i, gi, gj, ci, cj, vi, vj, NVVCTS, nvtmp;
+	double fa, fli, flim1, fbi, fbim1, cx, cy, xi, yi;
+	double flx, fly, fbx, fby;
+	double l0im1, l0i, a0tmp, atmp;
+	double dx, dy, da, dli, dlim1, dtim1, dti, dtip1;
+	double lim2x, lim2y, lim1x, lim1y, lix, liy, lip1x, lip1y, li, lim1;
+	double rim2x, rim2y, rim1x, rim1y, rix, riy, rip1x, rip1y, rip2x, rip2y;
+	double nim1x, nim1y, nix, niy, sinim1, sini, sinip1, cosim1, cosi, cosip1;
+	double ddtim1, ddti;
+	double sij, rij, zij, ftmp, fx, fy;
+	double P=0.0, dUdL=0.0;
+
+	// check size
+	NVVCTS = 0.5*NVTOT*(NVTOT-1);
+	if (gijtmp.size() != NVVCTS || gijtmp.size() != gij.size()){
+		cout << "** ERROR: in mesoInstantaneousPressure, input &gijtmp not initialized. Ending. " << endl;
+		exit(1);
+	}
+
+	// reset forces
+	resetForcesAndEnergy();
+
+	// loop over vertices, add to forces + dUdL
+	U = 0.0;
+	ci = 0;
+	for (gi=0; gi<NVTOT; gi++){
+
+		// -- Area force (and get cell index ci)
+		if (ci < NCELLS){
+			if (gi == szList[ci]){
+				// shape information
+				nvtmp = nv[ci];
+				a0tmp = a0[ci];
+
+				// preferred segment length of last segment
+				l0im1 = l0[im1[gi]];
+
+				// compute area deviation
+				atmp = area(ci);
+				da = (atmp/a0tmp) - 1.0;
+
+				// add to U
+				U += 0.5*ka*da*da;
+
+				// add to dUdL
+				dUdL += ((2.0 * ka * atmp)/(a0tmp * L[0])) * da;
+
+				// shape force parameters
+				fa = ka * (da / a0tmp);
+
+				// compute cell center of mass
+				xi = x[NDIM*gi];
+				yi = x[NDIM*gi + 1];
+				cx = xi; 
+				cy = yi;
+				for (vi=1; vi<nvtmp; vi++){
+					// get distances between vim1 and vi
+					dx = x[NDIM*(gi+vi)] - xi;
+					dy = x[NDIM*(gi+vi) + 1] - yi;
+					if (pbc[0])
+						dx -= L[0]*round(dx/L[0]);
+					if (pbc[1])
+						dy -= L[1]*round(dy/L[1]);
+
+					// add to centers
+					xi += dx;
+					yi += dy;
+
+					cx += xi;
+					cy += yi;
+				}
+				cx /= nvtmp;
+				cy /= nvtmp;
+
+				// get coordinates relative to center of mass
+				rix = x[NDIM*gi] - cx;
+				riy = x[NDIM*gi + 1] - cy;
+
+				// get prior adjacent vertices
+				rim2x = x[NDIM*im1[im1[gi]]] - cx;
+				rim2y = x[NDIM*im1[im1[gi]] + 1] - cy;
+				if (pbc[0])
+					rim2x -= L[0]*round(rim2x/L[0]);
+				if (pbc[1])
+					rim2y -= L[1]*round(rim2y/L[1]);
+
+				rim1x = x[NDIM*im1[gi]] - cx;
+				rim1y = x[NDIM*im1[gi] + 1] - cy;
+				if (pbc[0])
+					rim1x -= L[0]*round(rim1x/L[0]);
+				if (pbc[1])
+					rim1y -= L[1]*round(rim1y/L[1]);
+
+				// get prior segment vectors
+				lim2x = rim1x - rim2x;
+				lim2y = rim1y - rim2y;
+
+				lim1x = rix - rim1x;	
+				lim1y = riy - rim1y;
+
+				// increment cell index
+				ci++;
+			}
+		}
+
+		// preferred segment length
+		l0i = l0[gi];
+
+		// get next adjacent vertices
+		rip1x = x[NDIM*ip1[gi]] - cx;
+		rip1y = x[NDIM*ip1[gi] + 1] - cy;
+		if (pbc[0])
+			rip1x -= L[0]*round(rip1x/L[0]);
+		if (pbc[1])
+			rip1y -= L[1]*round(rip1y/L[1]);
+
+
+		// -- Area force
+		F[NDIM*gi] 		+= 0.5*fa*(rim1y - rip1y);
+		F[NDIM*gi + 1] 	+= 0.5*fa*(rip1x - rim1x);
+
+
+		// -- Perimeter force
+		lix 	= rip1x - rix;
+		liy 	= rip1y - riy;
+
+		// segment lengths
+		lim1 	= sqrt(lim1x*lim1x + lim1y*lim1y);
+		li 		= sqrt(lix*lix + liy*liy);
+
+		// segment deviations
+		dlim1  	= (lim1/l0im1) - 1.0;
+		dli 	= (li/l0i) - 1.0;
+
+		// segment forces
+		flim1 	= kl*(1.0/l0im1);
+		fli 	= kl*(1.0/l0i);
+
+		// add to forces
+		flx 			= (fli*dli*lix/li) - (flim1*dlim1*lim1x/lim1);
+		fly 			= (fli*dli*liy/li) - (flim1*dlim1*lim1y/lim1);
+		F[NDIM*gi] 		+= flx;
+		F[NDIM*gi + 1] 	+= fly;
+
+		// add to U
+		U += 0.5*kl*dli*dli;
+
+		// add to dUdL
+		dUdL += ((kl * li)/(L[0] * l0i)) * dli;
+
+		// -- Bending force
+		fbi = kbi[gi];
+		fbim1 = kbi[im1[gi]];
+
+		if (fbi > 0 || fbim1 > 0){
+			// get ip2 for third angle
+			rip2x = x[NDIM*ip1[ip1[gi]]] - cx;
+			rip2y = x[NDIM*ip1[ip1[gi]] + 1] - cy;
+			if (pbc[0])
+				rip2x -= L[0]*round(rip2x/L[0]);
+			if (pbc[1])
+				rip2y -= L[1]*round(rip2y/L[1]);
+
+			// get last segment length
+			lip1x = rip2x - rip1x;
+			lip1y = rip2y - rip1y;
+
+			// get angles
+			sinim1 = lim1x*lim2y - lim1y*lim2x;
+			cosim1 = lim1x*lim2x + lim1y*lim2y;
+
+			sini = lix*lim1y - liy*lim1x;
+			cosi = lix*lim1x + liy*lim1y;
+
+			sinip1 = lip1x*liy - lip1y*lix;
+			cosip1 = lip1x*lix + lip1y*liy;
+
+			// get normal vectors
+			nim1x = lim1y;
+			nim1y = -lim1x;
+
+			nix = liy;
+			niy = -lix;
+
+			// get change in angles
+			dtim1 = atan2(sinim1,cosim1) - t0[im1[gi]];
+			dti = atan2(sini,cosi) - t0[gi];
+			dtip1 = atan2(sinip1,cosip1) - t0[ip1[gi]];
+
+			// get delta delta theta's
+			ddtim1 = (dti - dtim1)/(lim1*lim1);
+			ddti = (dti - dtip1)/(li*li);
+
+			// add to force
+			fbx 			= fbim1*ddtim1*nim1x + fbi*ddti*nix;
+			fby 			= fbim1*ddtim1*nim1y + fbi*ddti*niy;
+			F[NDIM*gi] 		+= fbx;
+			F[NDIM*gi + 1] 	+= fby;
+
+			// add to U
+			U += 0.5*kb*dti*dti;
+		}
+
+		// update old coordinates
+		rim2x = rim1x;
+		rim1x = rix;
+		rix = rip1x;
+
+		rim2y = rim1y;
+		rim1y = riy;
+		riy = rip1y;
+
+		// update old segment vectors
+		lim2x = lim1x;
+		lim2y = lim1y;
+
+		lim1x = lix;
+		lim1y = liy;
+
+		// update old preferred segment length
+		l0im1 = l0i;
+	}
+
+
+
+
+	// compute interaction contribution to forces + dUdL
+	for (gi=0; gi<NVTOT; gi++){
+		for (gj=gi+1; gj<NVTOT; gj++){
+			if (gijtmp[NVTOT*gi + gj - (gi+1)*(gi+2)/2]){
+
+				// get cell indices
+				cindices(ci,vi,gi);
+				cindices(cj,vj,gj);
+
+				// contact distance
+				sij = r[gi] + r[gj];
+
+				// get vertex-vertex distance
+				dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
+				dy -= L[1]*round(dy/L[1]);
+
+				dx = x[NDIM*gj] - x[NDIM*gi];
+				dx -= L[0]*round(dx/L[0]);
+
+				// get true distance
+				rij = sqrt(dx*dx + dy*dy);
+
+				// // compute forces and potential
+				// if (rij > sij){
+				// 	// zij: determines strength of bond attraction
+				// 	zij 	= 0.5*(zc[ci] + zc[cj])*ctcdel + 1.0;
+
+				// 	// force scale
+				// 	ftmp 	= (kc/zij)*(1 - (rij/sij))*(1.0/sij);
+				// 	fx 		= ftmp*(dx/rij);
+				// 	fy 		= ftmp*(dy/rij);
+
+				// 	// add to U
+				// 	U += 0.5*(kc/zij)*pow(1 - (rij/sij),2.0);
+				// 	cout << "** In pressure meas, gi=" << gi << " and gj=" << gj << " are stretched bonds, kc/zij = " << kc / zij << "..." << endl;
+				// }
+				// else {
+					// // forces
+					// ftmp 	= kc*(1 - (rij/sij))*(1.0/sij);
+					// fx 	 	= ftmp*(dx/rij);
+					// fy 		= ftmp*(dy/rij);
+
+					// // add to U
+					// U += 0.5*kc*pow(1 - (rij/sij),2.0);
+				// }
+				// forces
+				ftmp 	= kc*(1 - (rij/sij))*(1.0/sij);
+				fx 	 	= ftmp*(dx/rij);
+				fy 		= ftmp*(dy/rij);
+
+				// add to U
+				U += 0.5*kc*pow(1 - (rij/sij),2.0);
+
+				// add to net force dot normal for pressure
+				F[NDIM*gi] 		-= fx;
+				F[NDIM*gi + 1]	-= fy;
+
+				F[NDIM*gj] 		+= fx;
+				F[NDIM*gj + 1] 	+= fy;
+
+				// add to dUdL
+				dUdL -= ftmp*(rij/L[0]);
+			}
+		}
+	}
+
+
+	// compute pressure
+
+	// // internal (virial) contribution
+	P = 0.0;
+	for (i=0; i<vertDOF; i++)
+		P += F[i]*x[i];
+	P /= (2.0*L[0]*L[1]);
+
+	// // external contribution
+	P -= (0.5*dUdL)/L[0];
+	// P = -dUdL/(2.0*L[0]);
+
+	// return P value
+	return P;
+}
+
 
 
 /******************************
@@ -3546,8 +3941,7 @@ void meso2D::mesoBendingHessian(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb){
 	double dtim1, dti, dtip1;
 
 	// non-dimensionalization
-	double rho0, Kb;
-	rho0 = sqrt(a0.at(0));
+	double Kb;
 
 	// compute segment unit vectors matrix elements, segment lengths, normals & angle strain
 	vector<double> ulxy(NVTOT,0.0);
@@ -3610,10 +4004,9 @@ void meso2D::mesoBendingHessian(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb){
 	}
 
 	// loop over vertices
-	rho0 = sqrt(a0[0]);
 	for (gi=0; gi<NVTOT; gi++){
 		// bending energy (can be local)
-		Kb = kbi[gi] * rho0 * rho0;
+		Kb = kbi[gi];
 
 		// indexing
 		kx = NDIM*gi;
@@ -3717,9 +4110,6 @@ void meso2D::mesoSpringNetworkHessian(Eigen::MatrixXd &Hbnds, Eigen::MatrixXd &S
 	int ci, vi, gi, cj, vj, gj, kx, ky, lx, ly;
 	double sij, dx, dy, rij, kij, h, uxij, uyij, zij;
 
-	// non-dimensionalization
-	double rho0 = sqrt(a0.at(0));
-
 	// loop over pairs of connected vertices, compute Hessian
 	for (gi=0; gi<NVTOT; gi++){
 		kx = NDIM*gi;
@@ -3750,7 +4140,7 @@ void meso2D::mesoSpringNetworkHessian(Eigen::MatrixXd &Hbnds, Eigen::MatrixXd &S
 				// if bond is extended
 				if (rij > sij) {
 					// spring constant
-					kij = (kc * rho0 * rho0) / (sij * rij * zij);
+					kij = kc / (sij * rij * zij);
 
 					// dimensionless overlap
 					h = rij / sij;
@@ -3762,10 +4152,10 @@ void meso2D::mesoSpringNetworkHessian(Eigen::MatrixXd &Hbnds, Eigen::MatrixXd &S
 					// compute stiffness and stress matrices (off diagonal, enforce symmetry in lower triangles)
 
 					// -- stiffness matrix
-					Hbnds(kx, lx) = -((kc * rho0 * rho0) / (sij * sij * zij)) * (uxij * uxij);
-					Hbnds(ky, ly) = -((kc * rho0 * rho0) / (sij * sij * zij)) * (uyij * uyij);
-					Hbnds(kx, ly) = -((kc * rho0 * rho0) / (sij * sij * zij)) * (uxij * uyij);
-					Hbnds(ky, lx) = -((kc * rho0 * rho0) / (sij * sij * zij)) * (uyij * uxij);
+					Hbnds(kx, lx) = -(kc / (sij * sij * zij)) * (uxij * uxij);
+					Hbnds(ky, ly) = -(kc / (sij * sij * zij)) * (uyij * uyij);
+					Hbnds(kx, ly) = -(kc / (sij * sij * zij)) * (uxij * uyij);
+					Hbnds(ky, lx) = -(kc / (sij * sij * zij)) * (uyij * uxij);
 
 					Hbnds(lx, kx) = Hbnds(kx, lx);
 					Hbnds(ly, ky) = Hbnds(ky, ly);
@@ -4237,6 +4627,8 @@ double meso2D::numericalBulkModulus(meso2DMemFn forceCall, double Ftol, double P
 	// return numerical result
 	return B;
 }
+
+
 
 /******************************
 

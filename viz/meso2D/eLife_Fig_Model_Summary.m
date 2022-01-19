@@ -1,4 +1,4 @@
-%% Script to draw development without boundaries
+%% Plot frames for model summary figure in eLife paper
 
 clear;
 close all;
@@ -6,14 +6,13 @@ clc;
 
 % create file name
 fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb01e-3_be50_da0.05_dl7_P1e-4_h0.5_cL0_cB2_seed32.posctc';
-% fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
-idx = phi > 0.395;
+idx = phi > 0.35 & phi < 1.0;
 phi = phi(idx);
 
 % number of frames
@@ -53,20 +52,8 @@ p = mesoData.p(idx,:);
 a = mesoData.a(idx,:);
 calA = p.^2./(4.0*pi*a);
 
-% stress data
-S = mesoData.S(idx,:);
-P = 0.5*(S(:,1) + S(:,2));
 
-%% Draw cells
-
-% information for ellipses
-th = 0.0:0.01:(2.0*pi);
-NTHE = length(th);
-ex = cos(th);
-ey = sin(th);
-
-% show vertices or not
-showverts = 0;
+%% Plot two figures (confluent and network) for comparison
 
 % color by shape or size
 colorOpt = 1;
@@ -74,7 +61,9 @@ colorOpt = 1;
 if colorOpt == 1
     % color by real shape
     NCLR = 100;
-    calABins = linspace(0.999*min(calA(:)),1.001*max(calA(:)),NCLR+1);
+%     calABins = linspace(0.999*min(calA(:)),1.001*max(calA(:)),NCLR+1);
+    calABins = linspace(0.99,2.86,NCLR);
+    calABins = [calABins 10];
     cellCLR = jet(NCLR);
 elseif colorOpt == 2
     % color by preferred shape
@@ -143,40 +132,20 @@ for ff = 1:NFRAMES
     cijList{ff} = cijtmp;
 end
 
-% get frames to plot
-if showverts == 0
-    FSTART = 12;
-    FSTEP = 1;
-    if NFRAMES > 50
-        FSTEP = 2;
-    elseif NFRAMES > 150
-        FSTEP = 10;
-    end
-%     FEND = NFRAMES;
-    FEND = FSTART;
-else
-    FSTART = 2;
-    FSTEP = 1;
-    FEND = NFRAMES;
-end
+% list of frames to show
+frameList = [1 9];
 
-% make a movie
-makeAMovie = 0;
-ctccopy = 0;
-if makeAMovie == 1
-    moviestr = 'mesoHMin2D_N64_n32_ca1.14_kb01e-3_be50_da0.05_dl7_P1e-4_h0.5_cL0_cB2_seed59_free.mp4';
-%     moviestr = 'mesoHMin2D_N64_n24_ca1.14_kb01e-3_be100_da0.05_dl0.1_P1e-8_h0.5_cL1_cB1_seed100.mp4';
-    vobj = VideoWriter(moviestr,'MPEG-4');
-    vobj.FrameRate = 15;
-    open(vobj);
-end
+% show vertices or not
+showverts = 0;
 
-fnum = 1;
-figure(fnum), clf, hold on, box on;
-for ff = FSTART:FSTEP:FEND
+% cell to highlight
+cell2highlight = 14;
+
+for fff = 1:2
     % reset figure for this frame
-    figure(fnum), clf, hold on, box on;
-    fprintf('printing frame ff = %d/%d, phi=%0.3g, phi0=%0.3g\n',ff,FEND,phi(ff),phi0(ff));
+    figure(fff), clf, hold on, box on;
+    ff = frameList(fff);
+    fprintf('printing frame ff = %d, phi=%0.3g, phi0=%0.3g\n',ff,phi(ff),phi0(ff));
     
     % get geometric info
     xf = x(ff,:);
@@ -189,12 +158,10 @@ for ff = FSTART:FSTEP:FEND
         ytmp = yf{nn};
         cx = mean(xtmp);
         cy = mean(ytmp);
-        rx = xtmp - cx;
-        ry = ytmp - cy;
-        cx = mod(cx,L);
-        cy = mod(cy,L);
-        xtmp = cx + rx;
-        ytmp = cy + ry;
+        if nn == cell2highlight
+            cxfocus = cx;
+            cyfocus = cy;
+        end
         rtmp = rf{nn};
         nvtmp = nv(ff,nn);
         if colorOpt == 2
@@ -207,16 +174,18 @@ for ff = FSTART:FSTEP:FEND
             clr = cellCLR(IC(ff,nn),:);
         end
         if showverts == 1
+            vpos = [xtmp, ytmp];
+            patch('Faces',[1:nvtmp 1],'vertices',vpos,'FaceColor','none','EdgeColor','k','Linewidth',1.5,'LineStyle','-');
             for vv = 1:nvtmp
                 rv = rtmp(vv);
                 xplot = xtmp(vv) - rv;
                 yplot = ytmp(vv) - rv;
-                for xx = 0
-                    for yy = 0
-                        if nn > 0
-                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',1.5);
+                for xx = -1:1
+                    for yy = -1:1
+                        if nn == cell2highlight
+                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',2);
                         else
-                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','w');
+                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','w','LineWidth',2);
                         end
                     end
                 end
@@ -227,17 +196,22 @@ for ff = FSTART:FSTEP:FEND
             rads = sqrt(rx.^2 + ry.^2);
             xtmp = xtmp + 0.8*rtmp.*(rx./rads);
             ytmp = ytmp + 0.8*rtmp.*(ry./rads);
-            for xx = 0
-                for yy = 0
+            for xx = -1:1
+                for yy = -1:1
                     vpos = [xtmp + xx*L, ytmp + yy*L];
                     finfo = [1:nvtmp 1];
-                    patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k','Linewidth',1.5,'markersize',10);
+                    if nn == cell2highlight
+                        patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k','Linewidth',2);
+                    else
+                        patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k','Linewidth',2);
+                    end
+%                     text(cx,cy,num2str(nn));
                 end
             end
         end
     end
     
-%     % plot vv contacts
+    % plot vv contacts
 %     gijtmp = gijList{ff};
 %     xa = cell2mat(xf');
 %     ya = cell2mat(yf');
@@ -253,7 +227,7 @@ for ff = FSTART:FSTEP:FEND
 %                 dy = dy - L*round(dy/L);
 %                 for xx = ctccopy
 %                     for yy = ctccopy
-%                         plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'w-','linewidth',1.5);
+%                         plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'k--','linewidth',2);
 %                     end
 %                 end
 %             end
@@ -261,27 +235,87 @@ for ff = FSTART:FSTEP:FEND
 %     end
         
     % plot box
-    plot([0 L L 0 0], [0 0 L L 0], 'k-', 'linewidth', 1.5);
+    if showverts == 0
+        plot([0 L L 0 0], [0 0 L L 0], 'k-', 'linewidth', 1.5);
+        axis equal;
+        ax = gca;
+        ax.XTick = [];
+        ax.YTick = [];
+        ax.XLim = [-0.25 1.25]*L;
+        ax.YLim = [-0.25 1.25]*L;
+    else
+        % plot vv contacts
+        gijtmp = gijList{ff};
+        xa = cell2mat(xf');
+        ya = cell2mat(yf');
+        NVTOT = sum(nv(ff,:));
+        for gi = 1:NVTOT
+            xi = xa(gi);
+            yi = ya(gi);
+            for gj = (gi+1):NVTOT
+                if (gijtmp(gi,gj) == 1)
+                    dx = xa(gj) - xi;
+                    dx = dx - L*round(dx/L);
+                    dy = ya(gj) - yi;
+                    dy = dy - L*round(dy/L);
+                    for xx = -1:1
+                        for yy = -1:1
+                            plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'k-','linewidth',2);
+                        end
+                    end
+                end
+            end
+        end
+    
+        axis equal;
+        ax = gca;
+        ax.XTick = [];
+        ax.YTick = [];
+        ax.XLim = [cxfocus - 0.15*L cxfocus + 0.15*L];
+        ax.YLim = [cyfocus - 0.15*L cyfocus + 0.15*L];
+    end
+end
+
+% return;
+%% Draw individual cell shape dynamics
+
+% pick random cell
+cellidx = 14;
+
+% figure for short-time dynamics
+figure(3), clf, hold on, box on;
+
+% get geometric info
+xf = x(:,cellidx);
+yf = y(:,cellidx);
+nvf = nv(:,cellidx);
+zvf = zv(:,cellidx);
+frList = [2 3 5 6 7 8 9 12];
+NFR = length(frList);
+LP = LList(end,1);
+for ii = 1:NFR
+    ff = frList(ii);
+    xtmp = xf{ff};
+    ytmp = yf{ff};
+    zvtmp = zvf{ff};
+    nvtmp = nvf(ff);
+    
+    cx = mean(xtmp);
+    cy = mean(ytmp);
+    xtmp = xtmp - cx + 0.15*(ii-1)*LP;
+    ytmp = ytmp - cy;
+    ip1 = [2:nvtmp 1];
+    for vv = 1:nvtmp
+        if zvtmp(vv) <= 0
+            plot([xtmp(vv) xtmp(ip1(vv))],[ytmp(vv) ytmp(ip1(vv))],'-','linewidth',1.5,'color','r');
+        else
+            plot([xtmp(vv) xtmp(ip1(vv))],[ytmp(vv) ytmp(ip1(vv))],'-','linewidth',2.5,'color','k');
+        end
+    end
     axis equal;
     ax = gca;
     ax.XTick = [];
     ax.YTick = [];
-    ax.XLim = [-0.25 1.25]*LList(end,1);
-    ax.YLim = [-0.25 1.25]*LList(end,2);
-    
-    % if making a movie, save frame
-    if makeAMovie == 1
-        currframe = getframe(gcf);
-        writeVideo(vobj,currframe);
-    end
+    ax.YLim = [-0.15*LP 0.15*LP];
+    ax.XLim = [-0.15*LP NFR*0.15*LP];
 end
-
-
-% close video object
-if makeAMovie == 1
-    close(vobj);
-end
-
-
-
-return;

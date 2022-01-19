@@ -1535,8 +1535,6 @@ void dpm::vertexRepulsiveForces2D() {
 							fx = ftmp * (dx / rij);
 							fy = ftmp * (dy / rij);
 
-							// cout << 1 << "  " << gi << "  " << gj << "  " << setprecision(12) << fx << "  " << setprecision(12) << fy << "  " << rij << "  " << sij << endl;
-
 							// add to forces
 							F[NDIM * gi] -= fx;
 							F[NDIM * gi + 1] -= fy;
@@ -1544,7 +1542,7 @@ void dpm::vertexRepulsiveForces2D() {
 							F[NDIM * gj] += fx;
 							F[NDIM * gj + 1] += fy;
 
-							// increae potential energy
+							// increase potential energy
 							U += 0.5 * kc * pow((1 - (rij / sij)), 2.0);
 
 							// add to virial stress

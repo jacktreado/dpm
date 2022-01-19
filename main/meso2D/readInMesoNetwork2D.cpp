@@ -4,7 +4,7 @@
 
 // Compilation command:
 // g++ -O3 --std=c++11 -I src main/meso2D/readInMesoNetwork2D.cpp src/*.cpp -o meso.o
-// ./meso.o meso.input 0.5 1e-3 50 0.02 5 1e-4 1 pos.test
+// ./meso.o meso.input 0.1 1e-3 50 0.02 5 1e-6 1 pos.test
 
 
 // header files
