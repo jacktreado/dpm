@@ -1596,7 +1596,8 @@ void meso2D::mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, 
 	fill(v.begin(), v.end(), 0.0);
 	Pinst = 0.0;
 	CALL_MEMBER_FN(*this, forceCall)();
-	P = Pinst;
+	// P = Pinst;
+	P = 0.5*(stress[0] + stress[1]);
 
 	// relax forces using FIRE
 	while ((fcheck > Ftol || dPcheck > dPtol || fireit < NDELAY) && fireit < itmax){
@@ -1720,6 +1721,7 @@ void meso2D::mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, 
 		CALL_MEMBER_FN(*this, forceCall)();
 
 		// update instantaneous pressure
+		// P = 0.5*(stress[0] + stress[1]);
 		P = Pinst;
 
 		// VV VELOCITY UPDATE #2
@@ -1734,7 +1736,6 @@ void meso2D::mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, 
 		fcheck = fcheckFrc + pow(P - P0,2.0);
 		fcheckFrc = sqrt(fcheckFrc/vertDOF);
 		fcheck = sqrt(fcheck/vertDOF);
-
 
 		// update iterator
 		fireit++;
@@ -1764,7 +1765,7 @@ void meso2D::mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, 
 		cout << "	** npPos 	= " << npPos << endl;
 		cout << "	** npNeg 	= " << npNeg << endl;
 		cout << "	** V  		= " << V << endl;
-		cout << "	** P 		= " << P << endl;
+		cout << "	** P 		= " << Pinst << endl;
 		cout << "	** Pi 		= " << Pi << endl;
 		cout << endl << endl;
 	}
@@ -4814,6 +4815,11 @@ void meso2D::printMesoNetworkCTCS2D(){
 	posout << setw(wnum) << setprecision(pnum) << left << stress.at(0);
 	posout << setw(wnum) << setprecision(pnum) << left << stress.at(1);
 	posout << setw(wnum) << setprecision(pnum) << left << stress.at(2);
+	posout << endl;
+
+	// print instaneous pressure info
+	posout << setw(w) << left << "PRESS";
+	posout << setw(wnum) << setprecision(pnum) << left << Pinst;
 	posout << endl;
 
 	// print coordinate for rest of the cells

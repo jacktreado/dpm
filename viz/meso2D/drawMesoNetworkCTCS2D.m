@@ -56,39 +56,15 @@ a = mesoData.a(idx,:);
 calA = p.^2./(4.0*pi*a);
 
 % stress data
-S = mesoData.S(idx,:);
-P = 0.5*(S(:,1) + S(:,2));
+P = mesoData.P(idx);
+Sxx = mesoData.S(idx,1);
+Syy = mesoData.S(idx,2);
+Pvirial = 0.5*(Sxx + Syy);
 
 % print if multiple frames
 if NFRAMES > 2
-    Sxx = S(:,1);
-    Syy = S(:,2);
-    Sxy = S(:,3);
-    
-    figure(10), clf, hold on, box on;
-    
-    plot(find(Sxx<0),abs(Sxx(Sxx<0)),'ks','markersize',10,'MarkerFaceColor','r');
-    plot(find(Sxx>0),Sxx(Sxx>0),'rs','markersize',10);
-    
-    plot(find(Syy<0),abs(Syy(Syy<0)),'ko','markersize',10,'MarkerFaceColor','b');
-    plot(find(Syy>0),Syy(Syy>0),'bo','markersize',10);
-    
-    xlabel('frame id. ','Interpreter','latex');
-    ylabel('$\Sigma_{xx}$, $\Sigma_{yy}$','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;
     
     figure(11), clf, hold on, box on;
-    
-    plot(phi(Sxy<0),abs(Sxy(Sxy<0)),'ks','markersize',10,'MarkerFaceColor','k');
-    plot(phi(Sxy>0),Sxy(Sxy>0),'ko','markersize',10);
-    
-    xlabel('$1-\phi$','Interpreter','latex');
-    ylabel('$\Sigma_{xy}$','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;
-    
-    figure(12), clf, hold on, box on;
     plot(1:NFRAMES,calA,'-','color',[0.5 0.5 0.5],'linewidth',1.2);
     plot(1:NFRAMES,mean(calA,2),'k-','linewidth',3);
     xlabel('frame id','Interpreter','latex');
@@ -96,31 +72,24 @@ if NFRAMES > 2
     ax = gca;
     ax.FontSize = 22;
     
-    
-    
-    % compute shear anisotropy
-    P = 0.5*(Sxx + Syy);
-    sN = (Syy - Sxx)./P;
-    sXY = -Sxy./P;
-    tau = sqrt(sN.^2 + sXY.^2);
-    figure(13), clf, hold on, box on;
-    plot(phi,tau,'k-','linewidth',2);
-    plot(phi,abs(sN),'b--','linewidth',2);
-    plot(phi,abs(sXY),'r--','linewidth',2);
-    xlabel('$1-\phi$','Interpreter','latex');
-    ylabel('$\hat{\tau}$','Interpreter','latex');
-    ax = gca;
-    ax.FontSize = 22;
-    
-    
     % plot contact network
-    figure(14), clf, hold on, box on;
+    figure(12), clf, hold on, box on;
     plot(1:NFRAMES,zc,'-','color',[0.5 0.5 0.5],'linewidth',1.2);
     plot(1:NFRAMES,mean(zc,2),'k--','linewidth',2.5);
     xlabel('frame id.','Interpreter','latex');
     ylabel('$z$','Interpreter','latex');
     ax = gca;
     ax.FontSize = 22;
+    
+    % print pressure
+    figure(12), clf, hold on, box on;
+    plot(1:NFRAMES,P,'ko','markerfacecolor','b','markersize',10);
+    plot(1:NFRAMES,Pvirial,'-k','linewidth',2);
+    xlabel('frame id.','Interpreter','latex');
+    ylabel('$P{\rm inst}$','Interpreter','latex');
+    ax = gca;
+    ax.FontSize = 22;
+    legend({'$P = -(\partial U / \partial L)/(2L)$','$P_{\rm contacts}$'},'Interpreter','latex','fontsize',16,'location','best');
     
     % plot contact populations
     zchecklist = 3:8;
@@ -170,7 +139,6 @@ if NFRAMES > 2
     ax = gca;
     ax.YColor = 'r';
     xlabel('frame','Interpreter','latex');
-    ax.YLim = [0 2e-4];
     ax.FontSize = 36;
     
     % plot shape vs porosity
@@ -193,7 +161,7 @@ if NFRAMES > 2
     ct17Porosity = totalData.ct17Porosity;
     
     figure(17), clf, hold on, box on;
-    errorbar(phi(2)-phi(2:end),mean(calA(2:end,:),2),std(calA(2:end,:),0,2),'-k','linewidth',1.75);
+    errorbar(max(phi) - phi,mean(calA,2),std(calA,0,2),'-k','linewidth',1.75);
 %     errorbar(porosity,calAMean,calAMin,calAMax,'k>','markersize',10,'markerfacecolor','b');
     errorbar(porosity,calAMeas,dCalAMin,dCalAMax,'k>','markersize',10,'markerfacecolor','r');
     errorbar(ct01Porosity,ct01CalAMean,ct01CalAStd,'k>','markersize',10);
@@ -210,8 +178,8 @@ if NFRAMES > 2
     
     figure(18), clf, hold on, box on;
     plot(porosity,aMean./aMean(1),'bo','markersize',10,'markerfacecolor','b');
-    plot(phi(2)-phi(2:end),aSim(2:end)./aSim(2),'ks','markersize',10);
-    plot(phi(2)-phi(2:end),a0Sim(2:end)./a0Sim(2),'k^','markersize',10);
+    plot(max(phi) - phi,aSim./aSim(2),'ks','markersize',10);
+    plot(max(phi) - phi,a0Sim./a0Sim(2),'k^','markersize',10);
     ylabel('$a/a(0)$','Interpreter','latex');
     xlabel('$1-\phi$','Interpreter','latex');
     ax = gca;
@@ -311,15 +279,15 @@ end
 
 % get frames to plot
 if showverts == 0
-    FSTART = 1;
+    FSTART = 2;
     FSTEP = 1;
     if NFRAMES > 50
         FSTEP = 2;
     elseif NFRAMES > 150
         FSTEP = 10;
     end
-%     FEND = NFRAMES;
-    FEND = FSTART;
+    FEND = NFRAMES;
+%     FEND = FSTART;
 else
     FSTART = 1;
     FSTEP = 1;
@@ -331,7 +299,7 @@ makeAMovie = 1;
 ctccopy = 0;
 if makeAMovie == 1
 %     moviestr = 'debug.mp4';
-    moviestr = 'mesoHMin2D_N64_n32_ca1.14_kl0.1_kb01e-3_be100_da0.02_dl5_P1e-4_seed11.mp4';
+    moviestr = 'deceNetwork_negPressure.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);

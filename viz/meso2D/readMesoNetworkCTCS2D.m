@@ -21,6 +21,8 @@ ctcstmp     = sscanf(ctcs_str(6:end),'%f');
 Ltmp        = textscan(fid,'BOXSZ %f %f',1);
 fline       = fgetl(fid);
 Stmp        = textscan(fid,'STRSS %f %f %f',1);
+fline       = fgetl(fid);
+Ptmp        = textscan(fid,'PRESS %f',1);
 
 % cells to save 
 NFRAMES = 1e6;
@@ -29,6 +31,7 @@ phi     = zeros(NFRAMES,1);
 L       = zeros(NFRAMES,2);
 ctcs    = cell(NFRAMES,1);
 S       = zeros(NFRAMES,3);
+P       = zeros(NFRAMES,1);
 
 nv      = zeros(NFRAMES,NCELLS);
 zc      = zeros(NFRAMES,NCELLS);
@@ -63,7 +66,10 @@ while ~feof(fid)
     % get stress info
     S(nf,1) = Stmp{1};
     S(nf,2) = Stmp{2};
-    S(nf,3) = Stmp{3}; 
+    S(nf,3) = Stmp{3};
+    
+    % get instantaneous pressure info
+    P(nf) = Ptmp{1};
     
     % get info about deformable particle
     for nn = 1:NCELLS
@@ -131,6 +137,10 @@ while ~feof(fid)
         % get new stress info
         Stmp            = textscan(fid,'STRSS %f %f %f',1);
         fline = fgetl(fid);
+        
+        % get new pressure info
+        Ptmp            = textscan(fid,'PRESS %f',1);
+        fline = fgetl(fid);
     end
 end
 
@@ -141,6 +151,7 @@ if (nf < NFRAMES)
     ctcs(nf:end) = [];
     L(nf:end,:) = [];
     S(nf:end,:) = [];
+    P(nf:end,:) = [];
     
     nv(nf:end,:) = [];
     zc(nf:end,:) = [];
@@ -166,6 +177,7 @@ dpmConfigData.phi           = phi;
 dpmConfigData.ctcs          = ctcs;
 dpmConfigData.L             = L;
 dpmConfigData.S             = S;
+dpmConfigData.P             = P;
 
 dpmConfigData.nv            = nv;
 dpmConfigData.zc            = zc;
