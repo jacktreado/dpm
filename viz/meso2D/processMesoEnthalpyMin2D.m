@@ -1,6 +1,7 @@
 function processMesoEnthalpyMin2D(floc,fpattern,savestr)
 %% FUNCTION to analyze enthalpy-minimized mesophyll network simulations
-% NOTE: skip the first frame by default, not saved in ensemble or list 
+% NOTE: skip the first frame by default, not saved in ensemble or list
+% NOTE: as of 01/21/22, not processing void polygons
 
 % get list of files that fit pattern
 flist = dir([floc '/' fpattern '*.posctc']);
@@ -26,12 +27,13 @@ NFRAMESList = zeros(NSIMS,1);
 nvList = cell(NSIMS,1);
 LList = cell(NSIMS,1);
 phiList = cell(NSIMS,1);
-polyList = cell(NSIMS,1);
+% polyList = cell(NSIMS,1);
 calAList = cell(NSIMS,1);
 calA0List = cell(NSIMS,1);
 SxxList = cell(NSIMS,1);
 SyyList = cell(NSIMS,1);
 SxyList = cell(NSIMS,1);
+PList = cell(NSIMS,1);
 zList = cell(NSIMS,1);
 t0List = cell(NSIMS,1);
 kbList = cell(NSIMS,1);
@@ -52,10 +54,11 @@ for ss = 1:NSIMS
     mesoData = readMesoNetworkCTCS2D(fstr);
     
     % find void polygons, get number of OK frames
-    polyListTmp = voidPolys(mesoData);
-    NFRAMES = size(polyListTmp,1);
+%     polyListTmp = voidPolys(mesoData);
+%     NFRAMES = size(polyListTmp,1);
 
     % sim info
+    NFRAMES = mesoData.NFRAMES;
     NCELLS = mesoData.NCELLS;
     nv = mesoData.nv(2:NFRAMES,:);
     L = mesoData.L(2:NFRAMES,:);
@@ -67,10 +70,11 @@ for ss = 1:NSIMS
     t0 = mesoData.t0(2:NFRAMES,:);
     kb = mesoData.kb(2:NFRAMES,:);
     S = mesoData.S(2:NFRAMES,:);
+    P = mesoData.P(2:NFRAMES);
     phi = mesoData.phi(2:NFRAMES);
     p = mesoData.p(2:NFRAMES,:);
     a = mesoData.a(2:NFRAMES,:);
-    polyList{ss} = polyListTmp(2:NFRAMES);
+%     polyList{ss} = polyListTmp(2:NFRAMES);
     
     NFRAMES = NFRAMES - 1;
     if NFRAMES == 0
@@ -124,6 +128,7 @@ for ss = 1:NSIMS
     SxxList{ss} = S(:,1);
     SyyList{ss} = S(:,2);
     SxyList{ss} = S(:,3);
+    PList{ss} = P;
     
     % sims to save
     svidx = ~fskip(1:ss);
@@ -135,13 +140,14 @@ for ss = 1:NSIMS
     saveStruct.LList = LList(svidx,:);
     saveStruct.cxList = cxList(svidx,:);
     saveStruct.cyList = cyList(svidx,:);
-    saveStruct.polyList = polyList(svidx,:);
+%     saveStruct.polyList = polyList(svidx,:);
     saveStruct.calA0List = calA0List(svidx,:);
     saveStruct.calAList = calAList(svidx,:);
     saveStruct.zList = zList(svidx,:);
     saveStruct.SxxList = SxxList(svidx,:);
     saveStruct.SxyList = SxyList(svidx,:);
     saveStruct.SyyList = SyyList(svidx,:);
+    saveStruct.PList = PList(svidx);
     saveStruct.nvList = nvList(svidx,:);
     saveStruct.NSIMS = sum(svidx);
     saveStruct.NCELLS = NCELLS;
@@ -161,17 +167,17 @@ NFRAMESList = saveStruct.NFRAMESList;
 % number of porosity bins
 nporobins = 25;
 
-% polygon type info
-minpoly = 3;
-maxpoly = 12;
-polycheck = minpoly:maxpoly;
-NPOLYCHECK = length(polycheck);
+% % polygon type info
+% minpoly = 3;
+% maxpoly = 12;
+% polycheck = minpoly:maxpoly;
+% NPOLYCHECK = length(polycheck);
 
 % reload finalized data
 phiList = saveStruct.phiList;
 calAList = saveStruct.calAList;
-polyList = saveStruct.polyList;
-LList = saveStruct.LList;
+% polyList = saveStruct.polyList;
+% LList = saveStruct.LList;
 zList = saveStruct.zList;
 
 % lists for later ensemble averaging
@@ -179,9 +185,9 @@ NFRAMETOT = sum(NFRAMESList);
 poros = zeros(NFRAMETOT,1);
 calAMeans = zeros(NFRAMETOT,1);
 calAStds = zeros(NFRAMETOT,1);
-npolys = zeros(NFRAMETOT,1);
-polyTypeList = zeros(NFRAMETOT,NPOLYCHECK);
-polyAreaList = zeros(NFRAMETOT,NPOLYCHECK);
+% npolys = zeros(NFRAMETOT,1);
+% polyTypeList = zeros(NFRAMETOT,NPOLYCHECK);
+% polyAreaList = zeros(NFRAMETOT,NPOLYCHECK);
 zMeans = zeros(NFRAMETOT,1);
 zStds = zeros(NFRAMETOT,1);
 
@@ -216,35 +222,35 @@ for ss = 1:NSIMS
     calAMeans(last:next) = mean(calAtmp,2);
     calAStds(last:next) = std(calAtmp,0,2);
     
-    % get polygon information
-    LListtmp = LList{ss};
-    polytmp = polyList{ss};
-    npolys(last:next) = cellfun(@length,polytmp);
-    polytypes = zeros(NFRAMEStmp,NPOLYCHECK);
-    polyAreaPop = zeros(NFRAMEStmp,NPOLYCHECK);
-    for ff = 1:NFRAMEStmp
-        polyconfigtmp = polytmp{ff};
-        NPOLYS = length(polyconfigtmp);
-        polytypetmp = cellfun(@length,polyconfigtmp);
-        for pp = minpoly:(maxpoly-1)
-            polytypes(ff,pp-(minpoly-1)) = sum(polytypetmp == pp);
-        end
-        polytypes(ff,end) = sum(polytypetmp > maxpoly);
-        Abox = LListtmp(ff,1)*LListtmp(ff,2);
-        for ii = 1:NPOLYS
-            ptmp = polyconfigtmp{ii};
-            NE = size(ptmp,1);
-            atmp = polyarea(ptmp(:,1),ptmp(:,2));
-            if NE < maxpoly
-                cc = NE-2;
-            else
-                cc = maxpoly-2;
-            end
-            polyAreaPop(ff,cc) = polyAreaPop(ff,cc) + (atmp/Abox);
-        end
-    end
-    polyTypeList(last:next,:) = polytypes;
-    polyAreaList(last:next,:) = polyAreaPop;
+%     % get polygon information
+%     LListtmp = LList{ss};
+%     polytmp = polyList{ss};
+%     npolys(last:next) = cellfun(@length,polytmp);
+%     polytypes = zeros(NFRAMEStmp,NPOLYCHECK);
+%     polyAreaPop = zeros(NFRAMEStmp,NPOLYCHECK);
+%     for ff = 1:NFRAMEStmp
+%         polyconfigtmp = polytmp{ff};
+%         NPOLYS = length(polyconfigtmp);
+%         polytypetmp = cellfun(@length,polyconfigtmp);
+%         for pp = minpoly:(maxpoly-1)
+%             polytypes(ff,pp-(minpoly-1)) = sum(polytypetmp == pp);
+%         end
+%         polytypes(ff,end) = sum(polytypetmp > maxpoly);
+%         Abox = LListtmp(ff,1)*LListtmp(ff,2);
+%         for ii = 1:NPOLYS
+%             ptmp = polyconfigtmp{ii};
+%             NE = size(ptmp,1);
+%             atmp = polyarea(ptmp(:,1),ptmp(:,2));
+%             if NE < maxpoly
+%                 cc = NE-2;
+%             else
+%                 cc = maxpoly-2;
+%             end
+%             polyAreaPop(ff,cc) = polyAreaPop(ff,cc) + (atmp/Abox);
+%         end
+%     end
+%     polyTypeList(last:next,:) = polytypes;
+%     polyAreaList(last:next,:) = polyAreaPop;
     
     % get contact information
     ztmp = zList{ss};
@@ -260,11 +266,11 @@ poro_bc = 0.5*(poro_be(2:end) + poro_be(1:end-1));
 % ensemble averaged data
 calA = zeros(nporobins,2);
 z = zeros(nporobins,2);
-npoly = zeros(nporobins,2);
-polytypeMean = zeros(nporobins,NPOLYCHECK);
-polytypeStd = zeros(nporobins,NPOLYCHECK);
-polyAreaMean = zeros(nporobins,NPOLYCHECK);
-polyAreaStd = zeros(nporobins,NPOLYCHECK);
+% npoly = zeros(nporobins,2);
+% polytypeMean = zeros(nporobins,NPOLYCHECK);
+% polytypeStd = zeros(nporobins,NPOLYCHECK);
+% polyAreaMean = zeros(nporobins,NPOLYCHECK);
+% polyAreaStd = zeros(nporobins,NPOLYCHECK);
 
 % loop over porosity bins, get all data
 for bb = 1:nporobins
@@ -282,25 +288,25 @@ for bb = 1:nporobins
     z(bb,1) = mean(zMeans(binidx));
     z(bb,2) = mean(zStds(binidx));
     
-    npoly(bb,1) = mean(npolys(binidx));
-    npoly(bb,2) = std(npolys(binidx));
-    
-    polytypeMean(bb,:) = mean(polyTypeList(binidx,:),1);
-    polytypeStd(bb,:) = std(polyTypeList(binidx,:),0,1);
-    
-    polyAreaMean(bb,:) = mean(polyAreaList(binidx,:),1);
-    polyAreaStd(bb,:) = std(polyAreaList(binidx,:),0,1);
+%     npoly(bb,1) = mean(npolys(binidx));
+%     npoly(bb,2) = std(npolys(binidx));
+%     
+%     polytypeMean(bb,:) = mean(polyTypeList(binidx,:),1);
+%     polytypeStd(bb,:) = std(polyTypeList(binidx,:),0,1);
+%     
+%     polyAreaMean(bb,:) = mean(polyAreaList(binidx,:),1);
+%     polyAreaStd(bb,:) = std(polyAreaList(binidx,:),0,1);
 end
 
 % save ensemble averages to save struct
 saveStruct.poro_bc = poro_bc;
 saveStruct.calA = calA;
 saveStruct.z = z;
-saveStruct.npoly = npoly;
-saveStruct.polytypeMean = polytypeMean;
-saveStruct.polytypeStd = polytypeStd;
-saveStruct.polyAreaMean = polyAreaMean;
-saveStruct.polyAreaStd = polyAreaStd;
+% saveStruct.npoly = npoly;
+% saveStruct.polytypeMean = polytypeMean;
+% saveStruct.polytypeStd = polytypeStd;
+% saveStruct.polyAreaMean = polyAreaMean;
+% saveStruct.polyAreaStd = polyAreaStd;
 save(savestr,'-struct','saveStruct');
 
 

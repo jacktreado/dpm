@@ -15,7 +15,7 @@ mesoData = readMesoNetworkCTCS2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
-idx = phi > 0.45;
+idx = phi > 0.3;
 phi = phi(idx);
 
 % number of frames
