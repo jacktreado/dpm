@@ -37,9 +37,9 @@ savestr="$simtypedir"/"$basestr".mat
 MCODE="addpath ~/dpm/viz/meso2D; mesoDimerGrowth('$savestr',$NGROWTH,$kl,$kb,$kc,$del_l0,$P0); quit"
 
 # setup slurm files
-slurmf=slurm/"$runstr".slurm
-job_name="$runstr"
-runout=out/"$runstr".out
+slurmf=slurm/"$basestr".slurm
+job_name="$basestr"
+runout=out/"$basestr".out
 rm -f $slurmf
 
 # echo about time
