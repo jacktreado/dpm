@@ -6,7 +6,7 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kl0.1_kb01e-3_be100_da0.02_dl5_P1e-4_seed11.posctc';
+% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kl1_kb01e-3_be50_da2e-2_dl5_P-1e-2_seed13.posctc';
 % fstr = 'local/mesoDM2D_data/mesoDM2D_N32_n32_ca1.14_kl1_kb01e-3_be50_da0.02_dl10_P1e-4_seed27.posctc';
 fstr = '~/Jamming/CellSim/dpm/pos.test';
 
@@ -15,7 +15,7 @@ mesoData = readMesoNetworkCTCS2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
-idx = phi > 0.3;
+idx = phi > 0.45;
 phi = phi(idx);
 
 % number of frames
@@ -140,6 +140,11 @@ if NFRAMES > 2
     ax.YColor = 'r';
     xlabel('frame','Interpreter','latex');
     ax.FontSize = 36;
+    if mean(P) > 0
+        ax.YLim = [0 2*mean(P)];
+    else
+        ax.YLim = [2*mean(P) 0];
+    end
     
     % plot shape vs porosity
     ambroseData = load('/Users/jacktreado/Jamming/Flowers/structure/plant/ambroseMesoCells/ambroseData.mat');
@@ -295,7 +300,7 @@ else
 end
 
 % make a movie
-makeAMovie = 1;
+makeAMovie = 0;
 ctccopy = 0;
 if makeAMovie == 1
 %     moviestr = 'debug.mp4';
