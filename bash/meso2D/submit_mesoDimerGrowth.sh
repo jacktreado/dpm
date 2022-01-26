@@ -20,7 +20,7 @@ NGROWTH=$1
 kl=$2
 kb=$3
 kc=$4
-dl=$5
+del_l0=$5
 P0=$6
 
 # inputs about cluster
@@ -71,7 +71,7 @@ sbatch -t $time $slurmf
 # 2. kl
 # 3. kb
 # 4. kc
-# 5. dl
+# 5. del_l0
 # 6. P0
 # 7. partition
 # 8. time
