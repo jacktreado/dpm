@@ -38,10 +38,10 @@ MCODE="addpath ~/dpm/viz/meso2D; mesoBoxGrowth('$savestr',$N,$NGROWTH,$calA0_bas
 if [[ ! -f "$taskf" ]]
 then
 	echo Creating new task file $taskf, adding line $MCODE
-	echo matlab -nodisplay -r \""$MCODE"\" >> $taskf
+	echo module load MATLAB/2021a";" matlab -nodisplay -r \""$MCODE"\" >> $taskf
 else
 	echo Task file $taskf exists, appending line $MCODE
-	echo matlab -nodisplay -r \""$MCODE"\" >> $taskf
+	echo module load MATLAB/2021a";" matlab -nodisplay -r \""$MCODE"\" >> $taskf
 fi
 
 
