@@ -284,7 +284,7 @@ end
 
 % get frames to plot
 if showverts == 0
-    FSTART = 2;
+    FSTART = 1;
     FSTEP = 1;
     if NFRAMES > 50
         FSTEP = 2;

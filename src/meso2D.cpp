@@ -2675,7 +2675,7 @@ void meso2D::mesoFreeGrowth(meso2DMemFn forceCall, double Ftol, double dt0, doub
 void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double dPtol, double dt0, double da0, double dl0, double P0, double phiMin, int NMINSKIP){
 	// local variables
 	int i, ci, gi, vi, d, k = 0;
-	double G, Lold, phi, phi0, calAtmp;
+	double G, a0old, phi, phi0, calAtmp;
 
 	// initialize packing fraction definitions
 	phi0 = vertexPreferredPackingFraction2D();
@@ -2687,8 +2687,16 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 
 	// loop until phi0 < phiMin
 	while (phi > phiMin && k < itmax){
+		// increase lengths of void segments bordered by contact-less vertices
+		for (gi=0; gi<NVTOT; gi++){
+			if (zv[gi] <= 0 && zv[ip1[gi]] <= 0){
+				l0[gi] *= (1.0 + dl0);
+			}
+			else
+				t0[gi] = 0.0;
+		}
+
 		// relax current configuration
-		Lold = L[0];
 		mesoEnthalpyFIRE(forceCall, Ftol, dPtol, P0, dt0);
 
 		// print MINIMIZED positions if change in packing fraction is large enough
@@ -2696,6 +2704,19 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 			printMesoNetworkCTCS2D();
 			if (hessout.is_open())
 				mesoPrintLinearResponse(forceCall, Ftol, dt0, P0);
+		}
+
+		// increase areas to be preferred areas
+		for (ci=0; ci<NCELLS; ci++){
+			a0old = a0[ci];
+			if (a0[ci] < area(ci))
+				a0[ci] = area(ci);
+
+			gi = szList[ci];
+			for (vi=0; vi<nv[ci]; vi++){
+				r[gi] *= sqrt(a0[ci]/a0old);
+				gi++;
+			}
 		}
 
 		// output to console
@@ -2731,43 +2752,37 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 		updateMesophyllBondNetwork(CTCMIN,PAIRMIN);
 
 		// age particle shapes
-		dt = da0;
+		dt = dl0;
 		ageMesophyllShapeParameters();
 
 		// add vertices
 		if (NVTOT < NVMAX)
-			addMesophyllCellMaterial(0.0);
+			addMesophyllCellMaterial(dl0);
 
-		// // increase lengths of void segments bordered by contact-less vertices
-		// for (gi=0; gi<NVTOT; gi++){
-		// 	if (zv[gi] <= 0 && zv[ip1[gi]] <= 0)
-		// 		l0[gi] *= (1.0 + da0*dl0);
-		// 	// else
-		// 		// l0[gi] *= (1.0 + 0.5*da0);
+		// // increase lengths of void segments bordered by contact-less vertices (IF shape is below max, otherwise normal growth)
+		// gi = 0;
+		// for (ci=0; ci<NCELLS; ci++){
+		// 	calAtmp = getCalA(ci);
+		// 	for (vi=0; vi<nv[ci]; vi++){
+		// 		if (calAtmp < calAmax){
+		// 			if (zv[gi] <= 0 && zv[ip1[gi]] <= 0)
+		// 				l0[gi] *= (1.0 + da0*dl0);
+		// 		}
+		// 		else
+		// 			l0[gi] *= (1.0 + da0);
+		// 		gi++;
+		// 	}
 		// }
 
-		// increase lengths of void segments bordered by contact-less vertices (IF shape is below max, otherwise normal growth)
-		gi = 0;
-		for (ci=0; ci<NCELLS; ci++){
-			calAtmp = getCalA(ci);
-			for (vi=0; vi<nv[ci]; vi++){
-				if (calAtmp < calAmax){
-					if (zv[gi] <= 0 && zv[ip1[gi]] <= 0)
-						l0[gi] *= (1.0 + da0*dl0);
-				}
-				else
-					l0[gi] *= (1.0 + da0);
-				gi++;
-			}
-		}
-
-		// increase particle size, radii size
-		for (ci=0; ci<NCELLS; ci++)
-			a0[ci] *= pow(1 + da0,2.0);
-		for (gi=0; gi<NVTOT; gi++){
-			// r[gi] *= L[0]/Lold;
-			r[gi] *= (1.0 + da0);
-		}
+		// // increase particle size, radii size
+		// for (ci=0; ci<NCELLS; ci++){
+		// 	// a0[ci] *= pow(1 + da0,2.0);
+		// 	a0old = a0[ci];
+		// 	a0[ci] = area(ci);
+		// }
+		// for (gi=0; gi<NVTOT; gi++){
+		// 	r[gi] *= (1.0 + da0);
+		// }
 
 		// update packing fraction
 		phi0 = vertexPreferredPackingFraction2D();
@@ -3216,8 +3231,8 @@ void meso2D::addMesophyllCellMaterial(double dl0){
 		// add vertices between neighbors of new vertices
 		else if (zv[gi] == -1){
 			// // relax new vertex toward mean segment length of cell
-			l0[gim1] += dl0*dt*(meanl - l0[gim1]);
-			l0[gi] += dl0*dt*(meanl - l0[gi]);
+			l0[gim1] += dl0*(meanl - l0[gim1]);
+			l0[gi] += dl0*(meanl - l0[gi]);
 
 			// birth if bwd neighbor is connected
 			if (zv[gim1] > 0 && dlim1 > testl)
@@ -3233,7 +3248,7 @@ void meso2D::addMesophyllCellMaterial(double dl0){
 	if (growthVerts.size() > 0){
 		for (gi=0; gi<growthVerts.size(); gi++){
 			cout << "adding vertex between gi=" << growthVerts.at(gi)+gi << " and gip1=" << ip1[growthVerts.at(gi)+gi] << endl;
-			addVertex(growthVerts.at(gi)+gi,(1+(dt*dl0/growthVerts.size()))*l0.at(growthVerts.at(gi)+gi));
+			addVertex(growthVerts.at(gi)+gi,(1+(dl0/growthVerts.size()))*l0.at(growthVerts.at(gi)+gi));
 			// addVertex(growthVerts.at(gi)+gi,l0.at(growthVerts.at(gi)+gi));
 		}
 	}
