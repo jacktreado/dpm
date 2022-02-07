@@ -169,7 +169,7 @@ for gg = 1:NGROWTH
             im1 = mod(ii+n-2,n)+1;
             if bw(ii,1,nn) == 0 && sum(bij(gi,:)) == 0
                 l0([im1 ii],nn) = l0([im1 ii],nn)*(1 + dl0);
-                th0([im1 ii],nn) = th0([im1 ii],nn) + dl0*cB;
+                th0([im1 ii],nn) = th0([im1 ii],nn) - dl0*cB;
             elseif sum(bij(gi,:)) ~= 0 || bw(ii,1,nn) ~= 0
                 th0(ii,nn) = th0(ii,nn)*(1.0 - cB*dl0);
             end
@@ -264,16 +264,48 @@ for gg = 1:NGROWTH
             end
         end
     end
+    
+    % save mat data as you go
+    
+    % constant data
+    saveStruct.N = N;
+    saveStruct.n = n;
+    saveStruct.calA0_base = calA0_base;
+    saveStruct.kl_base = kl_base;
+    saveStruct.kb_base = kb_base;
+    saveStruct.kc = kc;
+    saveStruct.dl0 = dl0;
+    saveStruct.da0 = da0;
+    saveStruct.cB = cB;
+    saveStruct.P0 = P0;
+    
+    % variable data
+    saveStruct.NGROWTH = gg;
+    saveStruct.xList = xList(1:gg);
+    saveStruct.yList = yList(1:gg);
+    saveStruct.rList = rList(1:gg);
+    saveStruct.LList = LList(1:gg,:);
+    saveStruct.aList = aList(1:gg,:);
+    saveStruct.a0List = a0List(1:gg,:);
+    saveStruct.lList = lList(1:gg);
+    saveStruct.l0List = l0List(1:gg);
+    saveStruct.thiList = thiList(1:gg);
+    saveStruct.th0List = th0List(1:gg);
+    saveStruct.calAList = calAList(1:gg,:);
+    saveStruct.calA0List = calA0List(1:gg,:);
+    saveStruct.bijList = bijList(1:gg);
+    saveStruct.bwList = bwList(1:gg);
+    save(savestr,'-struct','saveStruct');
 end
 
-% save
-save(savestr,...
-    'n','N','NGROWTH','calA0_base','kl_base',...
-    'kb_base','kc','dl0','da0','cB','P0',...
-    'xList','yList','rList','LList',...
-    'aList','a0List','lList','l0List',...
-    'thiList','th0List','calAList','calA0List',...
-    'bijList','bwList');
+% % save
+% save(savestr,...
+%     'n','N','NGROWTH','calA0_base','kl_base',...
+%     'kb_base','kc','dl0','da0','cB','P0',...
+%     'xList','yList','rList','LList',...
+%     'aList','a0List','lList','l0List',...
+%     'thiList','th0List','calAList','calA0List',...
+%     'bijList','bwList');
 
 end
 
@@ -516,18 +548,18 @@ while(fcheck > Ftol && it < itmax)
         % -- bending force
 
         % get sine + cosine
-        si = lvx.*lvy(im1) - lvy.*lvx(im1);
-        ci = lvx.*lvx(im1) + lvy.*lvy(im1);
+        si = lvx(im1).*lvy - lvy(im1).*lvx;
+        ci = lvx(im1).*lvx + lvy(im1).*lvy;
         thi = atan2(si,ci);
         dth = thi - th0tmp;
 
-        % get normal vector
-        nix = lvy;
-        niy = -lvx;
+        % get normal unit vector
+        nix = lvy./l;
+        niy = -lvx./l;
 
         % construct force components
-        fbix = (dth - dth(ip1)).*nix./(l.^2);
-        fbiy = (dth - dth(ip1)).*niy./(l.^2);
+        fbix = (dth(ip1) - dth).*nix./l;
+        fbiy = (dth(ip1) - dth).*niy./l;
 
         fbim1x = -fbix(im1);
         fbim1y = -fbiy(im1);
@@ -878,18 +910,18 @@ while(fcheck > Ftol && it < itmax)
         % -- bending force
 
         % get sine + cosine
-        si = lvx.*lvy(im1) - lvy.*lvx(im1);
-        ci = lvx.*lvx(im1) + lvy.*lvy(im1);
+        si = lvx(im1).*lvy - lvy(im1).*lvx;
+        ci = lvx(im1).*lvx + lvy(im1).*lvy;
         thi = atan2(si,ci);
         dth = thi - th0tmp;
 
-        % get normal vector
-        nix = lvy;
-        niy = -lvx;
+        % get normal unit vector
+        nix = lvy./l;
+        niy = -lvx./l;
 
         % construct force components
-        fbix = (dth - dth(ip1)).*nix./(l.^2);
-        fbiy = (dth - dth(ip1)).*niy./(l.^2);
+        fbix = (dth(ip1) - dth).*nix./l;
+        fbiy = (dth(ip1) - dth).*niy./l;
 
         fbim1x = -fbix(im1);
         fbim1y = -fbiy(im1);
@@ -1200,9 +1232,9 @@ for nn = 1:N
     
     % -- bending contribution
     
-    % get angles + cosine
-    si = lvx.*lvy(im1) - lvy.*lvx(im1);
-    ci = lvx.*lvx(im1) + lvy.*lvy(im1);
+    % get sine + cosine
+    si = lvx(im1).*lvy - lvy(im1).*lvx;
+    ci = lvx(im1).*lvx + lvy(im1).*lvy;
     thi = atan2(si,ci);
     dth = thi - th0tmp;
     
@@ -1321,20 +1353,16 @@ for nn = 1:N
     % segment vectors
     lvx = xtmp(ip1) - xtmp;
     lvy = ytmp(ip1) - ytmp;
-
-    % update perimeter segment lengths
-    l = sqrt(lvx.^2 + lvy.^2);
     
     % get sine + cosine
-    si = lvx.*lvy(im1) - lvy.*lvx(im1);
-    ci = lvx.*lvx(im1) + lvy.*lvy(im1);
-    thi = atan2(si,ci);
+    si = lvx(im1).*lvy - lvy(im1).*lvx;
+    ci = lvx(im1).*lvx + lvy(im1).*lvy;
+    thi_tmp = atan2(si,ci);
     
     % assign
-    thi(:,nn) = thi;
+    thi(:,nn) = thi_tmp;
 end
 end
-
 
 
 
