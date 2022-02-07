@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # directory for all output for cell simulations
-outputdir=/home/jdt45/scratch60
+outputdir=/gpfs/loomis/project/fas/ohern/jdt45/dpm
 
 # directory for simulations specific to sphereGel
 simtypedir=$outputdir/mesoBoxGrowth
