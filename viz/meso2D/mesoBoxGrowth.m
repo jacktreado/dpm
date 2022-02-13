@@ -1,4 +1,4 @@
-function mesoBoxGrowth(savestr,N,NGROWTH,calA0_base,kl_base,kb_base,kc,dl0,da0,cB,P0)
+function mesoBoxGrowth(savestr,N,NGROWTH,calA0_base,kb_base,dl0,da0,cB,th0_min_scale,P0)
 %% FUNCTION to run mesoBoxGrowth in single, self-contained function, save output
 
 % constants
@@ -6,8 +6,11 @@ phi0        = 0.1;
 Pcmp        = 1e-2;
 bbreak      = 1.1;
 n           = 32;
+kl_base     = 1.0;
 l0_base     = sqrt(4.0*pi*calA0_base)/n;
+kc          = 1.0;
 kw          = kc;
+th0_min     = -th0_min_scale*(0.5*pi);
 
 
 % shape parameters
@@ -162,14 +165,25 @@ for gg = 1:NGROWTH
 
     % grow area, void perimeter
     for nn = 1:N
+        % grow areas and radii
         a0(nn) = a0(nn)*(1 + dl0*da0)^2;
         r(:,nn) = r(:,nn)*(1 + dl0*da0);
+        
+        % growth shape parameters depending on void or contact
         for ii = 1:n
+            % get vertex indexing
             gi = (nn-1)*n + ii;
             im1 = mod(ii+n-2,n)+1;
+            
+            % if void, growth perimeter near void vertices
+            % and drive curvature toward th0_min
             if bw(ii,1,nn) == 0 && sum(bij(gi,:)) == 0
                 l0([im1 ii],nn) = l0([im1 ii],nn)*(1 + dl0);
-                th0([im1 ii],nn) = th0([im1 ii],nn) - dl0*cB;
+                th0tmp = th0(ii,nn);
+                if th0tmp > th0_min + dl0*cB
+                    th0(ii,nn) = th0tmp - dl0*cB;
+                end
+            % if contact
             elseif sum(bij(gi,:)) ~= 0 || bw(ii,1,nn) ~= 0
                 th0(ii,nn) = th0(ii,nn)*(1.0 - cB*dl0);
             end
@@ -277,6 +291,7 @@ for gg = 1:NGROWTH
     saveStruct.dl0 = dl0;
     saveStruct.da0 = da0;
     saveStruct.cB = cB;
+    saveStruct.th0_min;
     saveStruct.P0 = P0;
     
     % variable data
@@ -298,6 +313,7 @@ for gg = 1:NGROWTH
     save(savestr,'-struct','saveStruct');
 end
 
+fprintf('Finished running mesoBoxGrowth, saved data in %s\n',savestr);
 % % save
 % save(savestr,...
 %     'n','N','NGROWTH','calA0_base','kl_base',...

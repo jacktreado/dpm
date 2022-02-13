@@ -16,23 +16,22 @@ mkdir -p tasks
 N=$1
 NGROWTH=$2
 calA0_base=$3
-kl_base=$4
-kb_base=$5
-kc=$6
-dl0=$7
-da0=$8
-cB=$9
-P0="${10}"
+kb_base=$4
+dl0=$5
+da0=$6
+cB=$7
+th0_min_scale=$8
+P0=$9
 
 # name strings
-basestr=mesoBoxGrowth_N"$N"_NG"$NGROWTH"_ca"$calA0_base"_kl"$kl_base"_kb"$kb_base"_kc"$kc"_dl"$dl0"_da"$da0"_cB"$cB"_P0"$P0"
+basestr=mesoBoxGrowth_N"$N"_NG"$NGROWTH"_ca"$calA0_base"_kb"$kb_base"_dl"$dl0"_da"$da0"_cB"$cB"_t0m"$th0_min_scale"_P0"$P0"
 
 # get mafile string to save data
 savestr="$simtypedir"/"$basestr".mat
 taskf=tasks/mesoBoxGrowth.task
 
 # create matlab command
-MCODE="addpath ~/dpm/viz/meso2D; mesoBoxGrowth('$savestr',$N,$NGROWTH,$calA0_base,$kl_base,$kb_base,$kc,$dl0,$da0,$cB,$P0); quit"
+MCODE="addpath ~/dpm/viz/meso2D; mesoBoxGrowth('$savestr',$N,$NGROWTH,$calA0_base,$kb_base,$dl0,$da0,$cB,$th0_min_scale,$P0); quit"
 
 # add to task file
 if [[ ! -f "$taskf" ]]
@@ -53,12 +52,11 @@ fi
 # 1. N
 # 2. NGROWTH
 # 3. calA0
-# 4. kl
-# 5. kb
-# 6. kc
-# 7. dl0
-# 8. da0
-# 9. cB
+# 4. kb
+# 5. dl0
+# 6. da0
+# 7. cB
+# 8. th0_min_scale (sets min th0 in units of 0.5 * pi)
 # 10. P0
 
 # NOTE: this only adds to task file mesoBoxGrowth.task in tasks/ directory
