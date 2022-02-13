@@ -57,7 +57,7 @@ fi
 # 6. da0
 # 7. cB
 # 8. th0_min_scale (sets min th0 in units of 0.5 * pi)
-# 10. P0
+# 9. P0
 
 # NOTE: this only adds to task file mesoBoxGrowth.task in tasks/ directory
 # ** If running a new batch file, delete task file (rm tasks/mesoBoxGrowth.task)

@@ -291,7 +291,7 @@ for gg = 1:NGROWTH
     saveStruct.dl0 = dl0;
     saveStruct.da0 = da0;
     saveStruct.cB = cB;
-    saveStruct.th0_min;
+    saveStruct.th0_min_scale = th0_min_scale;
     saveStruct.P0 = P0;
     
     % variable data
