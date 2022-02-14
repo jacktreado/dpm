@@ -12,6 +12,9 @@ kc          = 1.0;
 kw          = kc;
 th0_min     = -th0_min_scale*(0.5*pi);
 
+% stopping criterion: phi < 0.3
+phimin      = 0.35;
+
 
 % shape parameters
 a0          = ones(1,N);
@@ -158,9 +161,11 @@ calAList = zeros(NGROWTH,N);
 calA0List = zeros(NGROWTH,N);
 bijList = cell(NGROWTH,1);
 bwList = cell(NGROWTH,1);
+phiList = zeros(NGROWTH,1);
 
-
-for gg = 1:NGROWTH
+phi = 1;
+gg = 1;
+while gg <= NGROWTH && phi > phimin
     fprintf('Enthalpy min + growth, step gg = %d\n',gg);
 
     % grow area, void perimeter
@@ -207,6 +212,7 @@ for gg = 1:NGROWTH
     calA = p.^2./(4.0*pi*a);
     calA0 = sum(l0).^2./(4.0*pi*a0);
     thi = currentAngles(x,y);
+    phi = sum(a)/(L(1)*L(2));
     
     fprintf('\n** Enthalpy minimized + printing\n');
     fprintf('** Pext = %0.5g\n',Pext);
@@ -215,7 +221,7 @@ for gg = 1:NGROWTH
     fprintf('** L = %0.5g\n',L(1));
     fprintf('** calA1 = %0.5g, calA2 = %0.5g\n',calA(1),calA(2));
     fprintf('** calA01 = %0.5g, calA02 = %0.5g\n',calA0(1),calA0(2));
-    fprintf('** phi = %0.5g\n',sum(a)/(L(1)*L(2)));
+    fprintf('** phi = %0.5g\n',phi);
     fprintf('** area strain = %0.5g, %0.5g\n\n\n',da(1),da(2));
     
     % save configuration
@@ -233,6 +239,7 @@ for gg = 1:NGROWTH
     calA0List(gg,:) = calA0;
     bijList{gg} = bij;
     bwList{gg} = bw;
+    phiList(gg) = phi;
     
     
     % break long bonds
@@ -310,10 +317,21 @@ for gg = 1:NGROWTH
     saveStruct.calA0List = calA0List(1:gg,:);
     saveStruct.bijList = bijList(1:gg);
     saveStruct.bwList = bwList(1:gg);
+    saveStruct.phiList = phiList(1:gg);
     save(savestr,'-struct','saveStruct');
+    
+    % increment growth scale
+    gg = gg + 1;
 end
+if gg > NGROWTH
+    fprintf('NGROWTH steps finished, phi=%0.5g, so ending mesoBoxGrowth protocol. Saved data is in %s\n',phi,savestr);
+else
+    fprintf('Parameter phimin reached, phi=%0.5g, so ending mesoBoxGrowth protocol. Saved data is in %s\n',phi,savestr);
+end
+fprintf('Goodbye!\n');
 
-fprintf('Finished running mesoBoxGrowth, saved data in %s\n',savestr);
+
+
 % % save
 % save(savestr,...
 %     'n','N','NGROWTH','calA0_base','kl_base',...
