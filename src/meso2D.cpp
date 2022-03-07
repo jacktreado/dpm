@@ -3548,6 +3548,7 @@ void meso2D::ageMesophyllShapeParameters(vector<bool> &edge_verts, double dl0, d
 	// local variables
 	int gi, ci, vi;
 	double lix, liy, lim1x, lim1y, li, ti, sini, cosi;
+	double dl0_tmp;
 
 	// grow areas, radii
 	gi = 0; 
@@ -3587,16 +3588,21 @@ void meso2D::ageMesophyllShapeParameters(vector<bool> &edge_verts, double dl0, d
 		cosi = lim1x*lix + lim1y*liy;
 		ti = atan2(sini,cosi);
 
-		// age near edges
-		if ( (edge_verts[gi] && (edge_verts[ip1[gi]] || zv[ip1[gi]] <= 0)) || (zv[gi] <= 0 && edge_verts[ip1[gi]]) ){
+		// // age near edges
+		// if ( (edge_verts[gi] && (edge_verts[ip1[gi]] || zv[ip1[gi]] <= 0)) || (zv[gi] <= 0 && edge_verts[ip1[gi]]) ){
+		// 	l0[gi] *= (1.0 + dl0);
+		// 	if (t0[gi] > t0_min + dl0*cB)
+		// 		t0[gi] -= dl0*cB;
+		// }
+		// // grow on void
+		// else if (zv[gi] <= 0){
+		// 	l0[gi] += dl0*cL*(li - l0[gi]);
+		// 	t0[gi] += dl0*cB*(ti - t0[gi]);
+		// }
+		if (zv[gi] <= 0){
 			l0[gi] *= (1.0 + dl0);
 			if (t0[gi] > t0_min + dl0*cB)
 				t0[gi] -= dl0*cB;
-		}
-		// grow on void
-		else if (zv[gi] <= 0){
-			l0[gi] += dl0*cL*(li - l0[gi]);
-			t0[gi] += dl0*cB*(ti - t0[gi]);
 		}
 		// if ctc, age toward 0
 		else

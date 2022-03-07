@@ -39,3 +39,7 @@ cat $slurmf
 # run sbatch file
 echo -- running on slurm in partition $partition
 sbatch -t $time $slurmf
+
+
+
+
