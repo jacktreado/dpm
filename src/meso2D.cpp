@@ -30,6 +30,7 @@ meso2D::meso2D(string &inputFileStr,int seed) : dpm(2) {
 	}
 
 	// set variables to default
+	NBUBBLES = 0;
 	betaEff=0.0; ctcdel=1.0; ctch=0.5; cL=0.0; aL=1.0; cB=0.0; cKb=0.0; pbc[0]=1; pbc[1]=1;
 	ka = 1.0;
 	kl = 1.0;
@@ -159,7 +160,151 @@ meso2D::meso2D(string &inputFileStr,int seed) : dpm(2) {
 	srand48(seed);
 }
 
+meso2D::meso2D(string &inputFileStr, double voidBubbleScale, int seed) : dpm(2) {
+	// open file
+	ifstream inputobj(inputFileStr.c_str());
+	if (!inputobj.is_open()){
+		cerr << "** ERROR: In meso2D void Bubble constructor, could not open file " << inputFileStr << ", ending here. " << endl;
+		exit(1);
+	}
 
+	// set variables to default
+	NBUBBLES = 0;
+	betaEff=0.0; ctcdel=1.0; ctch=0.5; cL=0.0; aL=1.0; cB=0.0; cKb=0.0; pbc[0]=1; pbc[1]=1;
+	ka = 1.0;
+	kl = 1.0;
+	kb = 0.0;
+	kc = 1.0;
+
+	// local variables
+	int nctmp, nvtmp, ci, vi, i;
+	double val;
+	double lxtmp, lytmp;
+	double s1, s2, s3;
+	double wp1, wp2;
+	double a0tmp, l0tmp, t0tmp, kbitmp;
+	double xtmp, ytmp, rtmp;
+	string inputStr;
+
+	// LINE 1: should be NEWFR
+	getline(inputobj, inputStr);
+	if (inputStr.compare(0,5,"NEWFR") != 0){
+		cerr << "** ERROR: In meso2D constructor, first line of input file NOT NEWFR, first line = " << inputStr << ". Ending." << endl;
+		exit(1);
+	}
+
+	// read in simulation information from header
+	getline(inputobj, inputStr);
+	sscanf(inputStr.c_str(),"NUMCL %d",&nctmp);
+	cout << "\t ** " << inputStr << endl;
+
+	getline(inputobj, inputStr);
+	sscanf(inputStr.c_str(),"NUMBL %d",&NBUBBLES);
+	cout << "\t ** " << inputStr << endl;
+
+	// let number of cells be # true cells + # bubbles
+	NCELLS = nctmp + NBUBBLES;
+
+	// verify input file
+	if (NCELLS < 1){
+		cerr << "** ERROR: in meso2D constructor, NCELLStmp = " << NCELLS << ". Ending here." << endl;
+		exit(1);
+	}
+	
+	getline(inputobj, inputStr);
+	sscanf(inputStr.c_str(),"PACKF %lf",&val);
+	cout << "\t ** " << inputStr << endl;
+
+	// initialize box lengths
+	getline(inputobj, inputStr);
+	sscanf(inputStr.c_str(),"BOXSZ %lf %lf",&lxtmp,&lytmp);
+	cout << "\t ** " << inputStr << endl;
+
+	L.at(0) = lxtmp;
+	L.at(1) = lytmp;
+
+	// initialize stress
+	getline(inputobj, inputStr);
+	sscanf(inputStr.c_str(),"STRSS %lf %lf %lf",&s1,&s2,&s3);
+	cout << "\t ** " << inputStr << endl;
+
+	stress.at(0) = s1;
+	stress.at(1) = s2;
+	stress.at(2) = s3;
+	Pinst = 0.0;
+
+	// szList and nv (keep track of global vertex indices)
+	nv.resize(NCELLS);
+	szList.resize(NCELLS);
+	a0.resize(NCELLS);
+
+	// initialize NVTOT to 0
+	NVTOT = 0;
+
+	// loop over cells, read in coordinates
+	cout << "\n\n** LOOPING OVER DATA, PRINTING INFO..." << endl;
+	for (ci=0; ci<NCELLS; ci++){
+		// first parse cell info
+		getline(inputobj, inputStr);
+		sscanf(inputStr.c_str(),"CINFO %d %*d %lf %*lf %*lf",&nvtmp,&a0tmp);
+
+		// print to console
+		cout << "\t ** " << inputStr << endl;
+
+		// store in vectors
+		nv.at(ci) = nvtmp;
+		a0.at(ci) = a0tmp;
+
+		// update NVTOT
+		NVTOT += nvtmp;
+
+		// increment szList
+		if (ci > 0)
+			szList.at(ci) = szList.at(ci-1) + nv.at(ci-1);
+
+		// loop over vertices, store coordinates
+		for (vi=0; vi<nvtmp; vi++){
+			// parse vertex coordinate info
+			getline(inputobj, inputStr);
+			sscanf(inputStr.c_str(),"VINFO %*d %*d %lf %lf %lf %lf %lf %lf %*lf",&xtmp,&ytmp,&rtmp,&l0tmp,&t0tmp,&kbitmp);
+
+			// print to console
+			cout << "\t ** " << inputStr << endl;
+
+			// push back 
+			x.push_back(xtmp);
+			x.push_back(ytmp);
+			r.push_back(rtmp);
+			l0.push_back(l0tmp);
+			t0.push_back(t0tmp);
+			kbi.push_back(kbitmp);
+		}
+	}
+	vertDOF = NDIM * NVTOT;
+	cout << "** NVTOT = " << NVTOT << ", vertDOF = " << vertDOF << ", NCELLS = " << NCELLS << ", NBUBBLES = " << NBUBBLES << ", NTRUECELLS = " << nctmp << endl;
+	cout << "** FINISHED LOOPING OVER DATA, CLOSING INPUT FILE OBJ\n" << endl;
+
+	// initialize vertex indexing
+	initializeVertexIndexing2D();
+
+	// initialize contact information
+	cij.resize(NCELLS * (NCELLS - 1) / 2);
+	zv.resize(NVTOT);
+	zc.resize(NVTOT);
+	
+	fill(cij.begin(),cij.end(),0);
+	fill(zv.begin(), zv.end(), 0);
+	fill(zc.begin(), zc.end(), 0);
+
+	// initialize contact network for bonds
+	initializeVertexContactNetwork();
+
+	// close input file object
+	inputobj.close();
+
+	// seed random number generator
+	srand48(seed);
+}
 
 
 
@@ -547,6 +692,145 @@ void meso2D::initializeMesophyllBondNetwork(){
 }
 
 
+// initialize bonds between overlapping CELLS
+void meso2D::initializeMesoBubbleBondNetwork(){
+	// local variables
+	int ci, cj, gi, gj, vi, vj, bi, bj, pi, pj, boxid, sbtmp;
+	double sij, rij, dx, dy;
+	int NTCELLS = NCELLS - NBUBBLES;
+
+	// sort particles
+	sortNeighborLinkedList2D();
+
+	// reset vertex-vertex bond network
+	fill(gij.begin(), gij.end(), 0);
+	fill(zc.begin(), zc.end(), 0);
+	fill(zv.begin(), zv.end(), 0);
+
+	// loop over boxes in cell linked list
+	for (bi=0; bi<NBX; bi++){
+
+		// get start of list of vertices
+		pi = head[bi];
+
+		// loop over linked list
+		while (pi > 0){
+			// real particle index
+			gi = pi - 1;
+
+			// next particle in list
+			pj = list[pi];
+
+			// loop down neighbors of pi in same interaction cell
+			while (pj > 0){
+				// real index of pj
+				gj = pj - 1;
+
+				// get cell and vert indices
+				cindices(ci,vi,gi);
+				cindices(cj,vj,gj);
+
+				if (ci == cj || ci >= NTCELLS || cj >= NTCELLS){
+					pj = list[pj];
+					continue;
+				}
+
+				// contact distance
+				sij = r[gi] + r[gj];
+
+				// particle distance
+				dx = x[NDIM*gj] - x[NDIM*gi];
+				if (pbc[0])
+					dx -= L[0]*round(dx/L[0]);
+				if (dx < sij){
+					dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
+					if (pbc[1])
+						dy -= L[1]*round(dy/L[1]);
+					if (dy < sij){
+						rij = sqrt(dx*dx + dy*dy);
+						if (rij < sij){
+
+							// add bond to network
+							if (gi > gj)
+								gij[NVTOT*gj + gi - (gj+1)*(gj+2)/2] = 1;
+							else if (gi < gj)
+								gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 1; 
+
+							// update cell and vertex contacts
+							zc[ci]++;
+							zc[cj]++;
+
+							zv[gi]++;
+							zv[gj]++;
+						}
+					}
+				}
+				// update pj
+				pj = list[pj];
+			}
+
+			// test overlaps with forward neighboring interaction cells
+			for (bj=0; bj<NNN; bj++){
+				// only check if boundaries permit
+				if (nn[bi][bj] == -1)
+					continue;
+
+				// get first particle in neighboring interaction cell
+				pj = head[nn[bi][bj]];
+
+				// loop down neighbors of pi in same interaction cell
+				while (pj > 0){
+					// real index of pj
+					gj = pj - 1;
+
+					// get cell and vert indices
+					cindices(ci,vi,gi);
+					cindices(cj,vj,gj);
+
+					if (ci == cj || ci >= NTCELLS || cj >= NTCELLS){
+						pj = list[pj];
+						continue;
+					}
+
+					// contact distance
+					sij = r[gi] + r[gj];
+
+					// particle distance
+					dx = x[NDIM*gj] - x[NDIM*gi];
+					if (pbc[0])
+						dx -= L[0]*round(dx/L[0]);
+					if (dx < sij){
+						dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
+						if (pbc[1])
+							dy -= L[1]*round(dy/L[1]);
+						if (dy < sij){
+							rij = sqrt(dx*dx + dy*dy);
+							if (rij < sij){
+								// add bond
+								if (gi > gj)
+									gij[NVTOT*gj + gi - (gj+1)*(gj+2)/2] = 1;
+								else if (gi < gj)
+									gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 1; 
+
+								// update cell and vertex contacts
+								zc[ci]++;
+								zc[cj]++;
+
+								zv[gi]++;
+								zv[gj]++;
+							}
+						}
+					}
+					// update pj
+					pj = list[pj];
+				}
+			}
+			// update pi index to be next
+			pi = list[pi];
+		}
+	}
+}
+
 // mesophyll repulsive vertex forces
 void meso2D::mesoRepulsiveVertexForces(){
 	// local variables
@@ -714,6 +998,176 @@ void meso2D::mesoRepulsiveVertexForces(){
 	}
 }
 
+// // cell-only mesophyll repulsive vertex forces in presence of void bubbles
+// void meso2D::mesoNoBubbleVertexForces(){
+// 	// local variables
+// 	int ci, cj, gi, gj, vi, vj, bi, bj, pi, pj, boxid, sbtmp;
+// 	double sij, rij, dx, dy;
+// 	double ftmp, fx, fy;
+// 	int NTCELLS = NCELLS - NBUBBLES;
+
+// 	// sort particles
+// 	sortNeighborLinkedList2D();
+
+// 	// reset contact network
+// 	fill(cij.begin(), cij.end(), 0);
+
+// 	// loop over boxes in neighbor linked list
+// 	for (bi = 0; bi < NBX; bi++) {
+// 		// get start of list of vertices
+// 		pi = head[bi];
+
+// 		// loop over linked list
+// 		while (pi > 0) {
+// 			// real particle index
+// 			gi = pi - 1;
+// 			cindices(ci, vi, gi);
+
+// 			// next particle in list
+// 			pj = list[pi];
+
+// 			// loop down neighbors of pi in same cell
+// 			while (pj > 0) {
+// 				// real index of pj
+// 				gj = pj - 1;
+
+// 				// add to contacts
+// 				cindices(cj, vj, gj);
+
+// 				if (gj == ip1[gi] || gj == im1[gi] || ci >= NTCELLS || cj >= NTCELLS) {
+// 					pj = list[pj];
+// 					continue;
+// 				}
+
+// 				// contact distance
+// 				sij = r[gi] + r[gj];
+
+// 				// particle distance
+// 				dx = x[NDIM * gj] - x[NDIM * gi];
+// 				if (pbc[0])
+// 					dx -= L[0] * round(dx / L[0]);
+// 				if (dx < sij) {
+// 					dy = x[NDIM * gj + 1] - x[NDIM * gi + 1];
+// 					if (pbc[1])
+// 						dy -= L[1] * round(dy / L[1]);
+// 					if (dy < sij) {
+// 						rij = sqrt(dx * dx + dy * dy);
+// 						if (rij < sij) {
+// 							// force scale
+// 							ftmp = (kc / sij) * (1 - (rij / sij));
+// 							fx = ftmp * (dx / rij);
+// 							fy = ftmp * (dy / rij);
+
+// 							// add to forces
+// 							F[NDIM * gi] -= fx;
+// 							F[NDIM * gi + 1] -= fy;
+
+// 							F[NDIM * gj] += fx;
+// 							F[NDIM * gj + 1] += fy;
+
+// 							// increase potential energy
+// 							U += 0.5 * kc * pow((1 - (rij / sij)), 2.0);
+
+// 							// add to dUdL contribution to pressure
+// 							Pinst -= ftmp*(rij/L[0]);
+
+// 							// add to virial stress
+// 							stress[0] += (dx * fx)/(L[0] * L[1]);
+// 							stress[1] += (dy * fy)/(L[0] * L[1]);;
+// 							stress[2] += (0.5 * (dx * fy + dy * fx))/(L[0] * L[1]);
+
+// 							if (ci > cj)
+// 								cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2]++;
+// 							else if (ci < cj)
+// 								cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2]++;
+// 						}
+// 					}
+// 				}
+
+// 				// update pj
+// 				pj = list[pj];
+// 			}
+
+// 			// test overlaps with forward neighboring cells
+// 			for (bj = 0; bj < NNN; bj++) {
+// 				// only check if boundaries permit
+// 				if (nn[bi][bj] == -1)
+// 					continue;
+
+// 				// get first particle in neighboring cell
+// 				pj = head[nn[bi][bj]];
+
+// 				// loop down neighbors of pi in same cell
+// 				while (pj > 0) {
+// 					// real index of pj
+// 					gj = pj - 1;
+
+// 					// add to contacts
+// 					cindices(cj, vj, gj);
+
+// 					if (gj == ip1[gi] || gj == im1[gi] || ci >= NTCELLS || cj >= NTCELLS) {
+// 						pj = list[pj];
+// 						continue;
+// 					}
+// 					// contact distance
+// 					sij = r[gi] + r[gj];
+
+// 					// particle distance
+// 					dx = x[NDIM * gj] - x[NDIM * gi];
+// 					if (pbc[0])
+// 						dx -= L[0] * round(dx / L[0]);
+// 					if (dx < sij) {
+// 						dy = x[NDIM * gj + 1] - x[NDIM * gi + 1];
+// 						if (pbc[1])
+// 							dy -= L[1] * round(dy / L[1]);
+// 						if (dy < sij) {
+// 							rij = sqrt(dx * dx + dy * dy);
+// 							if (rij < sij) {
+// 								// force scale
+// 								ftmp = (kc / sij) * (1 - (rij / sij));
+// 								fx = ftmp * (dx / rij);
+// 								fy = ftmp * (dy / rij);
+
+// 								// add to forces
+// 								F[NDIM * gi] -= fx;
+// 								F[NDIM * gi + 1] -= fy;
+
+// 								F[NDIM * gj] += fx;
+// 								F[NDIM * gj + 1] += fy;
+
+// 								// increae potential energy
+// 								U += 0.5 * kc * pow((1 - (rij / sij)), 2.0);
+
+// 								// add to dUdL contribution to pressure
+// 								Pinst -= ftmp*(rij/L[0]);
+
+// 								// add to virial stress
+// 								stress[0] += (dx * fx)/(L[0] * L[1]);
+// 								stress[1] += (dy * fy)/(L[0] * L[1]);;
+// 								stress[2] += (0.5 * (dx * fy + dy * fx))/(L[0] * L[1]);
+
+// 								// add to contacts
+// 								cindices(ci, vi, gi);
+// 								cindices(cj, vj, gj);
+
+// 								if (ci > cj)
+// 									cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2]++;
+// 								else if (ci < cj)
+// 									cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2]++;
+// 							}
+// 						}
+// 					}
+
+// 					// update pj
+// 					pj = list[pj];
+// 				}
+// 			}
+
+// 			// update pi index to be next
+// 			pi = list[pi];
+// 		}
+// 	}
+// }
 
 // mesophyll specific shape forces
 void meso2D::mesoShapeForces(){
@@ -873,21 +1327,21 @@ void meso2D::mesoShapeForces(){
 			lip1y = rip2y - rip1y;
 
 			// get angles
-			sinim1 = lim1x*lim2y - lim1y*lim2x;
-			cosim1 = lim1x*lim2x + lim1y*lim2y;
+			sinim1 = lim2x*lim1y - lim2y*lim1x;
+			cosim1 = lim2x*lim1x + lim2y*lim1y;
 
-			sini = lix*lim1y - liy*lim1x;
-			cosi = lix*lim1x + liy*lim1y;
+			sini = lim1x*liy - lim1y*lix;
+			cosi = lim1x*lix + lim1y*liy;
 
-			sinip1 = lip1x*liy - lip1y*lix;
-			cosip1 = lip1x*lix + lip1y*liy;
+			sinip1 = lix*lip1y - liy*lip1x;
+			cosip1 = lix*lip1x + liy*lip1y;
 
 			// get normal vectors
-			nim1x = lim1y;
-			nim1y = -lim1x;
+			nim1x = lim1y/lim1;
+			nim1y = -lim1x/lim1;
 
-			nix = liy;
-			niy = -lix;
+			nix = liy/li;
+			niy = -lix/li;
 
 			// get change in angles
 			dtim1 = atan2(sinim1,cosim1) - t0[im1[gi]];
@@ -895,12 +1349,12 @@ void meso2D::mesoShapeForces(){
 			dtip1 = atan2(sinip1,cosip1) - t0[ip1[gi]];
 
 			// get delta delta theta's
-			ddtim1 = (dti - dtim1)/(lim1*lim1);
-			ddti = (dti - dtip1)/(li*li);
+			ddtim1 = (dti - dtim1)/lim1;
+			ddti = (dtip1 - dti)/li;
 
 			// add to force
-			fbx 			= fbim1*ddtim1*nim1x + fbi*ddti*nix;
-			fby 			= fbim1*ddtim1*nim1y + fbi*ddti*niy;
+			fbx 			= fbi*ddti*nix - fbim1*ddtim1*nim1x;
+			fby 			= fbi*ddti*niy - fbim1*ddtim1*nim1y;
 			F[NDIM*gi] 		+= fbx;
 			F[NDIM*gi + 1] 	+= fby;
 
@@ -1097,21 +1551,21 @@ void meso2D::mesoShapeForces(double gamma){
 			lip1y = rip2y - rip1y;
 
 			// get angles
-			sinim1 = lim1x*lim2y - lim1y*lim2x;
-			cosim1 = lim1x*lim2x + lim1y*lim2y;
+			sinim1 = lim2x*lim1y - lim2y*lim1x;
+			cosim1 = lim2x*lim1x + lim2y*lim1y;
 
-			sini = lix*lim1y - liy*lim1x;
-			cosi = lix*lim1x + liy*lim1y;
+			sini = lim1x*liy - lim1y*lix;
+			cosi = lim1x*lix + lim1y*liy;
 
-			sinip1 = lip1x*liy - lip1y*lix;
-			cosip1 = lip1x*lix + lip1y*liy;
+			sinip1 = lix*lip1y - liy*lip1x;
+			cosip1 = lix*lip1x + liy*lip1y;
 
 			// get normal vectors
-			nim1x = lim1y;
-			nim1y = -lim1x;
+			nim1x = lim1y/lim1;
+			nim1y = -lim1x/lim1;
 
-			nix = liy;
-			niy = -lix;
+			nix = liy/li;
+			niy = -lix/li;
 
 			// get change in angles
 			dtim1 = atan2(sinim1,cosim1) - t0[im1[gi]];
@@ -1119,12 +1573,12 @@ void meso2D::mesoShapeForces(double gamma){
 			dtip1 = atan2(sinip1,cosip1) - t0[ip1[gi]];
 
 			// get delta delta theta's
-			ddtim1 = (dti - dtim1)/(lim1*lim1);
-			ddti = (dti - dtip1)/(li*li);
+			ddtim1 = (dti - dtim1)/lim1;
+			ddti = (dtip1 - dti)/li;
 
 			// add to force
-			fbx 			= fbim1*ddtim1*nim1x + fbi*ddti*nix;
-			fby 			= fbim1*ddtim1*nim1y + fbi*ddti*niy;
+			fbx 			= fbi*ddti*nix - fbim1*ddtim1*nim1x;
+			fby 			= fbi*ddti*niy - fbim1*ddtim1*nim1y;
 			F[NDIM*gi] 		+= fbx;
 			F[NDIM*gi + 1] 	+= fby;
 
@@ -2362,17 +2816,21 @@ void meso2D::mesoNetworkExtension(meso2DMemFn forceCall, double Ftol, double dt0
 	phi0 /= L[0]*L[1];
 	lastPrintPhi = phi0;
 
-	// minimum contacts
-	int CTCMIN = 0;
-	int PAIRMIN = 0;
+	// vector of vertices at edge of interfaces
+	vector<bool> edge_verts;
 
 	// loop until phi0 < phiMin
 	while (phi0 > phiMin && k < itmax){
 		// relax current configuration
 		mesoFIRE(forceCall, Ftol, dt0);
 
+		// find vertices at edge of interfaces
+		edge_verts.resize(NVTOT);
+		fill(edge_verts.begin(),edge_verts.end(),0);
+		findInterfaceEdges(edge_verts);
+
 		// break contact network
-		updateMesophyllBondNetwork(CTCMIN,PAIRMIN);
+		updateMesophyllBondNetwork(edge_verts);
 
 		// age particle shapes
 		dt = delShrink;
@@ -2444,10 +2902,6 @@ void meso2D::mesoPinExtension(double Ftol, double dt0, double hmax, double dh, d
 	vector<double> th(NCELLS,0.0);
 	vector<double> xpin(NDIM*NCELLS,0.0);
 
-	// minimum contacts
-	int CTCMIN = 3;
-	int PAIRMIN = 2;
-
 	// determine extension direction angles + initial pin placement
 	for (ci=0; ci<NCELLS; ci++){
 		// get center of mass
@@ -2470,6 +2924,10 @@ void meso2D::mesoPinExtension(double Ftol, double dt0, double hmax, double dh, d
 		xpin[NDIM*ci + 1] = cy;
 	}
 
+	// vector of vertices at edge of interfaces
+	vector<bool> edge_verts;
+
+
 	// loop over extension steps
 	while (h < hmax && k < itmax){
 		// printMesoPin2D(xpin, h);
@@ -2481,8 +2939,13 @@ void meso2D::mesoPinExtension(double Ftol, double dt0, double hmax, double dh, d
 		setdt(dt0);
 		mesoPinFIRE(xpin,Ftol,dt0,kcspring);
 
+		// find vertices at edge of interfaces
+		edge_verts.resize(NVTOT);
+		fill(edge_verts.begin(),edge_verts.end(),0);
+		findInterfaceEdges(edge_verts);
+
 		// update contact network
-		updateMesophyllBondNetwork(CTCMIN,PAIRMIN);
+		updateMesophyllBondNetwork(edge_verts);
 
 		// age particle shapes
 		dt = dh;
@@ -2573,10 +3036,6 @@ void meso2D::mesoFreeGrowth(meso2DMemFn forceCall, double Ftol, double dt0, doub
 	int ci, gi, k = 0;
 	double lastPrintPhi, scaleFactor;
 
-	// minimum contacts
-	int CTCMIN = 2;
-	int PAIRMIN = 2;
-
 	// current preferred packing fraction (neglect contribution from vertices)
 	double phi0 = 0.0;
 	for (ci=0; ci<NCELLS; ci++)
@@ -2590,13 +3049,21 @@ void meso2D::mesoFreeGrowth(meso2DMemFn forceCall, double Ftol, double dt0, doub
 	double a0check = a0.at(0);
 	double a0lim = a0max*a0check;
 
+	// edge vertices
+	vector<bool> edge_verts;
+
 	// loop over growth
 	while (a0check < a0lim && k < itmax){
 		// relax current configuration
 		mesoFIRE(forceCall, Ftol, dt0);
 
+		// find vertices at edge of interfaces
+		edge_verts.resize(NVTOT);
+		fill(edge_verts.begin(),edge_verts.end(),0);
+		findInterfaceEdges(edge_verts);
+
 		// break contact network
-		updateMesophyllBondNetwork(CTCMIN,PAIRMIN);
+		updateMesophyllBondNetwork(edge_verts);
 
 		// age particle shapes
 		dt = dphi0;
@@ -2672,7 +3139,17 @@ void meso2D::mesoFreeGrowth(meso2DMemFn forceCall, double Ftol, double dt0, doub
 }
 
 // simulate network *formation* using *enthalpy minimization*
-void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double dPtol, double dt0, double da0, double dl0, double P0, double phiMin, int NMINSKIP){
+// Updates (02/14/22)
+// 	* Changed perimeter growth to be on l0_im1, l0i only if vertex zv=0
+// 	* Changed angle growth to be driven toward negative minimum value
+// 
+// 	* ISSUE: how to get homogenous growth of perimeter? Seems like 
+// 	some regions "run off" while others stay small, causes heterogenous growth dynamics
+// 	-- Could be fixed by growth of void bubbles
+// 	-- SEEMS TO BE DRIVEN by non-homogenous contact breaking ... make it more so by labelling edge of voids differently? MAKE contacts break between different interfaces
+// 	-- 02/15: Getting closer, but will get to circle stage and then poro starts decreasing ... need to make sure that in circle stage, perimeter growth drives boundary growth?
+// 		** Try plotting which vertices are labelled as "edge", and 
+void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double dPtol, double dt0, double da0, double dl0, double t0_min, double P0, double phiMin, int NMINSKIP){
 	// local variables
 	int i, ci, gi, vi, d, k = 0;
 	double G, a0old, phi, phi0, calAtmp;
@@ -2681,42 +3158,84 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 	phi0 = vertexPreferredPackingFraction2D();
 	phi = vertexPackingFraction2D();
 
-	// minimum contacts
-	int CTCMIN = 0;
-	int PAIRMIN = 0;
+	// list of edge contacts
+	vector<bool> edge_verts;
+
+	// find vertices at edge of contacts
+	edge_verts.resize(NVTOT);
+	fill(edge_verts.begin(),edge_verts.end(),0);
+	findInterfaceEdges(edge_verts);
 
 	// loop until phi0 < phiMin
 	while (phi > phiMin && k < itmax){
-		// increase lengths of void segments bordered by contact-less vertices
-		for (gi=0; gi<NVTOT; gi++){
-			if (zv[gi] <= 0 && zv[ip1[gi]] <= 0){
-				l0[gi] *= (1.0 + dl0);
-			}
-			else
-				t0[gi] = 0.0;
-		}
+
+		// // growth driven by ALL VOID VERTICES
+		// for (gi=0; gi<NVTOT; gi++){
+		// 	// global radii growth
+		// 	r[gi] *= 1 + dl0*da0;
+
+		// 	// drive void-facing perimeter growth
+		// 	if (zv[gi] <= 0){
+		// 		// grow segment im1 and i if vertex i not in contact
+		// 		l0[im1[gi]] *= (1 + dl0);
+		// 		l0[gi] *= (1.0 + dl0);
+
+		// 		// drive curvature towards t0_min
+		// 		if (t0[gi] > t0_min + dl0*cB)
+		// 			t0[gi] -= dl0*cB;
+		// 	}
+		// 	// otherwise, relax angle toward 0 (flat interfaces)
+		// 	else
+		// 		t0[gi] *= 1 - dl0*cB;
+		// }
+
+		// // growth driven by EDGE VERTICES
+		// for (gi=0; gi<NVTOT; gi++){
+		// 	// global radii growth
+		// 	r[gi] *= 1 + dl0*da0;
+
+		// 	// growth between two edge vertices
+		// 	if ( (edge_verts[gi] && (edge_verts[ip1[gi]] || zv[ip1[gi]] <= 0)) || (zv[gi] <= 0 && edge_verts[ip1[gi]]) ) {
+		// 		// grow segment between edge vertices
+		// 		l0[gi] *= (1.0 + dl0);
+
+		// 		// drive curvature towards t0_min
+		// 		if (t0[gi] > t0_min + dl0*cB)
+		// 		// if (t0[gi] > -0.5*PI)
+		// 			t0[gi] -= dl0*cB;
+
+		// 		if (t0[ip1[gi]] > t0_min + dl0*cB)
+		// 		// if (t0[gi] > -0.5*PI)
+		// 			t0[ip1[gi]] -= dl0*cB;
+		// 	}
+		// 	else if (zv[gi] <= 0){
+		// 		if (t0[gi] > t0_min + dl0*cB)
+		// 			t0[gi] -= dl0*cB;
+		// 	}
+		// 	else
+		// 		t0[gi] *= 1 - dl0*cB;
+		// }
+
+		// // area-level growth
+		// for (ci=0; ci<NCELLS; ci++)
+		// 	a0[ci] *= pow(1 + dl0*da0,2.0);
+
+
+		// age and grow
+		ageMesophyllShapeParameters(edge_verts, dl0, da0, t0_min);
 
 		// relax current configuration
 		mesoEnthalpyFIRE(forceCall, Ftol, dPtol, P0, dt0);
+
+		// for (ci=0; ci<NCELLS; ci++)
+		// 	a0[ci] = area(ci);
+		// t0ToCurrent();
 
 		// print MINIMIZED positions if change in packing fraction is large enough
 		if (k % NMINSKIP == 0){
 			printMesoNetworkCTCS2D();
 			if (hessout.is_open())
 				mesoPrintLinearResponse(forceCall, Ftol, dt0, P0);
-		}
-
-		// increase areas to be preferred areas
-		for (ci=0; ci<NCELLS; ci++){
-			a0old = a0[ci];
-			if (a0[ci] < area(ci))
-				a0[ci] = area(ci);
-
-			gi = szList[ci];
-			for (vi=0; vi<nv[ci]; vi++){
-				r[gi] *= sqrt(a0[ci]/a0old);
-				gi++;
-			}
 		}
 
 		// output to console
@@ -2749,40 +3268,20 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 		cout << endl << endl;
 
 		// break contact network
-		updateMesophyllBondNetwork(CTCMIN,PAIRMIN);
+		updateMesophyllBondNetwork(edge_verts);
 
-		// age particle shapes
-		dt = dl0;
-		ageMesophyllShapeParameters();
+		// find vertices at edge of contacts
+		edge_verts.resize(NVTOT);
+		fill(edge_verts.begin(),edge_verts.end(),0);
+		findInterfaceEdges(edge_verts);
+
+		// // age particle shapes
+		// dt = dl0;
+		// ageMesophyllShapeParameters();
 
 		// add vertices
 		if (NVTOT < NVMAX)
-			addMesophyllCellMaterial(dl0);
-
-		// // increase lengths of void segments bordered by contact-less vertices (IF shape is below max, otherwise normal growth)
-		// gi = 0;
-		// for (ci=0; ci<NCELLS; ci++){
-		// 	calAtmp = getCalA(ci);
-		// 	for (vi=0; vi<nv[ci]; vi++){
-		// 		if (calAtmp < calAmax){
-		// 			if (zv[gi] <= 0 && zv[ip1[gi]] <= 0)
-		// 				l0[gi] *= (1.0 + da0*dl0);
-		// 		}
-		// 		else
-		// 			l0[gi] *= (1.0 + da0);
-		// 		gi++;
-		// 	}
-		// }
-
-		// // increase particle size, radii size
-		// for (ci=0; ci<NCELLS; ci++){
-		// 	// a0[ci] *= pow(1 + da0,2.0);
-		// 	a0old = a0[ci];
-		// 	a0[ci] = area(ci);
-		// }
-		// for (gi=0; gi<NVTOT; gi++){
-		// 	r[gi] *= (1.0 + da0);
-		// }
+			addMesophyllCellMaterial(edge_verts);
 
 		// update packing fraction
 		phi0 = vertexPreferredPackingFraction2D();
@@ -2793,6 +3292,137 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 	}
 }
 
+
+
+
+// drive voids by mesophyll void bubble growth
+void meso2D::mesoBubbleEnthalpyMin(meso2DMemFn forceCall, double Ftol, double dPtol, double dt0, double da0, double P0, double phiMin, int NMINSKIP){
+	// local variables
+	bool noBubbles = 1;
+	int NTOT, NTCELLS, i, ci, gi, vi, d, k = 0;
+	double G, a0old, phi, phi0, calAtmp;
+	double bubblePhi, growPhi;
+
+	// list of edge contacts
+	vector<bool> edge_verts;
+
+	// find vertices at edge of contacts
+	edge_verts.resize(NVTOT);
+	fill(edge_verts.begin(),edge_verts.end(),0);
+	findInterfaceEdges(edge_verts);
+
+	// change number of cells, to be switched when voids are large enough
+	NTOT = NCELLS;
+	NTCELLS = NTOT - NBUBBLES;
+	bubblePhi = 0.0;
+	for (ci=NTCELLS; ci<NCELLS; ci++)
+		bubblePhi += area(ci)/(L[0]*L[1]);
+	NCELLS = NTCELLS;
+	phi = vertexPackingFraction2D();
+	// growPhi = phi - 2.0*bubblePhi;
+	growPhi = 0.0;
+
+	// initialize packing fraction definitions
+	phi0 = vertexPreferredPackingFraction2D();
+	phi = vertexPackingFraction2D();
+
+	// loop until phi0 < phiMin
+	while (phi > phiMin && k < 5){
+
+		// relax current configuration
+		mesoEnthalpyFIRE(forceCall, Ftol, dPtol, P0, dt0);
+
+		// void bubbles
+		if (noBubbles){
+			// relax positions in fixed geometry
+			relaxSmallBubbles();
+
+			// change if phi is right
+			if (phi < growPhi){
+				noBubbles = 0;
+				NCELLS = NTOT;
+			}
+		}
+		else{
+			// homogenously grow cells
+			for (ci=NTCELLS; ci<NCELLS; ci++){
+				a0[ci] *= pow(1 + da0,2.0);
+				for (vi=0; vi<nv[ci]; vi++){
+					gi = szList[ci] + vi;
+					l0[gi] *= 1 + da0;
+					r[gi] *= 1 + da0;
+				}
+			}
+		}
+
+		// change to cells
+		for (ci=0; ci<NTCELLS; ci++)
+			a0[ci] *= pow(1 + da0,2.0);
+
+		// print MINIMIZED positions if change in packing fraction is large enough
+		if (k % NMINSKIP == 0){
+			printMesoNetworkCTCS2D();
+			if (hessout.is_open())
+				mesoPrintLinearResponse(forceCall, Ftol, dt0, P0);
+		}
+
+		// output to console
+		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
+		cout << "===============================================" << endl << endl;
+		cout << "												" << endl;
+		cout << " 	M E S O P H Y L L 							" << endl;
+		cout << "	 											" << endl;
+		cout << " 	N E T W O R K   							" << endl;
+		cout << "												" << endl;
+		cout << "	E X T E N S I O N 							" << endl;
+		cout << " 												" << endl;
+		cout << "===============================================" << endl;
+		cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
+		cout << endl;
+		cout << "	* k 			= " << k << endl;
+		cout << "	* phi0 			= " << phi0 << endl;
+		cout << "	* phi 			= " << vertexPackingFraction2D() << endl;
+		cout << "	* phi0 w/ verts = " << vertexPreferredPackingFraction2D() << endl;
+		cout << "	* P 			= " << Pinst << endl;
+		cout << "	* U 		 	= " << U << endl << endl;
+		cout << "	* Contacts:" << endl;
+		cout << "	* Nvv 			= " << vvContacts() << endl;
+		cout << "	* Ncc 			= " << ccContacts() << endl << endl;
+		cout << "	* Aging:" << endl;
+		cout << "	* meanl0 		= " << meanl0() << endl;
+		cout << "	* meancalA0 	= " << meancalA0() << endl;
+		cout << "	* meant0 		= " << meant0() << endl;
+		cout << "	* meankb 		= " << meankb() << endl;
+		cout << endl << endl;
+
+		// relax shape parameters in presence of void bubbles
+		for (ci=0; ci<NCELLS; ci++){
+			for (vi=0; vi<nv[ci]; vi++){
+				gi = szList[ci] + vi;
+				l0[gi] = perimeter(ci)/nv[ci];
+			}
+		}
+
+		// break contact network
+		updateMesophyllBondNetwork(edge_verts);
+
+		// find vertices at edge of contacts
+		edge_verts.resize(NVTOT);
+		fill(edge_verts.begin(),edge_verts.end(),0);
+		findInterfaceEdges(edge_verts);
+
+		// add vertices
+		if (NVTOT < NVMAX)
+			addMesophyllCellMaterial(edge_verts);
+
+		// update packing fraction
+		phi0 = vertexPreferredPackingFraction2D();
+		phi = vertexPackingFraction2D();
+
+		// update iterate
+		k++;
+	}
+}
 
 
 
@@ -2809,7 +3439,7 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 
 
 // update mesophyll network using MC
-void meso2D::updateMesophyllBondNetwork(int CTCMIN, int PAIRMIN){
+void meso2D::updateMesophyllBondNetwork(vector<bool> &edge_verts){
 	// local variables
 	bool isConnected, canBreak;
 	int cijctc, zitmp, zjtmp, ci, cj, ck, vi, vj, gi, gj, hi, hj;
@@ -2829,45 +3459,63 @@ void meso2D::updateMesophyllBondNetwork(int CTCMIN, int PAIRMIN){
 			// zij: determines strength of bond attraction
 			zij = 0.5*(zc[ci] + zc[cj])*ctcdel + 1.0;
 
-			// check that break allowed (preserves flat interfaces, min contacts)
-			canBreak = (zitmp > CTCMIN && zjtmp > CTCMIN) || cijctc > PAIRMIN;
-			if (canBreak){
-				// use global label of vi
-				gi = szList[ci];
-				for (vi=0; vi<nv[ci]; vi++){
-					// use global label of vj
-					gj = szList[cj];
-					for (vj=0; vj<nv[cj]; vj++){
-						// check if connected, otherwise go to next vertex
-						isConnected = gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2];
+			// use global label of vi
+			gi = szList[ci];
+			for (vi=0; vi<nv[ci]; vi++){
+				// use global label of vj
+				gj = szList[cj];
+				for (vj=0; vj<nv[cj]; vj++){
+					// check if connected, otherwise go to next vertex
+					isConnected = gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2];
 
-						// only break at edges
-						canBreak = (zv[im1[gi]] <= 0 || zv[ip1[gi]] <= 0) && (zv[im1[gj]] <= 0 || zv[ip1[gj]] <= 0);
+					if (isConnected){
+						// contact distance
+						sij = r[gi] + r[gj];
 
-						if (isConnected && canBreak){
-							// contact distance
-							sij = r[gi] + r[gj];
+						// get vertex-vertex distances
+						dx = x[NDIM*gj] - x[NDIM*gi];
+						if (pbc[0])
+							dx -= L[0]*round(dx/L[0]);
 
-							// get vertex-vertex distances
-							dx = x[NDIM*gj] - x[NDIM*gi];
-							if (pbc[0])
-								dx -= L[0]*round(dx/L[0]);
+						dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
+						if (pbc[1])
+							dy -= L[1]*round(dy/L[1]);
 
-							dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
-							if (pbc[1])
-								dy -= L[1]*round(dy/L[1]);
+						// true distance
+						rij = sqrt(dx*dx + dy*dy);
 
-							// true distance
-							rij = sqrt(dx*dx + dy*dy);
+						// only check bond if extended
+						if (rij > sij){
+							// change in energy from bond breaking
+							dU = 1.0 - 0.5*(pow(1 - (rij/sij),2.0)/h2);
 
-							// only check bond if extended
-							if (rij > sij){
-								// change in energy from bond breaking
-								dU = 1.0 - 0.5*(pow(1 - (rij/sij),2.0)/h2);
+							// only break stochastically at edges
+							canBreak = (edge_verts[gi] && edge_verts[gj]);
+							// canBreak = 1;
 
-								// remove if bond detaching decreases energy
-								if (dU < 0){
-									// remove vertex-vertex bond
+							// remove if bond detaching decreases energy
+							if (dU < 0){
+								// remove vertex-vertex bond
+								gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 0;
+
+								// remove single cell-cell contact
+								cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]--;
+
+								// update contact lists 
+								zc[ci]--;
+								zc[cj]--;
+
+								zv[gi]--;
+								zv[gj]--;
+							}
+							else{
+								// else, remove conditionally
+								poff = exp(-(betaEff*dU)/zij);
+								rdraw = drand48();
+
+								// detach
+								if (poff > rdraw && canBreak){
+									// detach vv contact
 									gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 0;
 
 									// remove single cell-cell contact
@@ -2880,41 +3528,373 @@ void meso2D::updateMesophyllBondNetwork(int CTCMIN, int PAIRMIN){
 									zv[gi]--;
 									zv[gj]--;
 								}
-								else{
-									// else, remove conditionally
-									poff = exp(-(betaEff*dU)/zij);
-									rdraw = drand48();
-
-									// detach
-									if (poff > rdraw){
-										// detach vv contact
-										gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 0;
-
-										// remove single cell-cell contact
-										cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]--;
-
-										// update contact lists 
-										zc[ci]--;
-										zc[cj]--;
-
-										zv[gi]--;
-										zv[gj]--;
-									}
-								}
 							}
 						}
-						// increment global vertex index
-						gj++;
 					}
-					
-
 					// increment global vertex index
-					gi++;
+					gj++;
 				}
+				
+
+				// increment global vertex index
+				gi++;
 			}
 		}
 	}
 }
+
+// age mesophyll shape parameters
+void meso2D::ageMesophyllShapeParameters(vector<bool> &edge_verts, double dl0, double da0, double t0_min){
+	// local variables
+	int gi, ci, vi;
+	double lix, liy, lim1x, lim1y, li, ti, sini, cosi;
+
+	// grow areas, radii
+	gi = 0; 
+	for (ci=0; ci<NCELLS; ci++){
+		a0[ci] *= pow(1 + dl0*da0,2.0);
+		for (vi=0; vi<nv[ci]; vi++){
+			r[gi] *= (1 + da0*dl0);
+			gi++;
+		}
+	}
+
+	// grow and age perimeter
+	for (gi=0; gi<NVTOT; gi++){
+		// segment from i to ip1
+		lix = x[NDIM*ip1[gi]] - x[NDIM*gi];
+		if (pbc[0])
+			lix -= L[0]*round(lix/L[0]);
+
+		liy = x[NDIM*ip1[gi] + 1] - x[NDIM*gi + 1];
+		if (pbc[1])
+			liy -= L[1]*round(liy/L[1]);
+
+		// segment from im1 to i
+		lim1x = x[NDIM*gi] - x[NDIM*im1[gi]];
+		if (pbc[0])
+			lim1x -= L[0]*round(lim1x/L[0]);
+
+		lim1y = x[NDIM*gi + 1] - x[NDIM*im1[gi] + 1];
+		if (pbc[1])
+			lim1y -= L[1]*round(lim1y/L[1]);
+
+		// segment length
+		li = sqrt(lix*lix + liy*liy);
+
+		// local bending
+		sini = lim1x*liy - lim1y*lix;
+		cosi = lim1x*lix + lim1y*liy;
+		ti = atan2(sini,cosi);
+
+		// age near edges
+		if ( (edge_verts[gi] && (edge_verts[ip1[gi]] || zv[ip1[gi]] <= 0)) || (zv[gi] <= 0 && edge_verts[ip1[gi]]) ){
+			l0[gi] *= (1.0 + dl0);
+			if (t0[gi] > t0_min + dl0*cB)
+				t0[gi] -= dl0*cB;
+		}
+		// grow on void
+		else if (zv[gi] <= 0){
+			l0[gi] += dl0*cL*(li - l0[gi]);
+			t0[gi] += dl0*cB*(ti - t0[gi]);
+		}
+		// if ctc, age toward 0
+		else
+			t0[gi] *= 1 - dl0*cB;
+	}
+}
+
+
+// add vertices between edge contacts or when distance between two void vertices is too large
+void meso2D::addMesophyllCellMaterial(vector<bool> &edge_verts){
+	// check that edge verts is correct size
+	if (edge_verts.size() != NVTOT){
+		cout << "ERROR: in addMesophyllCellMaterial, edge_verts.size != NVTOT. size=" << edge_verts.size() << ", NVTOT=" << NVTOT << "...ending. " << endl;
+		exit(1);
+	}
+
+	// local variables
+	bool gtmp = 0;
+	int d, gi, gj, gim1, gip1, ctc_im_jn, ctc_ip1m_kp, ci, vi, cin, vin, cip1p, vip1p;
+	double dx, dy, dli, dlim1, di, dmin, lix, liy, meanl, testl;
+
+	// vector to pushback vertices where extra material is added
+	vector<int> growthVerts;
+
+	// loop over vertices, decide which to grow
+	for (gi=0; gi<NVTOT; gi++){
+		// info for vertex gi
+		cindices(ci,vi,gi);
+		gip1 = ip1[gi];
+		gim1 = im1[gi];
+
+		// check distance to backward neighbor
+		dx = x[NDIM*gi] - x[NDIM*gim1];
+		dy = x[NDIM*gi + 1] - x[NDIM*gim1 + 1];
+		if (pbc[0])
+			dx -= L[0]*round(dx/L[0]);
+		if (pbc[1])
+			dy -= L[1]*round(dy/L[1]);
+		dlim1 = sqrt(dx*dx + dy*dy);
+
+		// check distance to forward neighbor
+		dx = x[NDIM*gip1] - x[NDIM*gi];
+		dy = x[NDIM*gip1 + 1] - x[NDIM*gi + 1];
+		if (pbc[0])
+			dx -= L[0]*round(dx/L[0]);
+		if (pbc[1])
+			dy -= L[1]*round(dy/L[1]);
+		dli = sqrt(dx*dx + dy*dy);
+
+		// add if void vertex and over extended
+		if (zv[gi] <= 0){
+			// if distance between two vertices is more than twice the vertex radius, add
+			if (dlim1 > 4.0*r[gi])
+				growthVerts.push_back(gim1);
+			if (dli > 4.0*r[gi])
+				growthVerts.push_back(gi);
+
+		}
+		// else if (edge_verts[gi] && edge_verts[gip1]){
+		// 	growthVerts.push_back(gi);
+		// }
+		// add if neighbors connected to different cells, or if center not connected,
+		// but ip1 and im1 are connected
+		else if (zv[gi] > 0 && zv[gip1] > 0){
+			// check min contact to gi
+			dmin = 1e6;
+			for (gj=0; gj<NVTOT; gj++){
+				if (gj < gi)
+					gtmp = gij[NVTOT*gj + gi - (gj+1)*(gj+2)/2];
+				else if (gj > gi)
+					gtmp = gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2];
+
+				if (gtmp && gi != gj){
+					// distance between j and i in x
+					dx = x[NDIM*gj] - x[NDIM*gi];
+					if (pbc[0])
+						dx -= L[0]*round(dx/L[0]);
+
+					// distance between j and i in y
+					dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
+					if (pbc[1])
+						dy -= L[1]*round(dy/L[1]);
+
+					// full distance
+					di = dx*dx + dy*dy;
+					if (di < dmin){
+						dmin = di;
+						ctc_im_jn = gj;
+					}
+				}
+			}
+
+			// check min contact to gip1
+			dmin = 1e6;
+			for (gj=0; gj<NVTOT; gj++){
+				if (gj < gip1)
+					gtmp = gij[NVTOT*gj + gip1 - (gj+1)*(gj+2)/2];
+				else if (gj > gip1)
+					gtmp = gij[NVTOT*gip1 + gj - (gip1+1)*(gip1+2)/2]; 
+
+				if (gtmp && gip1 != gj){
+					// distance between j and i in x
+					dx = x[NDIM*gj] - x[NDIM*gip1];
+					if (pbc[0])
+						dx -= L[0]*round(dx/L[0]);
+
+					// distance between j and i in y
+					dy = x[NDIM*gj + 1] - x[NDIM*gip1 + 1];
+					if (pbc[1])
+						dy -= L[1]*round(dy/L[1]);
+
+					// full distance
+					di = dx*dx + dy*dy;
+					if (di < dmin){
+						dmin = di;
+						ctc_ip1m_kp = gj;
+					}
+				}
+			}
+
+			// if contacts are on different cells, add vertex between contacts if space available
+			cindices(cin,vin,ctc_im_jn);
+			cindices(cip1p,vip1p,ctc_ip1m_kp);
+			if (cin != cip1p){
+				cout << "gi=" << gi << ", cin=" << cin << ", gip1=" << gip1 << ", cip1p=" << cip1p << endl;
+				growthVerts.push_back(gi);
+			}
+		}
+
+		// add if lone vertex between two connected vertices, connected to different cells
+		else if (zv[gim1] > 0 && zv[gip1] > 0 && zv[gi] == 0){
+			// check min contact to gim1
+			dmin = 1e6;
+			for (gj=0; gj<NVTOT; gj++){
+				if (gj < gim1)
+					gtmp = gij[NVTOT*gj + gim1 - (gj+1)*(gj+2)/2];
+				else if (gj > gim1)
+					gtmp = gij[NVTOT*gim1 + gj - (gim1+1)*(gim1+2)/2];
+
+				if (gtmp && gim1 != gj){
+					// distance between j and i in x
+					dx = x[NDIM*gj] - x[NDIM*gim1];
+					if (pbc[0])
+						dx -= L[0]*round(dx/L[0]);
+
+					// distance between j and i in y
+					dy = x[NDIM*gj + 1] - x[NDIM*gim1 + 1];
+					if (pbc[1])
+						dy -= L[1]*round(dy/L[1]);
+
+					// full distance
+					di = dx*dx + dy*dy;
+					if (di < dmin){
+						dmin = di;
+						ctc_im_jn = gj;
+					}
+				}
+			}
+
+			// check min contact to gip1
+			dmin = 1e6;
+			for (gj=0; gj<NVTOT; gj++){
+				if (gj < gip1)
+					gtmp = gij[NVTOT*gj + gip1 - (gj+1)*(gj+2)/2];
+				else if (gj > gip1)
+					gtmp = gij[NVTOT*gip1 + gj - (gip1+1)*(gip1+2)/2]; 
+
+				if (gtmp && gip1 != gj){
+					// distance between j and i in x
+					dx = x[NDIM*gj] - x[NDIM*gip1];
+					if (pbc[0])
+						dx -= L[0]*round(dx/L[0]);
+
+					// distance between j and i in y
+					dy = x[NDIM*gj + 1] - x[NDIM*gip1 + 1];
+					if (pbc[1])
+						dy -= L[1]*round(dy/L[1]);
+
+					// full distance
+					di = dx*dx + dy*dy;
+					if (di < dmin){
+						dmin = di;
+						ctc_ip1m_kp = gj;
+					}
+				}
+			}
+
+			// if contacts are on different cells, add vertex between contacts
+			cindices(cin,vin,ctc_im_jn);
+			cindices(cip1p,vip1p,ctc_ip1m_kp);
+			if (cin != cip1p){
+				growthVerts.push_back(gim1);
+				growthVerts.push_back(gi);
+			}
+		}
+	}
+	// Loop over growth locations, run growth protocol
+	if (growthVerts.size() > 0){
+		for (gi=0; gi<growthVerts.size(); gi++){
+			cout << "adding vertex between gi=" << growthVerts.at(gi)+gi << " and gip1=" << ip1[growthVerts.at(gi)+gi] << endl;
+			addVertex(growthVerts.at(gi)+gi,l0.at(growthVerts.at(gi)+gi));
+		}
+	}
+	growthVerts.clear();
+}
+
+
+// find vertices at the edges of cell-cell interfaces
+void meso2D::findInterfaceEdges(vector<bool> &edge_verts){
+	// check that edge verts is correct size
+	if (edge_verts.size() != NVTOT){
+		cout << "ERROR: in findInterfaceEdges, edge_verts.size != NVTOT. size=" << edge_verts.size() << ", NVTOT=" << NVTOT << "...ending. " << endl;
+		exit(1);
+	}
+
+	// local variables
+	bool diff, gitmp, gjtmp;
+	int gi, gim1, gip1, gj, gjp1, cthis, vthis, ci, cj, vi, vj;
+
+
+	// loop over vertices, check for edges of cell-cell interfaces
+	for (gi=0; gi<NVTOT; gi++){
+		// only proceed if gi is in contact
+		if (zv[gi] > 0){
+			// neighboring vertices to check if on edge
+			gip1 = ip1[gi];
+			gim1 = im1[gi];
+
+			// get cell info of gi
+			cindices(cthis, vthis, gi);
+
+			// check forward neighbor
+			if (zv[gip1] <= 0){
+				edge_verts[gi] = 1;
+				continue;
+			}
+			else{
+				// find cells that gi and gip1 are in contact with
+				diff = 0;
+				for (ci=0; ci<NCELLS; ci++){
+					if (ci != cthis){
+						for (vi=0; vi<nv[ci]; vi++){
+							// get possible contact with gi
+							gj = szList[ci] + vi;
+
+							// see if gi is connected to gj
+							if (gj < gi)
+								gitmp = gij[NVTOT*gj + gi - (gj+1)*(gj+2)/2];
+							else if (gj > gi)
+								gitmp = gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2];
+
+							// if gj a match, get possible contact with gip1
+							if (gitmp){
+								for (cj=0; cj<NCELLS; cj++){
+									if (cj != cthis && cj != ci){
+										for (vj=0; vj<nv[cj]; vj++){
+											// get possible contact with gip1
+											gjp1 = szList[cj] + vj;
+
+											// see if gip1 is connected to gjp1
+											if (gjp1 < gip1)
+												gjtmp = gij[NVTOT*gjp1 + gip1 - (gjp1+1)*(gjp1+2)/2];
+											else if (gjp1 > gip1)
+												gjtmp = gij[NVTOT*gip1 + gjp1 - (gip1+1)*(gip1+2)/2];
+
+											// if gip1 is in contact with gip1, on different cell than gj, break!
+											if (gjtmp){
+												diff = 1;
+												// cout << "Found edge vertex! On (" << cthis << ", " << vthis << "): vi ctc to (" << ci << ", " << vi << ");   vip1 ctc to (" << cj << ", " << vj << ")..." << endl;
+												break;
+											}
+										}
+									}
+									if (diff)
+										break;
+								}
+							}
+							if (diff)
+								break;
+						}
+					}
+					if (diff)
+						break;
+				}
+				if (diff)
+					edge_verts[gi] = 1;
+			}
+
+			// check backward neighbor (only need to check if not ctc...other case handled above)
+			if (zv[gim1] <= 0){
+				edge_verts[gi] = 1;
+				continue;
+			}
+		}
+	}
+}
+
+
 
 
 // age mesophyll shape parameters
@@ -2963,8 +3943,8 @@ void meso2D::ageMesophyllShapeParameters(){
 		// -- age angles
 
 		// angle trig functions
-		sini = lix*lim1y - liy*lim1x;
-		cosi = lix*lim1x + liy*lim1y;
+		sini = lim1x*liy - lim1y*lix;
+		cosi = lim1x*lix + lim1y*liy;
 
 		// angle
 		ti = atan2(sini,cosi);
@@ -3026,8 +4006,8 @@ void meso2D::relaxByAdding(){
 		// -- age angles
 
 		// angle trig functions
-		sini = lix*lim1y - liy*lim1x;
-		cosi = lix*lim1x + liy*lim1y;
+		sini = lim1x*liy - lim1y*lix;
+		cosi = lim1x*lix + lim1y*liy;
 
 		// angle
 		ti = atan2(sini,cosi);
@@ -3228,20 +4208,29 @@ void meso2D::addMesophyllCellMaterial(double dl0){
 			}
 		}
 
-		// add vertices between neighbors of new vertices
-		else if (zv[gi] == -1){
-			// // relax new vertex toward mean segment length of cell
-			l0[gim1] += dl0*(meanl - l0[gim1]);
-			l0[gi] += dl0*(meanl - l0[gi]);
-
-			// birth if bwd neighbor is connected
-			if (zv[gim1] > 0 && dlim1 > testl)
+		// add if void vertex and over extended
+		if (zv[gi] <= 0){
+			// if distance between two vertices is more than twice the vertex radius, add
+			if (dlim1 > 4.0*r[gi])
 				growthVerts.push_back(gim1);
-
-			// birth vertex if fwd neighbor is connected
-			if (zv[gip1] > 0 && dli > testl)
+			if (dli > 4.0*r[gi])
 				growthVerts.push_back(gi);
 		}
+
+		// // add vertices between neighbors of new vertices
+		// else if (zv[gi] == -1){
+		// 	// // relax new vertex toward mean segment length of cell
+		// 	l0[gim1] += dl0*(meanl - l0[gim1]);
+		// 	l0[gi] += dl0*(meanl - l0[gi]);
+
+		// 	// birth if bwd neighbor is connected
+		// 	if (zv[gim1] > 0 && dlim1 > testl)
+		// 		growthVerts.push_back(gim1);
+
+		// 	// birth vertex if fwd neighbor is connected
+		// 	if (zv[gip1] > 0 && dli > testl)
+		// 		growthVerts.push_back(gi);
+		// }
 	}
 
 	// Loop over growth locations, run growth protocol
@@ -3516,8 +4505,8 @@ void meso2D::t0ToCurrent(){
 			lim1y -= L[1]*round(lim1y/L[1]);
 
 		// angle trig functions
-		sini = lix*lim1y - liy*lim1x;
-		cosi = lix*lim1x + liy*lim1y;
+		sini = lim1x*liy - lim1y*lix;
+		cosi = lim1x*lix + lim1y*liy;
 
 		// angle
 		ti = atan2(sini,cosi);
@@ -3538,7 +4527,6 @@ void meso2D::t0ToReg(){
 		}
 	}
 }
-
 
 // return meso vertex-vertex contact network
 void meso2D::getMesoVVContactNetwork(vector<bool> &gijtmp){
@@ -3793,21 +4781,21 @@ double meso2D::mesoInstantaneousPressure(vector<bool> &gijtmp){
 			lip1y = rip2y - rip1y;
 
 			// get angles
-			sinim1 = lim1x*lim2y - lim1y*lim2x;
-			cosim1 = lim1x*lim2x + lim1y*lim2y;
+			sinim1 = lim2x*lim1y - lim2y*lim1x;
+			cosim1 = lim2x*lim1x + lim2y*lim1y;
 
-			sini = lix*lim1y - liy*lim1x;
-			cosi = lix*lim1x + liy*lim1y;
+			sini = lim1x*liy - lim1y*lix;
+			cosi = lim1x*lix + lim1y*liy;
 
-			sinip1 = lip1x*liy - lip1y*lix;
-			cosip1 = lip1x*lix + lip1y*liy;
+			sinip1 = lix*lip1y - liy*lip1x;
+			cosip1 = lix*lip1x + liy*lip1y;
 
 			// get normal vectors
-			nim1x = lim1y;
-			nim1y = -lim1x;
+			nim1x = lim1y/lim1;
+			nim1y = -lim1x/lim1;
 
-			nix = liy;
-			niy = -lix;
+			nix = liy/li;
+			niy = -lix/li;
 
 			// get change in angles
 			dtim1 = atan2(sinim1,cosim1) - t0[im1[gi]];
@@ -3815,17 +4803,17 @@ double meso2D::mesoInstantaneousPressure(vector<bool> &gijtmp){
 			dtip1 = atan2(sinip1,cosip1) - t0[ip1[gi]];
 
 			// get delta delta theta's
-			ddtim1 = (dti - dtim1)/(lim1*lim1);
-			ddti = (dti - dtip1)/(li*li);
+			ddtim1 = (dti - dtim1)/lim1;
+			ddti = (dtip1 - dti)/li;
 
 			// add to force
-			fbx 			= fbim1*ddtim1*nim1x + fbi*ddti*nix;
-			fby 			= fbim1*ddtim1*nim1y + fbi*ddti*niy;
+			fbx 			= fbi*ddti*nix - fbim1*ddtim1*nim1x;
+			fby 			= fbi*ddti*niy - fbim1*ddtim1*nim1y;
 			F[NDIM*gi] 		+= fbx;
 			F[NDIM*gi + 1] 	+= fby;
 
-			// add to U
-			U += 0.5*kb*dti*dti;
+			// update potential energy
+			U += 0.5 * kbi[gi] * (dti * dti);
 		}
 
 		// update old coordinates
@@ -3936,6 +4924,229 @@ double meso2D::mesoInstantaneousPressure(vector<bool> &gijtmp){
 
 
 
+
+
+// -- Protocol helpers for void bubbles
+
+// relax centers of small bubbles given given cell positions
+void meso2D::relaxSmallBubbles(){
+	// local variables
+	int bi, ci, vi, gi, i;
+	int NTOT, NTCELLS;
+	double cxtmp, cytmp, dx, dy, rij, sij, ftmp, fxtmp, fytmp;
+	double Ftol = 1e-12;
+
+	// get NTOT and # true cells
+	NTOT = a0.size();
+	NTCELLS = NTOT - NBUBBLES;
+
+	// arrays for moving void bubbles around
+	int bbDof = NDIM*NBUBBLES;
+	vector<double> bx(bbDof,0.0);
+	vector<double> bv(bbDof,0.0);
+	vector<double> bf(bbDof,0.0);
+	vector<double> br(NBUBBLES,0.0);
+	for (bi=0; bi<NBUBBLES; bi++){
+		// get global cell index
+		ci = NTCELLS + bi;
+
+		// set degree of freedom to be center of cell
+		com2D(ci,cxtmp,cytmp);
+		bx.at(NDIM*bi) = cxtmp;
+		bx.at(NDIM*bi + 1) = cytmp;
+
+		// set radius
+		br.at(bi) = 1.25*sqrt(a0[ci]/PI);
+	}
+
+	// arrays for fixed cell obstacles
+	vector<double> cx(NDIM*NTCELLS,0.0);
+	vector<double> cr(NTCELLS,0.0);
+	for (ci=0; ci<NTCELLS; ci++){
+		// set degree of freedom to be center of cell
+		com2D(ci,cxtmp,cytmp);
+		cx.at(NDIM*bi) = cxtmp;
+		cx.at(NDIM*bi + 1) = cytmp;
+
+		// set radius
+		cr.at(bi) = 1.25*sqrt(a0[ci]/PI);
+	}
+
+	// FIRE variables
+	double P, fnorm, fcheck, vnorm, alpha, dtmax, dtmin;
+	int npPos, npNeg, fireit;
+	setdt(0.01);
+
+	// Initialize FIRE variables
+	P  			= 0;	
+	fnorm 		= 0;
+	vnorm 		= 0;
+	alpha   	= alpha0;
+
+	dtmax   	= 20.0*dt;
+	dtmin   	= 1e-2*dt;
+
+	npPos      	= 0;
+	npNeg      	= 0;
+
+	fireit    	= 0;
+	fcheck  	= 10*Ftol;
+
+
+	while ((fcheck > Ftol || fireit < NDELAY) && fireit < itmax){
+		// compute P
+		P = 0.0;
+		for (i=0; i<bbDof; i++)
+			P += bv[i]*bf[i];
+
+		// print to console
+		if (fireit % NSKIP == 0){
+			cout << endl << endl;
+			cout << "===========================================" << endl;
+			cout << "		B U B B L E  C E N T E R S 			" << endl;
+			cout << " 		F I R E 							" << endl;
+			cout << "		M I N I M I Z A T I O N 			" << endl;
+			cout << "===========================================" << endl;
+			cout << endl;
+			cout << "	** fireit 	= " << fireit << endl;
+			cout << "	** fcheck 	= " << fcheck << endl;
+			cout << "	** dt 		= " << dt << endl;
+			cout << "	** P 		= " << P << endl;
+			cout << "	** alpha 	= " << alpha << endl;
+			cout << "	** npPos 	= " << npPos << endl;
+			cout << "	** npNeg 	= " << npNeg << endl;
+		}
+
+		// Adjust simulation based on net motion of degrees of freedom
+		if (P > 0){
+			// increase positive counter
+			npPos++;
+
+			// reset negative counter
+			npNeg = 0;
+
+			// alter simulation if enough positive steps have been taken
+			if (npPos > NDELAY){
+				// change time step
+				if (dt*finc < dtmax)
+					dt *= finc;
+
+				// decrease alpha
+				alpha *= falpha;
+			}
+		}
+		else{
+			// reset positive counter
+			npPos = 0;
+
+			// increase negative counter
+			npNeg++;
+
+			// check if simulation is stuck
+			if (npNeg > NNEGMAX){
+				cerr << "	** ERROR: During initial FIRE minimization, P < 0 for too long, so ending." << endl;
+				exit(1);
+			}
+
+			// take half step backwards, reset velocities
+			for (i=0; i<vertDOF; i++){
+				// take half step backwards
+				bx[i] -= 0.5*dt*bv[i];
+
+				// reset vertex velocities
+				bv[i] = 0.0;
+			}
+
+			// decrease time step if past initial delay
+			if (fireit > NDELAY){
+				// decrease time step 
+				if (dt*fdec > dtmin)
+					dt *= fdec;
+
+				// reset alpha
+				alpha = alpha0;
+			}
+		}
+
+		// VV VELOCITY UPDATE #1
+		for (i=0; i<bbDof; i++)
+			bv[i] += 0.5*dt*bf[i];
+
+		// compute fnorm, vnorm and P
+		fnorm = 0.0;
+		vnorm = 0.0;
+		for (i=0; i<bbDof; i++){
+			fnorm 	+= bf[i]*bf[i];
+			vnorm 	+= bv[i]*bv[i];
+		}
+		fnorm = sqrt(fnorm);
+		vnorm = sqrt(vnorm);
+
+		// update velocities (s.d. vs inertial dynamics) only if forces are acting
+		if (fnorm > 0){
+			for (i=0; i<bbDof; i++)
+				bv[i] = (1 - alpha)*bv[i] + alpha*(bf[i]/fnorm)*vnorm;
+		}
+
+		// VV POSITION UPDATE
+		for (i=0; i<bbDof; i++)
+			bx[i] += dt*bv[i];
+
+		// update forces (function passed as argument)
+		for (bi=0; bi<NBUBBLES; bi++){
+			for (ci=0; ci<NTCELLS; ci++){
+				// get x distance (assume pbc)
+				dx = cx[NDIM*ci] - bx[NDIM*bi];
+				dx -= L[0]*round(dx/L[0]);
+
+				dy = cx[NDIM*ci + 1] - bx[NDIM*bi + 1];
+				dy -= L[1]*round(dy/L[1]);
+
+				// true distance
+				rij = sqrt(dx*dx + dy*dy);
+
+				// contact distance
+				sij = br[bi] + cr[ci];
+
+				// check overlap
+				if (rij < sij){
+					ftmp 				= 0.01*(1 - (rij/sij))/sij;
+					fxtmp 				= ftmp*(dx/rij);
+					fytmp 				= ftmp*(dy/rij);
+					bf[NDIM*bi] 		-= fxtmp;
+					bf[NDIM*bi + 1] 	-= fytmp;
+				}
+			}
+		}
+
+		// VV VELOCITY UPDATE #2
+		for (i=0; i<bbDof; i++)
+			bv[i] += 0.5*bf[i]*dt;
+
+		// update fcheck based on fnorm (= force per degree of freedom)
+		fcheck = 0.0;
+		for (i=0; i<bbDof; i++)
+			fcheck += bf[i]*bf[i];
+		fcheck = sqrt(fcheck/vertDOF);
+
+		// update iterator
+		fireit++;
+	}
+	// check if FIRE converged
+	if (fireit == itmax){
+		cout << "	** FIRE minimization did not converge, fireit = " << fireit << ", itmax = " << itmax << "; ending." << endl;
+		exit(1);
+	}
+	else{
+		cout << endl;
+		cout << "Bubble center FIRE minimzation converged!" << endl;
+	}
+}
+
+
+
+
+
 /******************************
 
 	M E S O P H Y L L
@@ -4013,8 +5224,8 @@ void meso2D::mesoBendingHessian(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb){
 		ny[gi] = -ulx/ltmp;
 
 		// compute angles
-		si = lx*lyim1 - ly*lxim1;
-		ci = lx*lxim1 + ly*lyim1;
+		si = lxim1*ly - lyim1*lx;
+		ci = lxim1*lx + lyim1*ly;
 		th = atan2(si,ci);
 		dth[gi] = th - t0[gi];
 	}

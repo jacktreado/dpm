@@ -4,7 +4,7 @@
 
 // Compilation command:
 // g++ -O3 --std=c++11 -I src main/meso2D/readInMesoNetwork2D.cpp src/*.cpp -o meso.o
-// ./meso.o meso.input 0.1 0.1 200 0 0.01 1e-4 1 pos.test
+// ./meso.o meso_n16.input 1 0.1 50 0.2 0.01 1e-4 1 pos.test
 
 
 // header files
@@ -27,8 +27,9 @@ const double dt0 = 1e-2;		   	// initial magnitude of time step in units of MD t
 const double Ftol = 1e-12; 			// force tolerance
 const double dPtol = 1e-10;			// pressure change tolerance
 const double phiMin = 0.3;			// minimum packing fraction in decompression algorithm
-const double cL = 0.0; 				// perimeter aging (set to 0, possibly deprecated)
-const double cB = 1.5; 			// bending aging (set to 0, possibly deprecated)
+const double cL = 1.0; 				// perimeter aging (set to 0, possibly deprecated)
+const double cB = 1.0; 				// bending aging (set to 0, possibly deprecated)
+const double t0_min = 0.6*(-.5*PI);		// minimum curvature
 const double ctch = 0.5; 			// sets magnitude of \Delta U in bond-breaking
 const double aL = 1.0; 				// distribution of aging to boundary (when = 1)
 const double kc = 0.5; 				// interaction spring constant
@@ -101,13 +102,14 @@ int main(int argc, char const *argv[])
 
 	// relax configuration using network + bending
 	meso2Dobj.initializeMesophyllBondNetwork();
-	meso2Dobj.t0ToCurrent();
-	meso2Dobj.mesoFIRE(&meso2D::mesoNetworkForceUpdate, Ftol, dt0);
-	meso2Dobj.printMesoNetworkCTCS2D();
 	// meso2Dobj.t0ToCurrent();
+	// meso2Dobj.mesoFIRE(&meso2D::mesoNetworkForceUpdate, Ftol, dt0);
+	meso2Dobj.t0ToCurrent();
+	meso2Dobj.printMesoNetworkCTCS2D();
+	
 
 	// run stretching simulation to create network
-	meso2Dobj.mesoNetworkEnthalpyMin(&meso2D::mesoNetworkForceUpdate, Ftol, dPtol, dt0, da0, dl0, P0, phiMin, NMINSKIP);
+	meso2Dobj.mesoNetworkEnthalpyMin(&meso2D::mesoNetworkForceUpdate, Ftol, dPtol, dt0, da0, dl0, t0_min, P0, phiMin, NMINSKIP);
 
 	// say goodbye
 	cout << "\n** Finished readInMesoNetwork2D.cpp, ending. " << endl;

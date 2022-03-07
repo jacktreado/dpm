@@ -1,10 +1,9 @@
-function mesoBoxGrowth(savestr,N,NGROWTH,calA0_base,kb_base,dl0,da0,cB,th0_min_scale,P0)
+function mesoBoxGrowth(savestr,N,NGROWTH,calA0_base,kb_base,dp0,da0,cB,bbreak,th0_min_scale,P0)
 %% FUNCTION to run mesoBoxGrowth in single, self-contained function, save output
 
 % constants
 phi0        = 0.1;
 Pcmp        = 1e-2;
-bbreak      = 1.1;
 n           = 32;
 kl_base     = 1.0;
 l0_base     = sqrt(4.0*pi*calA0_base)/n;
@@ -13,8 +12,7 @@ kw          = kc;
 th0_min     = -th0_min_scale*(0.5*pi);
 
 % stopping criterion: phi < 0.3
-phimin      = 0.35;
-
+phimin      = 0.3;
 
 % shape parameters
 a0          = ones(1,N);
@@ -168,29 +166,31 @@ gg = 1;
 while gg <= NGROWTH && phi > phimin
     fprintf('Enthalpy min + growth, step gg = %d\n',gg);
 
-    % grow area, void perimeter
+    % grow area and void perimeter
+    thi = currentAngles(x,y);
+    voididx = isvoid(bij,bw);
     for nn = 1:N
-        % grow areas and radii
-        a0(nn) = a0(nn)*(1 + dl0*da0)^2;
-        r(:,nn) = r(:,nn)*(1 + dl0*da0);
+        % constant growth
+        a0(nn) = a0(nn)*(1 + dp0*da0)^2;
+        r(:,nn) = r(:,nn)*(1 + dp0*da0);
         
-        % growth shape parameters depending on void or contact
+        % grow l0 based on void fraction
+        vi = (nn-1)*n + 1;
+        vf = nn*n;
+        nvoid = sum(voididx(vi:vf));
+        dl0 = dp0/nvoid;
         for ii = 1:n
-            % get vertex indexing
             gi = (nn-1)*n + ii;
             im1 = mod(ii+n-2,n)+1;
-            
-            % if void, growth perimeter near void vertices
-            % and drive curvature toward th0_min
-            if bw(ii,1,nn) == 0 && sum(bij(gi,:)) == 0
+            if voididx(gi) == 1
                 l0([im1 ii],nn) = l0([im1 ii],nn)*(1 + dl0);
                 th0tmp = th0(ii,nn);
-                if th0tmp > th0_min + dl0*cB
+                thitmp = thi(ii,nn);
+                if th0tmp > th0_min + dl0*cB && thitmp > th0_min + dl0*cB
                     th0(ii,nn) = th0tmp - dl0*cB;
                 end
-            % if contact
-            elseif sum(bij(gi,:)) ~= 0 || bw(ii,1,nn) ~= 0
-                th0(ii,nn) = th0(ii,nn)*(1.0 - cB*dl0);
+            else
+                th0(ii,nn) = th0(ii,nn)*(1.0 - cB*dp0);
             end
         end
     end
@@ -295,7 +295,7 @@ while gg <= NGROWTH && phi > phimin
     saveStruct.kl_base = kl_base;
     saveStruct.kb_base = kb_base;
     saveStruct.kc = kc;
-    saveStruct.dl0 = dl0;
+    saveStruct.dp0 = dp0;
     saveStruct.da0 = da0;
     saveStruct.cB = cB;
     saveStruct.th0_min_scale = th0_min_scale;
@@ -1400,6 +1400,29 @@ end
 
 
 
+
+%% Return whether vertices are void
+
+function voididx = isvoid(bij,bw)
+    NVTOT = length(bij);
+    [n,~,N] = size(bw);
+    voididx = zeros(NVTOT,1);
+    for gi = 1:NVTOT
+        if sum(bij(gi,:)) == 0
+            voididx(gi) = 1;
+        end
+    end
+    
+    gi = 1;
+    for nn = 1:N
+        for ii = 1:n
+            if bw(ii,1,nn) ~= 0 && voididx(gi) == 1
+                voididx(gi) = 0;
+            end
+            gi = gi + 1;
+        end
+    end
+end
 
 
 

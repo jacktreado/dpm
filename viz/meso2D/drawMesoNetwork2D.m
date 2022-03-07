@@ -29,7 +29,7 @@ floc = '~/Jamming/CellSim/dpm/viz/meso2D/local/meso2D_data';
 % fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_kb0' kb0str '_be' bestr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_seed' seedstr];
 fpattern = ['meso2D_N' Nstr '_n' nstr '_ca' castr '_kb0' kb0str '_be' bestr '_h' hstr '_cL' cLstr '_aL' aLstr '_cB' cBstr '_cKb' cKbstr '_seed' seedstr];
 fstr = [floc '/' fpattern '.pos'];
-% fstr = '~/Jamming/CellSim/dpm/meso.input';
+fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetwork2D(fstr);
@@ -180,7 +180,7 @@ ey = sin(th);
 
 
 % show vertices or not
-showverts = 0;
+showverts = 1;
 
 % color by shape or size
 colorOpt = 1;
@@ -292,6 +292,23 @@ for ff = FSTART:FSTEP:FEND
         else
             clr = cellCLR(IC(ff,nn),:);
         end
+        
+%         % draw effective radius
+%         rx = xtmp - cx;
+%         ry = ytmp - cy;
+%         rads = sqrt(rx.^2 + ry.^2);
+%         xedge = xtmp + 1*rtmp.*(rx./rads);
+%         yedge = ytmp + 1*rtmp.*(ry./rads);
+%         ex = xedge - cx;
+%         ey = yedge - cy;
+%         r2 = sum(ex.^2 + ey.^2)/nvtmp;
+%         reff = sqrt(r2);
+%         for xx = -1:1
+%             for yy = -1:1
+%                 rectangle('Position',[cx - reff + xx*L, cy - reff + yy*L, 2*reff, 2*reff],'Curvature',[1 1],'FaceColor',clr);
+%             end
+%         end
+        
         if showverts == 1
             for vv = 1:nvtmp
                 rv = rtmp(vv);
@@ -299,11 +316,7 @@ for ff = FSTART:FSTEP:FEND
                 yplot = ytmp(vv) - rv;
                 for xx = -1:1
                     for yy = -1:1
-                        if nn == 1
-                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',0.2);
-                        else
-                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','none');
-                        end
+                        rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'linewidth',2);
                     end
                 end
             end
@@ -321,6 +334,7 @@ for ff = FSTART:FSTEP:FEND
                 end
             end
         end
+        
 %         text(cx,cy,num2str(nn));
 %         plot(mean(xtmp),mean(ytmp),'wo','markersize',8,'markerfacecolor','w');
         

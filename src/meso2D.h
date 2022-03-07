@@ -28,6 +28,7 @@ class meso2D : public dpm{
 protected:
 	// int for maximum number of vertices
 	int NVMAX;
+	int NBUBBLES;
 
 	// bending energy per vertex
 	// NOTE: will need to add different Hessian computation
@@ -63,7 +64,8 @@ public:
 
 	// constructor and destructor
 	meso2D(std::string &inputFile, int seed);
-	meso2D(int n, int seed) : dpm(n,seed) { betaEff=0.0; ctcdel=1.0; ctch=0.5; cL=0.0; aL=1.0; cB=0.0; cKb=0.0; zc.resize(n); NVMAX = n; };
+	meso2D(std::string &inputFileStr, double voidBubbleScale, int seed);
+	meso2D(int n, int seed) : dpm(n,seed) { NBUBBLES=0; betaEff=0.0; ctcdel=1.0; ctch=0.5; cL=0.0; aL=1.0; cB=0.0; cKb=0.0; zc.resize(n); NVMAX = n; };
 
 	// overloaded operators
 	void operator=(const meso2D &rhs);
@@ -116,6 +118,7 @@ public:
 
 	// mesophyll cell interactions
 	void initializeMesophyllBondNetwork();
+	void initializeMesoBubbleBondNetwork();
 	void mesoRepulsiveVertexForces();
 	void mesoShapeForces();
 	void mesoShapeForces(double gamma);
@@ -135,10 +138,14 @@ public:
 	void mesoNetworkExtension(meso2DMemFn forceCall, double Ftol, double dt0, double delShrink, double dphiPrint, double phiMin);
 	void mesoPinExtension(double Ftol, double dt0, double hmax, double dh, double dhprint, double kcspring, int cellskip);
 	void mesoFreeGrowth(meso2DMemFn forceCall, double Ftol, double dt0, double dl0, double da0, double dphiPrint, double a0max);
-	void mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double dPtol, double dt0, double da0, double dl0, double P0, double phiMin, int NMINSKIP);
+	void mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double dPtol, double dt0, double da0, double dl0, double t0_min, double P0, double phiMin, int NMINSKIP);
+	void mesoBubbleEnthalpyMin(meso2DMemFn forceCall, double Ftol, double dPtol, double dt0, double da0, double P0, double phiMin, int NMINSKIP);
 
 	// protocol helpers
-	void updateMesophyllBondNetwork(int CTCMIN, int PAIRMIN);
+	void updateMesophyllBondNetwork(std::vector<bool> &edge_verts);
+	void ageMesophyllShapeParameters(std::vector<bool> &edge_verts, double dl0, double da0, double t0_min);
+	void addMesophyllCellMaterial(std::vector<bool> &edge_verts);
+	void findInterfaceEdges(std::vector<bool> &edge_verts);
 	void ageMesophyllShapeParameters();
 	void relaxByAdding();
 	void addMesophyllCellMaterial(double dl0);
@@ -149,6 +156,8 @@ public:
 	void t0ToReg();
 	void getMesoVVContactNetwork(std::vector<bool> &gijtmp);
 	double mesoInstantaneousPressure(std::vector<bool> &gijtmp);
+
+	void relaxSmallBubbles();
 
 	// hessian computation & linear response
 	void mesoBendingHessian(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb);

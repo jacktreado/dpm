@@ -2,7 +2,7 @@
 //
 // Compilation command:
 // g++ -O3 --std=c++11 -I src main/meso2D/generateMesoInput2D.cpp src/*.cpp -o meso.o
-// ./meso.o 16 24 1.12 1 meso.input
+// ./meso.o 16 24 1.15 1 meso.input
 //
 //
 // Parameter input list
@@ -26,12 +26,12 @@ using namespace std;
 const double plotCompression = 0;  	// whether or not to plot compression
 const double dphiGrow = 0.01;	   	// packing fraction increment during initial growth step
 const double boxLengthScale = 3.0; 	// neighbor list box size in units of initial l0
-const double phi0 = 0.5;		   	// initial packing fraction
+const double phi0 = 0.55;		   	// initial packing fraction
 const double dt0 = 1e-2;		   	// initial magnitude of time step in units of MD time
-const double Ptol = 1e-7;		   	// target pressure in initial compression
-const double Ftol = 1e-12; 			// force tolerance
-const double T0 = 1e-2; 			// temperature for jamming preparation protocol
-const double trun = 50.0; 			// amount of time to run annealing
+const double Ptol = 5e-7;		   	// target pressure in initial compression
+const double Ftol = 1e-11; 			// force tolerance
+const double T0 = 1e-3; 			// temperature for jamming preparation protocol
+const double trun = 20.0; 			// amount of time to run annealing
 const double kl = 0.5; 				// perimeter spring constant
 const double kc = 0.5; 				// interaction spring constant
 const double dispersion = 0.1; 		// polydispersity (fixed)

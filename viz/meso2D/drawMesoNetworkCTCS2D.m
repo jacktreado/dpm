@@ -73,9 +73,9 @@ if NFRAMES > 2
     ax.FontSize = 22;
     
     % plot contact network
-    figure(12), clf, hold on, box on;
-    plot(1:NFRAMES,zc,'-','color',[0.5 0.5 0.5],'linewidth',1.2);
-    plot(1:NFRAMES,mean(zc,2),'k--','linewidth',2.5);
+    figure(21), clf, hold on, box on;
+    plot(2:NFRAMES,zc(2:end,:),'-','color',[0.5 0.5 0.5],'linewidth',1.2);
+    plot(2:NFRAMES,mean(zc(2:end,:),2),'k--','linewidth',2.5);
     xlabel('frame id.','Interpreter','latex');
     ylabel('$z$','Interpreter','latex');
     ax = gca;
@@ -124,7 +124,7 @@ if NFRAMES > 2
     ax.FontSize = 22;
     ax.YScale = 'log';
     
-     % plot packing fractions
+     % plot packing fraction and fraction perimeter at void
     figure(16), clf, hold on, box on;
     yyaxis left
     plot((2:NFRAMES) - 1,phi(2:NFRAMES),'ko','markersize',10,'markerfacecolor','b');
@@ -206,7 +206,7 @@ ey = sin(th);
 showverts = 0;
 
 % color by shape or size
-colorOpt = 1;
+colorOpt = 3;
 
 if colorOpt == 1
     % color by real shape
@@ -220,6 +220,15 @@ elseif colorOpt == 2
     NCLR = 100;
     calA0Bins = linspace(0.999*min(calA0(:)),1.001*max(calA0(:)),NCLR+1);
     cellCLR = jet(NCLR);
+elseif colorOpt == 3
+    % color face as gray
+    t0_face_color = [0.9 0.9 0.9];
+    
+    % get bins for preferred curvature
+    NCLRS = 100;
+    t0_bins = linspace(-0.5*pi,0.5*pi,NCLRS-1);
+    t0_bins = [-1e5 t0_bins 1e5];
+    t0_clr_list = jet(NCLRS);
 else
     [nvUQ, ~, IC] = unique(nv);
     IC = reshape(IC,NFRAMES,NCELLS);
@@ -287,28 +296,28 @@ if showverts == 0
     FSTART = 1;
     FSTEP = 1;
     if NFRAMES > 50
-        FSTEP = 2;
+        FSTEP = 5;
     elseif NFRAMES > 150
-        FSTEP = 10;
+        FSTEP = 20;
     end
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
     FSTART = 1;
     FSTEP = 1;
-    FEND = NFRAMES;
+    FEND = FSTART;
 end
 
 % make a movie
-makeAMovie = 0;
+makeAMovie = 1;
 ctccopy = 0;
 if makeAMovie == 1
 %     moviestr = 'debug.mp4';
-    moviestr = 'deceNetwork_negPressure.mp4';
+    moviestr = 'negCurvature.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
-    ctccopy = 0;
+    ctccopy = -1:1;
 end
 
 fnum = 1;
@@ -322,23 +331,30 @@ for ff = FSTART:FSTEP:FEND
     xf = x(ff,:);
     yf = y(ff,:);
     rf = r(ff,:);
+    t0f = t0(ff,:);
     zctmp = zc(ff,:);
     L = LList(ff,1);
     for nn = 1:NCELLS
         xtmp = xf{nn};
         ytmp = yf{nn};
+        t0tmp = t0f{nn};
         cx = mean(xtmp);
         cy = mean(ytmp);
         rtmp = rf{nn};
         nvtmp = nv(ff,nn);
-        if colorOpt == 2
-            cbin = calA0(ff,nn) > calA0Bins(1:end-1) & calA0(ff,nn) < calA0Bins(2:end);
-            clr = cellCLR(cbin,:);
-        elseif colorOpt == 1
-            cbin = calA(ff,nn) > calABins(1:end-1) & calA(ff,nn) < calABins(2:end);
-            clr = cellCLR(cbin,:);
-        else
-            clr = cellCLR(IC(ff,nn),:);
+        
+        % get color info
+        switch colorOpt
+            case 1
+                cbin = calA(ff,nn) > calABins(1:end-1) & calA(ff,nn) < calABins(2:end);
+                clr = cellCLR(cbin,:);
+            case 2
+                cbin = calA0(ff,nn) > calA0Bins(1:end-1) & calA0(ff,nn) < calA0Bins(2:end);
+                clr = cellCLR(cbin,:);
+            case 3
+                clr = t0_face_color;
+            otherwise
+                clr = cellCLR(IC(ff,nn),:);
         end
         if showverts == 1
             vpos = [xtmp, ytmp];
@@ -367,7 +383,16 @@ for ff = FSTART:FSTEP:FEND
                 for yy = -1:1
                     vpos = [xtmp + xx*L, ytmp + yy*L];
                     finfo = [1:nvtmp 1];
-                    patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k','Linewidth',1.5,'markersize',10);
+                    if colorOpt == 3
+                        t0_clr = zeros(nvtmp,3);
+                        for vv = 1:nvtmp
+                            t0_bin = t0tmp(vv) > t0_bins(1:end-1) & t0tmp(vv) < t0_bins(2:end);
+                            t0_clr(vv,:) = t0_clr_list(t0_bin,:);
+                        end
+                        patch('Faces',finfo,'vertices',vpos,'FaceVertexCData',t0_clr,'FaceColor',clr,'EdgeColor','interp','Linewidth',3);
+                    else
+                        patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k','Linewidth',1.5,'markersize',10);
+                    end
 %                     text(cx,cy,num2str(nn));
                 end
             end
@@ -390,7 +415,7 @@ for ff = FSTART:FSTEP:FEND
                 dy = dy - L*round(dy/L);
                 for xx = ctccopy
                     for yy = ctccopy
-                        plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'k--','linewidth',2);
+                        plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'k-','linewidth',1.5);
                     end
                 end
             end
