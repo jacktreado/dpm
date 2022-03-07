@@ -20,18 +20,19 @@ kb_base=$4
 dl0=$5
 da0=$6
 cB=$7
-th0_min_scale=$8
-P0=$9
+bbreak=$8
+th0_min_scale=$9
+P0="${10}"
 
 # name strings
-basestr=mesoBoxGrowth_N"$N"_NG"$NGROWTH"_ca"$calA0_base"_kb"$kb_base"_dl"$dl0"_da"$da0"_cB"$cB"_t0m"$th0_min_scale"_P0"$P0"
+basestr=mesoBoxGrowth_N"$N"_NG"$NGROWTH"_ca"$calA0_base"_kb"$kb_base"_dl"$dl0"_da"$da0"_cB"$cB"_bb"$bbreak"_t0m"$th0_min_scale"_P0"$P0"
 
 # get mafile string to save data
 savestr="$simtypedir"/"$basestr".mat
 taskf=tasks/mesoBoxGrowth.task
 
 # create matlab command
-MCODE="addpath ~/dpm/viz/meso2D; mesoBoxGrowth('$savestr',$N,$NGROWTH,$calA0_base,$kb_base,$dl0,$da0,$cB,$th0_min_scale,$P0); quit"
+MCODE="addpath ~/dpm/viz/meso2D; mesoBoxGrowth('$savestr',$N,$NGROWTH,$calA0_base,$kb_base,$dl0,$da0,$cB,$bbreak,$th0_min_scale,$P0); quit"
 
 # add to task file
 if [[ ! -f "$taskf" ]]
@@ -56,8 +57,9 @@ fi
 # 5. dl0
 # 6. da0
 # 7. cB
-# 8. th0_min_scale (sets min th0 in units of 0.5 * pi)
-# 9. P0
+# 8. bbreak
+# 9. th0_min_scale (sets min th0 in units of 0.5 * pi)
+# 10. P0
 
 # NOTE: this only adds to task file mesoBoxGrowth.task in tasks/ directory
 # ** If running a new batch file, delete task file (rm tasks/mesoBoxGrowth.task)
