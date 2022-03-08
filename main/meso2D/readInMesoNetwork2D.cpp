@@ -4,7 +4,7 @@
 
 // Compilation command:
 // g++ -O3 --std=c++11 -I src main/meso2D/readInMesoNetwork2D.cpp src/*.cpp -o meso.o
-// ./meso.o meso_n16.input 1 0.1 50 0.2 0.01 1e-4 1 pos.test
+// ./meso.o meso_n16.input 1 0.1 200 0.5 0.4 0.05 2 0.6 1e-4 1 pos.test
 
 
 // header files
@@ -28,11 +28,8 @@ const double Ftol = 1e-12; 			// force tolerance
 const double dPtol = 1e-10;			// pressure change tolerance
 const double phiMin = 0.3;			// minimum packing fraction in decompression algorithm
 const double cL = 1.0; 				// perimeter aging (set to 0, possibly deprecated)
-const double cB = 1.0; 				// bending aging (set to 0, possibly deprecated)
-const double t0_min = 0.6*(-.5*PI);		// minimum curvature
-const double ctch = 0.5; 			// sets magnitude of \Delta U in bond-breaking
 const double aL = 1.0; 				// distribution of aging to boundary (when = 1)
-const double kc = 0.5; 				// interaction spring constant
+const double kc = 1.0; 				// interaction spring constant
 const double cKb = 0; 				// change in bending energy
 const int NMINSKIP = 1;				// number of frames to skip output
 const int NVMAXMAG = 5; 			// scale of max number of vertices
@@ -44,25 +41,31 @@ int main(int argc, char const *argv[])
 {
 	// local variables to be read in
 	int seed, NVMAX;
-	double kl, kb0, betaEff, da0, dl0, P0;
+	double kl, kb0, betaEff, ctch, da0, dl0, cB, t0_min, P0;
 
 	// read in parameters from command line input
 	string inputFile 		= argv[1];
 	string kl_str 			= argv[2];
 	string kb0_str 			= argv[3];
 	string betaEff_str 		= argv[4];
-	string da0_str 			= argv[5];
-	string dl0_str 			= argv[6];
-	string P0_str 			= argv[7];
-	string seed_str 		= argv[8];
-	string positionFile 	= argv[9];
+	string ctch_str 		= argv[5];
+	string da0_str 			= argv[6];
+	string dl0_str 			= argv[7];
+	string cB_str 			= argv[8];
+	string t0_min_str 		= argv[9];
+	string P0_str 			= argv[10];
+	string seed_str 		= argv[11];
+	string positionFile 	= argv[12];
 
 	// using sstreams to get parameters
 	stringstream klss(kl_str);
 	stringstream kb0ss(kb0_str);
 	stringstream betaEffss(betaEff_str);
+	stringstream ctchss(ctch_str);
 	stringstream da0ss(da0_str);
 	stringstream dl0ss(dl0_str);
+	stringstream cBss(cB_str);
+	stringstream t0_minss(t0_min_str);
 	stringstream P0ss(P0_str);
 	stringstream seedss(seed_str);
 
@@ -70,10 +73,16 @@ int main(int argc, char const *argv[])
 	klss >> kl;
 	kb0ss >> kb0;
 	betaEffss >> betaEff;
+	ctchss >> ctch;
 	da0ss >> da0;
 	dl0ss >> dl0;
+	cBss >> cB;
+	t0_minss >> t0_min;
 	P0ss >> P0;
 	seedss >> seed;
+
+	// scale t0_min
+	t0_min *= -0.5*PI;
 
 	// instantiate object
 	meso2D meso2Dobj(inputFile,seed);

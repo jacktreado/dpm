@@ -146,6 +146,7 @@ public:
 	void ageMesophyllShapeParameters(std::vector<bool> &edge_verts, double dl0, double da0, double t0_min);
 	void addMesophyllCellMaterial(std::vector<bool> &edge_verts);
 	void findInterfaceEdges(std::vector<bool> &edge_verts);
+	void computeZ();
 	void ageMesophyllShapeParameters();
 	void relaxByAdding();
 	void addMesophyllCellMaterial(double dl0);

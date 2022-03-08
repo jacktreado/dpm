@@ -16,6 +16,7 @@ mesoData = readMesoNetworkCTCS2D(fstr);
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
 idx = phi > 0.45;
+idx(1:3) = zeros(3,1);
 phi = phi(idx);
 
 % number of frames
@@ -31,11 +32,23 @@ y = mesoData.y(idx,:);
 r = mesoData.r(idx,:);
 zc = mesoData.zc(idx,:);
 zv = mesoData.zv(idx,:);
+a = mesoData.a(idx,:);
 a0 = mesoData.a0(idx,:);
 l0 = mesoData.l0(idx,:);
 t0 = mesoData.t0(idx,:);
 kb = mesoData.kb(idx,:);
 phi0 = sum(a0,2)./(LList(:,1).*LList(:,2));
+phiA = sum(a,2)./(LList(:,1).*LList(:,2));
+% phiA = zeros(NFRAMES,1);
+% for ff = 1:NFRAMES
+%     phitmp = 0.0;
+%     for nn = 1:NCELLS
+%         phitmp = phitmp + a(ff,nn) + pi*mean(l0{ff,nn})^2*(0.5*nv(ff,nn)-1);
+%     end
+%     phitmp = phitmp/(LList(ff,1)*LList(ff,2));
+%     phiA(ff) = phitmp;
+% end
+
 
 % get preferred shape
 calA0 = zeros(NFRAMES,NCELLS);
@@ -132,19 +145,16 @@ if NFRAMES > 2
     h.Color = 'b';
     ax = gca;
     ax.YColor = 'b';
+    ax.YLim = [0 1];
     yyaxis right
-    plot((2:NFRAMES) - 1,P(2:NFRAMES),'ks','markersize',10,'markerfacecolor','r');
-    h = ylabel('$P$','Interpreter','latex');
+    plot((2:NFRAMES) - 1,phiA(2:NFRAMES),'ks','markersize',10,'markerfacecolor','r');
+    h = ylabel('$\phi_{\rm area}$','Interpreter','latex');
     h.Color = 'r';
     ax = gca;
     ax.YColor = 'r';
+    ax.YLim = [0 1];
     xlabel('frame','Interpreter','latex');
     ax.FontSize = 36;
-    if mean(P) > 0
-        ax.YLim = [0 2*mean(P)];
-    else
-        ax.YLim = [2*mean(P) 0];
-    end
     
     % plot shape vs porosity
     ambroseData = load('/Users/jacktreado/Jamming/Flowers/structure/plant/ambroseMesoCells/ambroseData.mat');
@@ -166,7 +176,7 @@ if NFRAMES > 2
     ct17Porosity = totalData.ct17Porosity;
     
     figure(17), clf, hold on, box on;
-    errorbar(max(phi) - phi,mean(calA,2),std(calA,0,2),'-k','linewidth',1.75);
+    errorbar(max(phiA) - phiA,mean(calA,2),std(calA,0,2),'-k','linewidth',1.75);
 %     errorbar(porosity,calAMean,calAMin,calAMax,'k>','markersize',10,'markerfacecolor','b');
     errorbar(porosity,calAMeas,dCalAMin,dCalAMax,'k>','markersize',10,'markerfacecolor','r');
     errorbar(ct01Porosity,ct01CalAMean,ct01CalAStd,'k>','markersize',10);
@@ -183,13 +193,14 @@ if NFRAMES > 2
     
     figure(18), clf, hold on, box on;
     plot(porosity,aMean./aMean(1),'bo','markersize',10,'markerfacecolor','b');
-    plot(max(phi) - phi,aSim./aSim(2),'ks','markersize',10);
-    plot(max(phi) - phi,a0Sim./a0Sim(2),'k^','markersize',10);
+    plot(max(phiA) - phiA,aSim./aSim(2),'ks','markersize',10);
+    plot(max(phiA) - phiA,a0Sim./a0Sim(2),'k^','markersize',10);
     ylabel('$a/a(0)$','Interpreter','latex');
     xlabel('$1-\phi$','Interpreter','latex');
     ax = gca;
     ax.FontSize = 22;
     ax.YScale = 'log';
+    legend({'data','$a/a(0)$','$a_0/a_0(0)$'},'Interpreter','latex','Fontsize',18);
 end
 
 
@@ -303,13 +314,13 @@ if showverts == 0
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
-    FSTART = 1;
+    FSTART = NFRAMES;
     FSTEP = 1;
     FEND = FSTART;
 end
 
 % make a movie
-makeAMovie = 1;
+makeAMovie = 0;
 ctccopy = 0;
 if makeAMovie == 1
 %     moviestr = 'debug.mp4';
@@ -333,6 +344,7 @@ for ff = FSTART:FSTEP:FEND
     rf = r(ff,:);
     t0f = t0(ff,:);
     zctmp = zc(ff,:);
+    zvff = zv(ff,:);
     L = LList(ff,1);
     for nn = 1:NCELLS
         xtmp = xf{nn};
@@ -342,6 +354,7 @@ for ff = FSTART:FSTEP:FEND
         cy = mean(ytmp);
         rtmp = rf{nn};
         nvtmp = nv(ff,nn);
+        zvtmp = zvff{nn};
         
         % get color info
         switch colorOpt
@@ -365,8 +378,8 @@ for ff = FSTART:FSTEP:FEND
                 yplot = ytmp(vv) - rv;
                 for xx = -1:1
                     for yy = -1:1
-                        if nn > 0
-                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',2);
+                        if zvtmp(vv) > 0
+                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','k','LineWidth',2);
                         else
                             rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','w','LineWidth',2);
                         end

@@ -998,177 +998,6 @@ void meso2D::mesoRepulsiveVertexForces(){
 	}
 }
 
-// // cell-only mesophyll repulsive vertex forces in presence of void bubbles
-// void meso2D::mesoNoBubbleVertexForces(){
-// 	// local variables
-// 	int ci, cj, gi, gj, vi, vj, bi, bj, pi, pj, boxid, sbtmp;
-// 	double sij, rij, dx, dy;
-// 	double ftmp, fx, fy;
-// 	int NTCELLS = NCELLS - NBUBBLES;
-
-// 	// sort particles
-// 	sortNeighborLinkedList2D();
-
-// 	// reset contact network
-// 	fill(cij.begin(), cij.end(), 0);
-
-// 	// loop over boxes in neighbor linked list
-// 	for (bi = 0; bi < NBX; bi++) {
-// 		// get start of list of vertices
-// 		pi = head[bi];
-
-// 		// loop over linked list
-// 		while (pi > 0) {
-// 			// real particle index
-// 			gi = pi - 1;
-// 			cindices(ci, vi, gi);
-
-// 			// next particle in list
-// 			pj = list[pi];
-
-// 			// loop down neighbors of pi in same cell
-// 			while (pj > 0) {
-// 				// real index of pj
-// 				gj = pj - 1;
-
-// 				// add to contacts
-// 				cindices(cj, vj, gj);
-
-// 				if (gj == ip1[gi] || gj == im1[gi] || ci >= NTCELLS || cj >= NTCELLS) {
-// 					pj = list[pj];
-// 					continue;
-// 				}
-
-// 				// contact distance
-// 				sij = r[gi] + r[gj];
-
-// 				// particle distance
-// 				dx = x[NDIM * gj] - x[NDIM * gi];
-// 				if (pbc[0])
-// 					dx -= L[0] * round(dx / L[0]);
-// 				if (dx < sij) {
-// 					dy = x[NDIM * gj + 1] - x[NDIM * gi + 1];
-// 					if (pbc[1])
-// 						dy -= L[1] * round(dy / L[1]);
-// 					if (dy < sij) {
-// 						rij = sqrt(dx * dx + dy * dy);
-// 						if (rij < sij) {
-// 							// force scale
-// 							ftmp = (kc / sij) * (1 - (rij / sij));
-// 							fx = ftmp * (dx / rij);
-// 							fy = ftmp * (dy / rij);
-
-// 							// add to forces
-// 							F[NDIM * gi] -= fx;
-// 							F[NDIM * gi + 1] -= fy;
-
-// 							F[NDIM * gj] += fx;
-// 							F[NDIM * gj + 1] += fy;
-
-// 							// increase potential energy
-// 							U += 0.5 * kc * pow((1 - (rij / sij)), 2.0);
-
-// 							// add to dUdL contribution to pressure
-// 							Pinst -= ftmp*(rij/L[0]);
-
-// 							// add to virial stress
-// 							stress[0] += (dx * fx)/(L[0] * L[1]);
-// 							stress[1] += (dy * fy)/(L[0] * L[1]);;
-// 							stress[2] += (0.5 * (dx * fy + dy * fx))/(L[0] * L[1]);
-
-// 							if (ci > cj)
-// 								cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2]++;
-// 							else if (ci < cj)
-// 								cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2]++;
-// 						}
-// 					}
-// 				}
-
-// 				// update pj
-// 				pj = list[pj];
-// 			}
-
-// 			// test overlaps with forward neighboring cells
-// 			for (bj = 0; bj < NNN; bj++) {
-// 				// only check if boundaries permit
-// 				if (nn[bi][bj] == -1)
-// 					continue;
-
-// 				// get first particle in neighboring cell
-// 				pj = head[nn[bi][bj]];
-
-// 				// loop down neighbors of pi in same cell
-// 				while (pj > 0) {
-// 					// real index of pj
-// 					gj = pj - 1;
-
-// 					// add to contacts
-// 					cindices(cj, vj, gj);
-
-// 					if (gj == ip1[gi] || gj == im1[gi] || ci >= NTCELLS || cj >= NTCELLS) {
-// 						pj = list[pj];
-// 						continue;
-// 					}
-// 					// contact distance
-// 					sij = r[gi] + r[gj];
-
-// 					// particle distance
-// 					dx = x[NDIM * gj] - x[NDIM * gi];
-// 					if (pbc[0])
-// 						dx -= L[0] * round(dx / L[0]);
-// 					if (dx < sij) {
-// 						dy = x[NDIM * gj + 1] - x[NDIM * gi + 1];
-// 						if (pbc[1])
-// 							dy -= L[1] * round(dy / L[1]);
-// 						if (dy < sij) {
-// 							rij = sqrt(dx * dx + dy * dy);
-// 							if (rij < sij) {
-// 								// force scale
-// 								ftmp = (kc / sij) * (1 - (rij / sij));
-// 								fx = ftmp * (dx / rij);
-// 								fy = ftmp * (dy / rij);
-
-// 								// add to forces
-// 								F[NDIM * gi] -= fx;
-// 								F[NDIM * gi + 1] -= fy;
-
-// 								F[NDIM * gj] += fx;
-// 								F[NDIM * gj + 1] += fy;
-
-// 								// increae potential energy
-// 								U += 0.5 * kc * pow((1 - (rij / sij)), 2.0);
-
-// 								// add to dUdL contribution to pressure
-// 								Pinst -= ftmp*(rij/L[0]);
-
-// 								// add to virial stress
-// 								stress[0] += (dx * fx)/(L[0] * L[1]);
-// 								stress[1] += (dy * fy)/(L[0] * L[1]);;
-// 								stress[2] += (0.5 * (dx * fy + dy * fx))/(L[0] * L[1]);
-
-// 								// add to contacts
-// 								cindices(ci, vi, gi);
-// 								cindices(cj, vj, gj);
-
-// 								if (ci > cj)
-// 									cij[NCELLS * cj + ci - (cj + 1) * (cj + 2) / 2]++;
-// 								else if (ci < cj)
-// 									cij[NCELLS * ci + cj - (ci + 1) * (ci + 2) / 2]++;
-// 							}
-// 						}
-// 					}
-
-// 					// update pj
-// 					pj = list[pj];
-// 				}
-// 			}
-
-// 			// update pi index to be next
-// 			pi = list[pi];
-// 		}
-// 	}
-// }
-
 // mesophyll specific shape forces
 void meso2D::mesoShapeForces(){
 	// local variables
@@ -3114,7 +2943,7 @@ void meso2D::mesoFreeGrowth(meso2DMemFn forceCall, double Ftol, double dt0, doub
 
 		// increase perimeters near void
 		for (gi=0; gi<NVTOT; gi++){
-			if (zv[gi] < 0 || zv[ip1[gi]] < 0)
+			if (zv[gi] == 0 || zv[ip1[gi]] == 0)
 				l0[gi] += (dl0*dphi0/NCELLS)*l0[gi];
 		}
 
@@ -3269,6 +3098,9 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 
 		// break contact network
 		updateMesophyllBondNetwork(edge_verts);
+
+		// recompute bond information
+		// computeZ();
 
 		// find vertices at edge of contacts
 		edge_verts.resize(NVTOT);
@@ -3442,8 +3274,10 @@ void meso2D::mesoBubbleEnthalpyMin(meso2DMemFn forceCall, double Ftol, double dP
 void meso2D::updateMesophyllBondNetwork(vector<bool> &edge_verts){
 	// local variables
 	bool isConnected, canBreak;
+	int imove, jmove, gitmp;
 	int cijctc, zitmp, zjtmp, ci, cj, ck, vi, vj, gi, gj, hi, hj;
 	double dx, dy, sij, rij, zij, dU, poff, h=ctch, h2=h*h, rdraw;
+	double lix, liy, lim1x, lim1y, ljx, ljy, ljm1x, ljm1y, btmp;
 
 	// loop over pairs of vertices, check whether to connect or detach
 	for (ci=0; ci<NCELLS; ci++){
@@ -3484,7 +3318,128 @@ void meso2D::updateMesophyllBondNetwork(vector<bool> &edge_verts){
 						// true distance
 						rij = sqrt(dx*dx + dy*dy);
 
-						// only check bond if extended
+						// check if bond should move, if so don't break
+						imove = 0;
+						jmove = 0;
+
+
+
+						// bond vectors in x-direction
+						lim1x = x[NDIM*gi] - x[NDIM*im1[gi]];
+						lix = x[NDIM*ip1[gi]] - x[NDIM*gi];
+						ljm1x = x[NDIM*gj] - x[NDIM*im1[gj]];
+						ljx = x[NDIM*ip1[gj]] - x[NDIM*gj];
+						if (pbc[0]){
+							lim1x -= L[0]*round(lim1x/L[0]);
+							lix -= L[0]*round(lix/L[0]);
+							ljm1x -= L[0]*round(ljm1x/L[0]);
+							ljx -= L[0]*round(ljx/L[0]);
+						}
+
+						// bond vectors in y-direction
+						lim1y = x[NDIM*gi + 1] - x[NDIM*im1[gi] + 1];
+						liy = x[NDIM*ip1[gi] + 1] - x[NDIM*gi + 1];
+						ljm1y = x[NDIM*gj + 1] - x[NDIM*im1[gj] + 1];
+						ljy = x[NDIM*ip1[gj] + 1] - x[NDIM*gj + 1];
+						if (pbc[0]){
+							lim1y -= L[0]*round(lim1y/L[0]);
+							liy -= L[0]*round(liy/L[0]);
+							ljm1y -= L[0]*round(ljm1y/L[0]);
+							ljy -= L[0]*round(ljy/L[0]);
+						}
+
+
+
+						// // -- check whether or not to move
+
+						// // new bond length moving from i to ip1
+						// btmp = pow(dx - lix,2.0) + pow(dy - liy,2.0);
+						// if (btmp < rij*rij && !gij[NVTOT*ip1[gi] + gj - (ip1[gi]+1)*(ip1[gi]+2)/2]){
+						// 	// set has moved to +1
+						// 	imove = 1;
+
+						// 	// switch v-v bond to gi+1
+						// 	gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 0;
+						// 	gij[NVTOT*ip1[gi] + gj - (ip1[gi]+1)*(ip1[gi]+2)/2] = 1;
+
+						// 	// update vertex-vertex distances
+						// 	dx = x[NDIM*gj] - x[NDIM*ip1[gi]];
+						// 	if (pbc[0])
+						// 		dx -= L[0]*round(dx/L[0]);
+
+						// 	dy = x[NDIM*gj + 1] - x[NDIM*ip1[gi] + 1];
+						// 	if (pbc[1])
+						// 		dy -= L[1]*round(dy/L[1]);
+
+						// 	// true distance
+						// 	rij = sqrt(dx*dx + dy*dy);
+						// }
+
+						// // moving from i to im1
+						// btmp = pow(dx + lim1x,2.0) + pow(dy + lim1y,2.0);
+						// if (btmp < rij*rij && imove == 0 && !gij[NVTOT*im1[gi] + gj - (im1[gi]+1)*(im1[gi]+2)/2]){
+						// 	// set has moved to -1
+						// 	imove = -1;
+
+						// 	// switch v-v bond to gi-1
+						// 	gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 0;
+						// 	gij[NVTOT*im1[gi] + gj - (im1[gi]+1)*(im1[gi]+2)/2] = 1;
+
+						// 	// update vertex-vertex distances
+						// 	dx = x[NDIM*gj] - x[NDIM*im1[gi]];
+						// 	if (pbc[0])
+						// 		dx -= L[0]*round(dx/L[0]);
+
+						// 	dy = x[NDIM*gj + 1] - x[NDIM*im1[gi] + 1];
+						// 	if (pbc[1])
+						// 		dy -= L[1]*round(dy/L[1]);
+
+						// 	// true distance
+						// 	rij = sqrt(dx*dx + dy*dy);
+						// }
+
+
+						// ALSO CHECK FOR MOVING J TO NEIGHBORING VERTICES!!
+
+						// // moving from j to jp1
+						// btmp = pow(dx + ljx,2.0) + pow(dy + ljy,2.0);
+						// if (btmp < rij*rij){
+						// 	// set jmove = 1
+						// 	jmove = 1;
+
+						// 	// determine if need to use new gi
+						// 	if (imove == 1)
+						// 		gitmp = ip1[gi];
+						// 	else if (imove == -1)
+						// 		gitmp = im1[gi];
+						// 	else
+						// 		gitmp = gi;
+
+						// 	// switch v-v bond to gitmp & ip1[gj]
+						// 	gij[NVTOT*gitmp + gj - (gitmp+1)*(gitmp+2)/2] = 0;
+						// 	gij[NVTOT*gitmp + ip1[gj] - (gitmp+1)*(gitmp+2)/2] = 1;
+						// }
+
+						// // moving from j to jm1
+						// btmp = pow(dx - ljm1x,2.0) + pow(dy - ljm1y,2.0);
+						// if (btmp < rij*rij && jmove == 0){
+						// 	// set jmove to -1
+						// 	jmove = -1;
+
+						// 	// determine if need to use new gi
+						// 	if (imove == 1)
+						// 		gitmp = ip1[gi];
+						// 	else if (imove == -1)
+						// 		gitmp = im1[gi];
+						// 	else
+						// 		gitmp = gi;
+
+						// 	// switch v-v bond to gitmp & ip1[gj]
+						// 	gij[NVTOT*gitmp + gj - (gitmp+1)*(gitmp+2)/2] = 0;
+						// 	gij[NVTOT*gitmp + im1[gj] - (gitmp+1)*(gitmp+2)/2] = 1;
+						// }
+
+						// only check bond if extended & has not moved
 						if (rij > sij){
 							// change in energy from bond breaking
 							dU = 1.0 - 0.5*(pow(1 - (rij/sij),2.0)/h2);
@@ -3550,18 +3505,33 @@ void meso2D::ageMesophyllShapeParameters(vector<bool> &edge_verts, double dl0, d
 	double lix, liy, lim1x, lim1y, li, ti, sini, cosi;
 	double dl0_tmp;
 
+	// count number of void vertices per cell
+	vector<int> nvoid(NCELLS,0);
+
 	// grow areas, radii
 	gi = 0; 
 	for (ci=0; ci<NCELLS; ci++){
+		// grow area
 		a0[ci] *= pow(1 + dl0*da0,2.0);
 		for (vi=0; vi<nv[ci]; vi++){
+			// grow vertex radius
 			r[gi] *= (1 + da0*dl0);
+
+			// count number of void segments
+			if (zv[gi] == 0)
+				nvoid[ci]++;
+
+			// increment global vertex counter
 			gi++;
 		}
 	}
 
 	// grow and age perimeter
 	for (gi=0; gi<NVTOT; gi++){
+		// cell index
+		cindices(ci,vi,gi);
+		dl0_tmp = dl0*(1.0/(1.0 + (nvoid[ci]/nv[ci])));
+
 		// segment from i to ip1
 		lix = x[NDIM*ip1[gi]] - x[NDIM*gi];
 		if (pbc[0])
@@ -3589,24 +3559,28 @@ void meso2D::ageMesophyllShapeParameters(vector<bool> &edge_verts, double dl0, d
 		ti = atan2(sini,cosi);
 
 		// // age near edges
-		// if ( (edge_verts[gi] && (edge_verts[ip1[gi]] || zv[ip1[gi]] <= 0)) || (zv[gi] <= 0 && edge_verts[ip1[gi]]) ){
+		// if ( (edge_verts[gi] && (edge_verts[ip1[gi]] || zv[ip1[gi]] == 0)) || (zv[gi] == 0 && edge_verts[ip1[gi]]) ){
 		// 	l0[gi] *= (1.0 + dl0);
 		// 	if (t0[gi] > t0_min + dl0*cB)
 		// 		t0[gi] -= dl0*cB;
 		// }
 		// // grow on void
-		// else if (zv[gi] <= 0){
+		// else if (zv[gi] == 0){
 		// 	l0[gi] += dl0*cL*(li - l0[gi]);
 		// 	t0[gi] += dl0*cB*(ti - t0[gi]);
 		// }
-		if (zv[gi] <= 0){
-			l0[gi] *= (1.0 + dl0);
-			if (t0[gi] > t0_min + dl0*cB)
+
+		// grow along void areas
+		if (zv[gi] == 0){
+			l0[gi] *= (1.0 + dl0_tmp);
+			if (t0[gi] > t0_min + dl0_tmp*cB)
 				t0[gi] -= dl0*cB;
 		}
 		// if ctc, age toward 0
-		else
+		else{
 			t0[gi] *= 1 - dl0*cB;
+			l0[gi] += dl0*(li - l0[gi]);
+		}
 	}
 }
 
@@ -3653,7 +3627,7 @@ void meso2D::addMesophyllCellMaterial(vector<bool> &edge_verts){
 		dli = sqrt(dx*dx + dy*dy);
 
 		// add if void vertex and over extended
-		if (zv[gi] <= 0){
+		if (zv[gi] == 0){
 			// if distance between two vertices is more than twice the vertex radius, add
 			if (dlim1 > 4.0*r[gi])
 				growthVerts.push_back(gim1);
@@ -3835,7 +3809,7 @@ void meso2D::findInterfaceEdges(vector<bool> &edge_verts){
 			cindices(cthis, vthis, gi);
 
 			// check forward neighbor
-			if (zv[gip1] <= 0){
+			if (zv[gip1] == 0){
 				edge_verts[gi] = 1;
 				continue;
 			}
@@ -3892,7 +3866,7 @@ void meso2D::findInterfaceEdges(vector<bool> &edge_verts){
 			}
 
 			// check backward neighbor (only need to check if not ctc...other case handled above)
-			if (zv[gim1] <= 0){
+			if (zv[gim1] == 0){
 				edge_verts[gi] = 1;
 				continue;
 			}
@@ -3901,6 +3875,34 @@ void meso2D::findInterfaceEdges(vector<bool> &edge_verts){
 }
 
 
+// recompute number of vertices on each bond
+void meso2D::computeZ(){
+	// local variables
+	int gi, ci, vi, gj, cj, vj;
+
+	// reset z
+	fill(zv.begin(),zv.end(),0);
+	fill(zc.begin(),zc.end(),0);
+
+	// loop over each bond, recompute zc and zv
+	for (gi=0; gi<NVTOT; gi++){
+		cindices(ci,vi,gi);
+		for (gj=(gi+1); gj<NVTOT; gj++){
+			cindices(cj,vj,gj);
+			if (cj == ci)
+				continue;
+
+			// check if bonded
+			if (gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2]){
+				zv[gi]++;
+				zv[gj]++;
+
+				zc[ci]++;
+				zc[cj]++;
+			}
+		}
+	}
+}
 
 
 // age mesophyll shape parameters
@@ -3937,12 +3939,8 @@ void meso2D::ageMesophyllShapeParameters(){
 		if (l0[gi] < li){
 			if (zv[gi] > 0 && zv[ip1[gi]] > 0)
 				l0[gi] += (1.0-aL)*dt*cL*(li - l0[gi]);
-			else if (zv[gi] == 0)
+			else
 				l0[gi] += aL*dt*cL*(li - l0[gi]);
-			else if (zv[gi] == -1){
-				l0[gi] += aL*dt*cL*(li - l0[gi]);
-				l0[im1[gi]] += aL*dt*cL*(li - l0[im1[gi]]);
-			}
 		}
 		
 
@@ -4215,7 +4213,7 @@ void meso2D::addMesophyllCellMaterial(double dl0){
 		}
 
 		// add if void vertex and over extended
-		if (zv[gi] <= 0){
+		if (zv[gi] == 0){
 			// if distance between two vertices is more than twice the vertex radius, add
 			if (dlim1 > 4.0*r[gi])
 				growthVerts.push_back(gim1);
@@ -4475,7 +4473,7 @@ void meso2D::addVertex(int gi, double newl0){
 	t0[gi+1] = t0[gi];
 	r[gi+1] = r[gi];
 	kbi[gi+1] = kbi[gi];
-	zv[gi+1] = -1;
+	zv[gi+1] = 0;
 
 	cout << "new:" << endl;
 	cout << "vertex " << gi << "; (" << x[NDIM*gi] << ", " << x[NDIM*gi + 1] << ")" << endl;
