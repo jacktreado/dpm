@@ -103,7 +103,3 @@ sbatch -t $time $slurmf
 # 14. time
 
 
-
-for da in 0.01 0.1 0.2 0.4 1; do for dl in 0.01 0.02 0.05 0.1; do for
-
-
