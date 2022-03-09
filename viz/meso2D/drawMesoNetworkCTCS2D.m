@@ -6,7 +6,7 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kl1_kb01e-3_be50_da2e-2_dl5_P-1e-2_seed13.posctc';
+% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kl1_kb0.2_be250_h0.5_da0.4_dl0.02_cB1.5_t0m0.4_P1e-6_seed100.posctc';
 % fstr = 'local/mesoDM2D_data/mesoDM2D_N32_n32_ca1.14_kl1_kb01e-3_be50_da0.02_dl10_P1e-4_seed27.posctc';
 fstr = '~/Jamming/CellSim/dpm/pos.test';
 
@@ -15,8 +15,9 @@ mesoData = readMesoNetworkCTCS2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
-idx = phi > 0.45;
-idx(1:3) = zeros(3,1);
+idx = phi > 0.35;
+NSKIP = 1;
+idx(1:NSKIP) = zeros(NSKIP,1);
 phi = phi(idx);
 
 % number of frames

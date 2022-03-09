@@ -3324,29 +3324,29 @@ void meso2D::updateMesophyllBondNetwork(vector<bool> &edge_verts){
 
 
 
-						// bond vectors in x-direction
-						lim1x = x[NDIM*gi] - x[NDIM*im1[gi]];
-						lix = x[NDIM*ip1[gi]] - x[NDIM*gi];
-						ljm1x = x[NDIM*gj] - x[NDIM*im1[gj]];
-						ljx = x[NDIM*ip1[gj]] - x[NDIM*gj];
-						if (pbc[0]){
-							lim1x -= L[0]*round(lim1x/L[0]);
-							lix -= L[0]*round(lix/L[0]);
-							ljm1x -= L[0]*round(ljm1x/L[0]);
-							ljx -= L[0]*round(ljx/L[0]);
-						}
+						// // bond vectors in x-direction
+						// lim1x = x[NDIM*gi] - x[NDIM*im1[gi]];
+						// lix = x[NDIM*ip1[gi]] - x[NDIM*gi];
+						// ljm1x = x[NDIM*gj] - x[NDIM*im1[gj]];
+						// ljx = x[NDIM*ip1[gj]] - x[NDIM*gj];
+						// if (pbc[0]){
+						// 	lim1x -= L[0]*round(lim1x/L[0]);
+						// 	lix -= L[0]*round(lix/L[0]);
+						// 	ljm1x -= L[0]*round(ljm1x/L[0]);
+						// 	ljx -= L[0]*round(ljx/L[0]);
+						// }
 
-						// bond vectors in y-direction
-						lim1y = x[NDIM*gi + 1] - x[NDIM*im1[gi] + 1];
-						liy = x[NDIM*ip1[gi] + 1] - x[NDIM*gi + 1];
-						ljm1y = x[NDIM*gj + 1] - x[NDIM*im1[gj] + 1];
-						ljy = x[NDIM*ip1[gj] + 1] - x[NDIM*gj + 1];
-						if (pbc[0]){
-							lim1y -= L[0]*round(lim1y/L[0]);
-							liy -= L[0]*round(liy/L[0]);
-							ljm1y -= L[0]*round(ljm1y/L[0]);
-							ljy -= L[0]*round(ljy/L[0]);
-						}
+						// // bond vectors in y-direction
+						// lim1y = x[NDIM*gi + 1] - x[NDIM*im1[gi] + 1];
+						// liy = x[NDIM*ip1[gi] + 1] - x[NDIM*gi + 1];
+						// ljm1y = x[NDIM*gj + 1] - x[NDIM*im1[gj] + 1];
+						// ljy = x[NDIM*ip1[gj] + 1] - x[NDIM*gj + 1];
+						// if (pbc[0]){
+						// 	lim1y -= L[0]*round(lim1y/L[0]);
+						// 	liy -= L[0]*round(liy/L[0]);
+						// 	ljm1y -= L[0]*round(ljm1y/L[0]);
+						// 	ljy -= L[0]*round(ljy/L[0]);
+						// }
 
 
 
@@ -3445,7 +3445,8 @@ void meso2D::updateMesophyllBondNetwork(vector<bool> &edge_verts){
 							dU = 1.0 - 0.5*(pow(1 - (rij/sij),2.0)/h2);
 
 							// only break stochastically at edges
-							canBreak = (edge_verts[gi] && edge_verts[gj]);
+							// canBreak = (edge_verts[gi] && edge_verts[gj]);
+							canBreak = (zv[ip1[gi]] == 0 || zv[im1[gi]] == 0) && (zv[ip1[gj]] == 0 || zv[im1[gj]] == 0);
 							// canBreak = 1;
 
 							// remove if bond detaching decreases energy
@@ -3466,6 +3467,7 @@ void meso2D::updateMesophyllBondNetwork(vector<bool> &edge_verts){
 							else{
 								// else, remove conditionally
 								poff = exp(-(betaEff*dU)/zij);
+								// poff = exp(-(betaEff*dU)/zij);
 								rdraw = drand48();
 
 								// detach
@@ -3530,7 +3532,7 @@ void meso2D::ageMesophyllShapeParameters(vector<bool> &edge_verts, double dl0, d
 	for (gi=0; gi<NVTOT; gi++){
 		// cell index
 		cindices(ci,vi,gi);
-		dl0_tmp = dl0*(1.0/(1.0 + (nvoid[ci]/nv[ci])));
+		dl0_tmp = dl0*(1.0/(1.0 + (1.0*(nvoid[ci]/nv[ci]))));
 
 		// segment from i to ip1
 		lix = x[NDIM*ip1[gi]] - x[NDIM*gi];

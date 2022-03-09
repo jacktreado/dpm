@@ -111,8 +111,8 @@ int main(int argc, char const *argv[])
 
 	// relax configuration using network + bending
 	meso2Dobj.initializeMesophyllBondNetwork();
-	// meso2Dobj.t0ToCurrent();
-	// meso2Dobj.mesoFIRE(&meso2D::mesoNetworkForceUpdate, Ftol, dt0);
+	meso2Dobj.t0ToCurrent();
+	meso2Dobj.mesoFIRE(&meso2D::mesoNetworkForceUpdate, Ftol, dt0);
 	meso2Dobj.t0ToCurrent();
 	meso2Dobj.printMesoNetworkCTCS2D();
 	

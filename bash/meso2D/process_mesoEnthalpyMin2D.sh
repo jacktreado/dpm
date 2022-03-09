@@ -23,20 +23,23 @@ NCELLS=$1
 n1=$2
 calA0=$3
 
-# inputs about specific simulation
+# inputs about network formation simulation
 kl=$4
 kb0=$5
 betaEff=$6
-da0=$7
-dl0=$8
-P0=$9
+ctch=$7
+da0=$8
+dl0=$9
+cB="${10}"
+t0min="${11}"
+P0="${12}"
 
 # inputs about cluster
-partition="${10}"
-time="${11}"
+partition="${13}"
+time="${14}"
 
 # name strings
-basestr=mesoHMin2D_N"$NCELLS"_n"$n1"_ca"$calA0"_kl"$kl"_kb0"$kb0"_be"$betaEff"_da"$da0"_dl"$dl0"_P"$P0"
+basestr=mesoHMin2D_N"$NCELLS"_n"$n1"_ca"$calA0"_kl"$kl"_kb"$kb0"_be"$betaEff"_h"$ctch"_da"$da0"_dl"$dl0"_cB"$cB"_t0m"$t0min"_P"$P0"
 runstr="$basestr"_PROCESS
 searchstr="$basestr"_seed
 
@@ -90,10 +93,17 @@ sbatch -t $time $slurmf
 # 4. kl
 # 5. kb0
 # 6. betaEff
-# 7. da0
-# 8. dl0
-# 9. P0
-# 10. partition
-# 11. time
+# 7. ctch
+# 8. da0
+# 9. dl0
+# 10. cB
+# 11. t0min
+# 12. P0
+# 13. partition
+# 14. time
+
+
+
+for da in 0.01 0.1 0.2 0.4 1; do for dl in 0.01 0.02 0.05 0.1; do for
 
 

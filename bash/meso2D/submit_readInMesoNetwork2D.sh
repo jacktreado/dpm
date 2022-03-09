@@ -225,6 +225,3 @@ sbatch -t $time $slurmf
 # 16. number of seeds to use
 
 
-
-
-
