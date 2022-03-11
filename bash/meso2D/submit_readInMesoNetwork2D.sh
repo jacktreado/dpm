@@ -29,28 +29,28 @@ n1=$2
 calA0=$3
 
 # inputs about network formation simulation
-kl=$4
-kb0=$5
-betaEff=$6
-ctch=$7
-da0=$8
-dl0=$9
-cB="${10}"
-t0min="${11}"
-P0="${12}"
+kb0=$4
+betaEff=$5
+ctch=$6
+da0=$7
+dl0=$8
+cL=$9
+cB="${11}"
+t0min="${12}"
+P0="${13}"
 
 # inputs about cluster
-partition="${13}"
-time="${14}"
-startSeed="${15}"
-numSeeds="${16}"
+partition="${14}"
+time="${15}"
+startSeed="${16}"
+numSeeds="${17}"
 
 # compute number of seeds
 let endSeed=$startSeed+$numSeeds-1
 
 # name strings
 inputstr=mesoInput_N"$NCELLS"_n"$n1"_ca"$calA0"
-basestr=mesoHMin2D_N"$NCELLS"_n"$n1"_ca"$calA0"_kl"$kl"_kb"$kb0"_be"$betaEff"_h"$ctch"_da"$da0"_dl"$dl0"_cB"$cB"_t0m"$t0min"_P"$P0"
+basestr=mesoHMin2D_N"$NCELLS"_n"$n1"_ca"$calA0"_kb"$kb0"_be"$betaEff"_h"$ctch"_da"$da0"_dl"$dl0"_cL"$cL"_cB"$cB"_t0m"$t0min"_P"$P0"
 runstr="$basestr"_ns"$numSeeds"
 
 # make directory specific for this simulation

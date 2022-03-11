@@ -6,7 +6,7 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kl1_kb0.2_be250_h0.5_da0.4_dl0.02_cB1.5_t0m0.4_P1e-6_seed100.posctc';
+% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kl1_kb0.2_be250_h0.5_da0.4_dl0.05_cB1.5_t0m0.6_P1e-6_seed10.posctc';
 % fstr = 'local/mesoDM2D_data/mesoDM2D_N32_n32_ca1.14_kl1_kb01e-3_be50_da0.02_dl10_P1e-4_seed27.posctc';
 fstr = '~/Jamming/CellSim/dpm/pos.test';
 
@@ -15,8 +15,8 @@ mesoData = readMesoNetworkCTCS2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
-idx = phi > 0.35;
-NSKIP = 1;
+idx = phi > 0.5;
+NSKIP = 3;
 idx(1:NSKIP) = zeros(NSKIP,1);
 phi = phi(idx);
 
@@ -324,8 +324,7 @@ end
 makeAMovie = 0;
 ctccopy = 0;
 if makeAMovie == 1
-%     moviestr = 'debug.mp4';
-    moviestr = 'negCurvature.mp4';
+    moviestr = 'mesoHMin2D_N32_n32_ca1.14_kl1_kb0.2_be250_h0.5_da0.4_dl0.05_cB1.5_t0m0.6_P1e-6_seed10.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -413,28 +412,28 @@ for ff = FSTART:FSTEP:FEND
         end
     end
     
-    % plot vv contacts
-    gijtmp = gijList{ff};
-    xa = cell2mat(xf');
-    ya = cell2mat(yf');
-    NVTOT = sum(nv(ff,:));
-    for gi = 1:NVTOT
-        xi = xa(gi);
-        yi = ya(gi);
-        for gj = (gi+1):NVTOT
-            if (gijtmp(gi,gj) == 1)
-                dx = xa(gj) - xi;
-                dx = dx - L*round(dx/L);
-                dy = ya(gj) - yi;
-                dy = dy - L*round(dy/L);
-                for xx = ctccopy
-                    for yy = ctccopy
-                        plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'k-','linewidth',1.5);
-                    end
-                end
-            end
-        end
-    end
+%     % plot vv contacts
+%     gijtmp = gijList{ff};
+%     xa = cell2mat(xf');
+%     ya = cell2mat(yf');
+%     NVTOT = sum(nv(ff,:));
+%     for gi = 1:NVTOT
+%         xi = xa(gi);
+%         yi = ya(gi);
+%         for gj = (gi+1):NVTOT
+%             if (gijtmp(gi,gj) == 1)
+%                 dx = xa(gj) - xi;
+%                 dx = dx - L*round(dx/L);
+%                 dy = ya(gj) - yi;
+%                 dy = dy - L*round(dy/L);
+%                 for xx = ctccopy
+%                     for yy = ctccopy
+%                         plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'k-','linewidth',1.5);
+%                     end
+%                 end
+%             end
+%         end
+%     end
         
     % plot box
     plot([0 L L 0 0], [0 0 L L 0], 'k-', 'linewidth', 1.5);

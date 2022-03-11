@@ -3532,7 +3532,7 @@ void meso2D::ageMesophyllShapeParameters(vector<bool> &edge_verts, double dl0, d
 	for (gi=0; gi<NVTOT; gi++){
 		// cell index
 		cindices(ci,vi,gi);
-		dl0_tmp = dl0*(1.0/(1.0 + (1.0*(nvoid[ci]/nv[ci]))));
+		dl0_tmp = dl0*(1.0/(1.0 + (cL*(nvoid[ci]/nv[ci]))));
 
 		// segment from i to ip1
 		lix = x[NDIM*ip1[gi]] - x[NDIM*gi];
@@ -3576,7 +3576,9 @@ void meso2D::ageMesophyllShapeParameters(vector<bool> &edge_verts, double dl0, d
 		if (zv[gi] == 0){
 			l0[gi] *= (1.0 + dl0_tmp);
 			if (t0[gi] > t0_min + dl0_tmp*cB)
-				t0[gi] -= dl0*cB;
+				t0[gi] -= dl0_tmp*cB;
+			else
+				t0[gi] *= 1 - dl0_tmp*cB;
 		}
 		// if ctc, age toward 0
 		else{

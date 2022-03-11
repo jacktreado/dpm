@@ -4,7 +4,7 @@
 
 // Compilation command:
 // g++ -O3 --std=c++11 -I src main/meso2D/readInMesoNetwork2D.cpp src/*.cpp -o meso.o
-// ./meso.o meso_n16.input 1 0.1 200 0.5 0.4 0.05 2 0.6 1e-4 1 pos.test
+// ./meso.o meso_n16.input 0.2 200 0.5 0.4 0.05 2 1 0.5 1e-6 1 pos.test
 
 
 // header files
@@ -27,7 +27,7 @@ const double dt0 = 1e-2;		   	// initial magnitude of time step in units of MD t
 const double Ftol = 1e-12; 			// force tolerance
 const double dPtol = 1e-10;			// pressure change tolerance
 const double phiMin = 0.3;			// minimum packing fraction in decompression algorithm
-const double cL = 1.0; 				// perimeter aging (set to 0, possibly deprecated)
+const double kl = 1.0;				// perimeter spring stiffness
 const double aL = 1.0; 				// distribution of aging to boundary (when = 1)
 const double kc = 1.0; 				// interaction spring constant
 const double cKb = 0; 				// change in bending energy
@@ -41,16 +41,16 @@ int main(int argc, char const *argv[])
 {
 	// local variables to be read in
 	int seed, NVMAX;
-	double kl, kb0, betaEff, ctch, da0, dl0, cB, t0_min, P0;
+	double kl, kb0, betaEff, ctch, da0, dl0, cL, cB, t0_min, P0;
 
 	// read in parameters from command line input
 	string inputFile 		= argv[1];
-	string kl_str 			= argv[2];
-	string kb0_str 			= argv[3];
-	string betaEff_str 		= argv[4];
-	string ctch_str 		= argv[5];
-	string da0_str 			= argv[6];
-	string dl0_str 			= argv[7];
+	string kb0_str 			= argv[2];
+	string betaEff_str 		= argv[3];
+	string ctch_str 		= argv[4];
+	string da0_str 			= argv[5];
+	string dl0_str 			= argv[6];
+	string cL_str 			= argv[7];
 	string cB_str 			= argv[8];
 	string t0_min_str 		= argv[9];
 	string P0_str 			= argv[10];
@@ -58,24 +58,24 @@ int main(int argc, char const *argv[])
 	string positionFile 	= argv[12];
 
 	// using sstreams to get parameters
-	stringstream klss(kl_str);
 	stringstream kb0ss(kb0_str);
 	stringstream betaEffss(betaEff_str);
 	stringstream ctchss(ctch_str);
 	stringstream da0ss(da0_str);
 	stringstream dl0ss(dl0_str);
+	stringstream cLss(cL_str);
 	stringstream cBss(cB_str);
 	stringstream t0_minss(t0_min_str);
 	stringstream P0ss(P0_str);
 	stringstream seedss(seed_str);
 
 	// read into data
-	klss >> kl;
 	kb0ss >> kb0;
 	betaEffss >> betaEff;
 	ctchss >> ctch;
 	da0ss >> da0;
 	dl0ss >> dl0;
+	cLss >> cL;
 	cBss >> cB;
 	t0_minss >> t0_min;
 	P0ss >> P0;
