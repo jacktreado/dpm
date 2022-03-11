@@ -68,12 +68,12 @@ echo inputstr=$inputstr >> $paramf
 echo NCELLS=$NCELLS >> $paramf
 echo n1=$n1 >> $paramf
 echo calA0=$calA0 >> $paramf
-echo kl=$kl >> $paramf
 echo kb0=$kb0 >> $paramf
 echo betaEff=$betaEff >> $paramf
 echo ctch=$ctch >> $paramf
 echo da0=$da0 >> $paramf
 echo dl0=$dl0 >> $paramf
+echo cL=$cL >> $paramf
 echo cB=$cB >> $paramf
 echo t0min=$t0min >> $paramf
 echo P0=$P0 >> $paramf
@@ -159,7 +159,7 @@ for f in $flist; do
     outputf=$simdatadir/"$basestr"_seed"$seed".posctc
 
     # create runString
-    runString="./$binf $f $kl $kb0 $betaEff $ctch $da0 $dl0 $cB $t0min $P0 $seed $outputf"
+    runString="./$binf $f $kb0 $betaEff $ctch $da0 $dl0 $cL $cB $t0min $P0 $seed $outputf"
 
     # echo to task file
     echo "$runString" >> $taskf
@@ -210,12 +210,12 @@ sbatch -t $time $slurmf
 # 1. NCELLS
 # 2. n
 # 3. calA0
-# 4. kl
-# 5. kb0
-# 6. betaEff
-# 7. ctch
-# 8. da0
-# 9. dl0
+# 4. kb0
+# 5. betaEff
+# 6. ctch
+# 7. da0
+# 8. dl0
+# 9. cL
 # 10. cB
 # 11. t0min
 # 12. P0
