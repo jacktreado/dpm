@@ -35,15 +35,15 @@ ctch=$6
 da0=$7
 dl0=$8
 cL=$9
-cB="${11}"
-t0min="${12}"
-P0="${13}"
+cB="${10}"
+t0min="${11}"
+P0="${12}"
 
 # inputs about cluster
-partition="${14}"
-time="${15}"
-startSeed="${16}"
-numSeeds="${17}"
+partition="${13}"
+time="${14}"
+startSeed="${15}"
+numSeeds="${16}"
 
 # compute number of seeds
 let endSeed=$startSeed+$numSeeds-1
