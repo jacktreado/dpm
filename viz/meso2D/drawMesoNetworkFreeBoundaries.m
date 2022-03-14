@@ -5,8 +5,8 @@ close all;
 clc;
 
 % create file name
-fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kl1_kb0.2_be250_h0.5_da0.4_dl0.05_cB1.5_t0m0.6_P1e-6_seed10.posctc';
-% fstr = '~/Jamming/CellSim/dpm/pos.test';
+% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kl1_kb0.2_be250_h0.5_da0.4_dl0.05_cB1.5_t0m0.6_P1e-6_seed10.posctc';
+fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);
@@ -145,15 +145,15 @@ end
 
 % get frames to plot
 if showverts == 0
-    FSTART = 12;
+    FSTART = 1;
     FSTEP = 1;
     if NFRAMES > 50
         FSTEP = 2;
     elseif NFRAMES > 150
         FSTEP = 10;
     end
-%     FEND = NFRAMES;
-    FEND = FSTART;
+    FEND = NFRAMES;
+%     FEND = FSTART;
 else
     FSTART = 2;
     FSTEP = 1;

@@ -4,7 +4,7 @@
 
 // Compilation command:
 // g++ -O3 --std=c++11 -I src main/meso2D/readInMesoNetwork2D.cpp src/*.cpp -o meso.o
-// ./meso.o meso_n16.input 0.2 200 0.5 0.4 0.05 2 1 0.5 1e-6 1 pos.test
+// ./meso.o meso_n32.input 0.2 500 0.5 0.4 0.05 2 1 0.5 1e-6 1 pos.test
 
 
 // header files
@@ -41,7 +41,7 @@ int main(int argc, char const *argv[])
 {
 	// local variables to be read in
 	int seed, NVMAX;
-	double kl, kb0, betaEff, ctch, da0, dl0, cL, cB, t0_min, P0;
+	double kb0, betaEff, ctch, da0, dl0, cL, cB, t0_min, P0;
 
 	// read in parameters from command line input
 	string inputFile 		= argv[1];
