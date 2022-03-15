@@ -6,16 +6,16 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kl1_kb0.2_be250_h0.5_da0.4_dl0.05_cB1.5_t0m0.6_P1e-6_seed10.posctc';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.2_be100_h0.8_da0.5_dl0.05_cL1_cB1_t0m0.5_P1e-4_seed11.posctc';
 % fstr = 'local/mesoDM2D_data/mesoDM2D_N32_n32_ca1.14_kl1_kb01e-3_be50_da0.02_dl10_P1e-4_seed27.posctc';
-fstr = '~/Jamming/CellSim/dpm/pos.test';
+% fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
-idx = phi > 0.5;
+idx = phi > 0.3;
 NSKIP = 3;
 idx(1:NSKIP) = zeros(NSKIP,1);
 phi = phi(idx);
