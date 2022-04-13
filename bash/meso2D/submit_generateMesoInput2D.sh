@@ -30,6 +30,7 @@ startSeed=$7
 
 # other variables
 numSeedsPerRun=1
+disp=0;
 
 let numSeeds=$numSeedsPerRun*$numRuns
 let endSeed=$startSeed+$numSeeds-1
@@ -94,7 +95,7 @@ for seed in `seq $startSeed $numSeedsPerRun $endSeed`; do
         posf=$simdatadir/$filestr.input
 
         # append to runString
-        runString="$runString ; ./$binf $NCELLS $n1 $calA0 $runseed $posf"
+        runString="$runString ; ./$binf $NCELLS $n1 $calA0 $disp $runseed $posf"
     done
 
     # finish off run string

@@ -31,28 +31,29 @@ const double dt0 = 1e-2;		   	// initial magnitude of time step in units of MD t
 const double Ptol = 5e-7;		   	// target pressure in initial compression
 const double Ftol = 1e-11; 			// force tolerance
 const double T0 = 1e-3; 			// temperature for jamming preparation protocol
-const double trun = 20.0; 			// amount of time to run annealing
+const double trun = 50.0; 			// amount of time to run annealing
 const double kl = 0.5; 				// perimeter spring constant
 const double kc = 0.5; 				// interaction spring constant
-const double dispersion = 0.1; 		// polydispersity (fixed)
 
 int main(int argc, char const *argv[])
 {
 	// local variables to be read in
-	int NCELLS, n1, seed;
+	int NCELLS, n1, seed, dispersion;
 	double calA0;
 
 	// read in parameters from command line input
 	string NCELLS_str 		= argv[1];
 	string n1_str 			= argv[2];
 	string calA0_str 		= argv[3];
-	string seed_str 		= argv[4];
-	string positionFile 	= argv[5];
+	string disp_str 		= argv[4];
+	string seed_str 		= argv[5];
+	string positionFile 	= argv[6];
 
 	// using sstreams to get parameters
 	stringstream NCELLSss(NCELLS_str);
 	stringstream n1ss(n1_str);
 	stringstream calA0ss(calA0_str);
+	stringstream dispss(disp_str);
 	stringstream seedss(seed_str);
 
 	// read into data
@@ -60,6 +61,7 @@ int main(int argc, char const *argv[])
 	n1ss >> n1;
 	calA0ss >> calA0;
 	seedss >> seed;
+	dispss >> dispersion;
 
 	// instantiate object
 	meso2D meso2Dobj(NCELLS, seed);
