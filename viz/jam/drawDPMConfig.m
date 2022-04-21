@@ -5,11 +5,11 @@ close all;
 clc;
 
 % universal params
-Nstr = '62';
-nstr = '16';
-calA0str = '1.14';
+Nstr = '64';
+nstr = '24';
+calA0str = '1.12';
 kbstr = '0';
-seedstr = '10';
+seedstr = '5';
 
 % simtype
 simstr = 'a2j';
@@ -21,7 +21,7 @@ datadir = 'local/jam_data';
 if strcmp(simstr,'a2j')
     % a2j params
     trunstr = '50';
-    T0str = '1e-2';
+    T0str = '1e-3';
     
     % a2j file pattern
     fpattern = [simstr '_N' Nstr '_n' nstr '_calA0' calA0str '_kb' kbstr '_trun' trunstr '_T0' T0str '_seed' seedstr];
@@ -41,8 +41,8 @@ end
 % file info
 vizdir = pwd;
 fname = [fpattern '.pos'];
-% fstr = [vizdir '/' datadir '/' fname];
-fstr = '../../monodisperse.test';
+fstr = [vizdir '/' datadir '/' fname];
+% fstr = '../../pos.test';
 
 % read in data
 dpmData = readDPMConfig(fstr);
@@ -72,7 +72,7 @@ phi = dpmData.phi;
 %% Draw cells
 
 % show vertices or not
-showverts = 0;
+showverts = 1;
 
 % get cell colors
 [nvUQ, ~, IC] = unique(nv);
@@ -87,15 +87,15 @@ if showverts == 0
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
-    FSTART = NFRAMES;
+    FSTART = 1;
     FSTEP = 1;
-    FEND = FSTART;
+    FEND = NFRAMES;
 end
 
 % make a movie
-makeAMovie = 1;
+makeAMovie = 0;
 if makeAMovie == 1
-    moviestr = 'compress2jamming_dpb.mp4';
+    moviestr = 'compress2jamming_calA1.06.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -133,8 +133,8 @@ for ff = FSTART:FSTEP:FEND
                 yplot = ytmp(vv) - rv;
                 for xx = -1:1
                     for yy = -1:1
-                        if zctmp(nn) > 0
-                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',0.2);
+                        if zctmp(nn) > -10
+                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',1);
                         else
                             rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor',clr,'FaceColor','none');
                         end

@@ -35,57 +35,52 @@
 using namespace std;
 
 // global constants
-const bool plotCompression = 0;			// whether or not to plot configuration during compression protocol (0 saves memory)
-const double dphi0 = 0.005;				// packing fraction increment
+const bool plotCompression = 1;			// whether or not to plot configuration during compression protocol (0 saves memory)
+const double dphi0 = 0.01;				// packing fraction increment
 const double ka = 1.0;					// area force spring constant (should be unit)
 const double kc = 1.0;					// interaction force spring constant (should be unit)
+const double kl = 1.0;					// perimeter spring constant
 const double boxLengthScale = 2.5;		// neighbor list box size in units of initial l0
-const double phi0 = 0.5;				// initial packing fraction
+const double phi0 = 0.3;				// initial packing fraction
 const double smallfrac = 0.5;			// fraction of small particles
 const double sizeratio = 1.4;			// size ratio between small and large particles
-const double dt0 = 2e-2;				// initial magnitude of time step in units of MD time
+const double dt0 = 1e-2;				// initial magnitude of time step in units of MD time
+const double Ftol = 1e-10; 				// force tolerance for energy minimization
+const double trun = 5.0; 				// amount of time to run equilibration between growth steps
 
 int main(int argc, char const *argv[])
 {
 	// local variables to be read in
 	int NCELLS, nsmall, seed;
-	double calA0, kl, kb, trun, T0, Ptol, Ftol;
+	double calA0, kb, T0, Ptol;
 
 	// read in parameters from command line input
 	string NCELLS_str 		= argv[1];
 	string nsmall_str 		= argv[2];
 	string calA0_str 		= argv[3];
-	string kl_str 			= argv[4];
-	string kb_str 			= argv[5];
-	string trun_str 		= argv[6];
-	string T0_str 			= argv[7];
-	string Ptol_str 		= argv[8];
-	string Ftol_str 		= argv[9];
-	string seed_str 		= argv[10];
-	string positionFile 	= argv[11];
+	string kb_str 			= argv[4];
+	string T0_str 			= argv[5];
+	string Ptol_str 		= argv[6];
+	string seed_str 		= argv[7];
+	string positionFile 	= argv[8];
+	string vdosFile 	 	= argv[9];
 
 	// using sstreams to get parameters
 	stringstream NCELLSss(NCELLS_str);
 	stringstream nsmallss(nsmall_str);
 	stringstream calA0ss(calA0_str);
-	stringstream klss(kl_str);
 	stringstream kbss(kb_str);
-	stringstream trunss(trun_str);
 	stringstream T0ss(T0_str);
 	stringstream Ptolss(Ptol_str);
-	stringstream Ftolss(Ftol_str);
 	stringstream seedss(seed_str);
 
 	// read into data
 	NCELLSss 		>> NCELLS;
 	nsmallss 		>> nsmall;
 	calA0ss 		>> calA0;
-	klss 			>> kl;
 	kbss 			>> kb;
-	trunss 			>> trun;
 	T0ss 			>> T0;
 	Ptolss			>> Ptol;
-	Ftolss 			>> Ftol;
 	seedss 			>> seed;
 
 	// instantiate object
@@ -112,6 +107,8 @@ int main(int argc, char const *argv[])
 	// compress to target packing fraction
 	configobj2D.vertexAnneal2Jam2D(&dpm::repulsiveForceUpdate,Ftol,Ptol,dt0,dphi0,T0,trun,plotCompression);
 	configobj2D.printConfiguration2D();
+
+	// get dynamical matrix, print eigenvalues + participation ratios to vdos file
 
 	// say goodbye
 	cout << "\n** Finished bidisperseSinusoidalParticleJamming.cpp, ending. " << endl;

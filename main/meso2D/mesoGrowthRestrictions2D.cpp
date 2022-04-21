@@ -3,8 +3,8 @@
 // * Same as mesoEnthalpyMin2D, but initial condition is read in 
 
 // Compilation command:
-// g++ -O3 --std=c++11 -I src main/meso2D/readInMesoNetwork2D.cpp src/*.cpp -o meso.o
-// ./meso.o meso_n32.input 0.2 500 0.5 0.4 0.05 2 1 0.5 1e-6 1 pos.test
+// g++ -O3 --std=c++11 -I src main/meso2D/mesoGrowthRestrictions2D.cpp src/*.cpp -o meso.o
+// ./meso.o meso_n16.input 0.1 200 0.3 0.2 0.05 0.5 1 1e-6 1 pos.test
 
 
 // header files
@@ -34,6 +34,11 @@ const double cKb = 0; 				// change in bending energy
 const int NMINSKIP = 1;				// number of frames to skip output
 const int NVMAXMAG = 5; 			// scale of max number of vertices
 
+// constants related to restrictions
+const double eg = 0.1;
+const double g_add = 2.0;
+const double g_del = 1.01;
+
 // set parameters
 const double ctcdel = 1.0;
 
@@ -41,7 +46,7 @@ int main(int argc, char const *argv[])
 {
 	// local variables to be read in
 	int seed, NVMAX;
-	double kb0, betaEff, ctch, da0, dl0, cL, cB, t0_min, P0;
+	double kb0, betaEff, ctch, da0, dl0, cL, cB, P0;
 
 	// read in parameters from command line input
 	string inputFile 		= argv[1];
@@ -52,10 +57,9 @@ int main(int argc, char const *argv[])
 	string dl0_str 			= argv[6];
 	string cL_str 			= argv[7];
 	string cB_str 			= argv[8];
-	string t0_min_str 		= argv[9];
-	string P0_str 			= argv[10];
-	string seed_str 		= argv[11];
-	string positionFile 	= argv[12];
+	string P0_str 			= argv[9];
+	string seed_str 		= argv[10];
+	string positionFile 	= argv[11];
 
 	// using sstreams to get parameters
 	stringstream kb0ss(kb0_str);
@@ -65,7 +69,6 @@ int main(int argc, char const *argv[])
 	stringstream dl0ss(dl0_str);
 	stringstream cLss(cL_str);
 	stringstream cBss(cB_str);
-	stringstream t0_minss(t0_min_str);
 	stringstream P0ss(P0_str);
 	stringstream seedss(seed_str);
 
@@ -77,12 +80,8 @@ int main(int argc, char const *argv[])
 	dl0ss >> dl0;
 	cLss >> cL;
 	cBss >> cB;
-	t0_minss >> t0_min;
 	P0ss >> P0;
 	seedss >> seed;
-
-	// scale t0_min
-	t0_min *= -0.5*PI;
 
 	// instantiate object
 	meso2D meso2Dobj(inputFile,seed);
@@ -114,14 +113,13 @@ int main(int argc, char const *argv[])
 	meso2Dobj.t0ToCurrent();
 	meso2Dobj.mesoFIRE(&meso2D::mesoNetworkForceUpdate, Ftol, dt0);
 	meso2Dobj.t0ToCurrent();
-	meso2Dobj.printMesoNetworkCTCS2D();
 	
 
 	// run stretching simulation to create network
-	meso2Dobj.mesoNetworkEnthalpyMin(&meso2D::mesoNetworkForceUpdate, Ftol, dPtol, dt0, da0, dl0, t0_min, P0, phiMin, NMINSKIP);
+	meso2Dobj.mesoRestrictionEnthalpyMin(eg, g_add, g_del, Ftol, dPtol, dt0, da0, dl0, P0, phiMin, NMINSKIP);
 
 	// say goodbye
-	cout << "\n** Finished readInMesoNetwork2D.cpp, ending. " << endl;
+	cout << "\n** Finished mesoGrowthRestrictions2D.cpp, ending. " << endl;
 
 	return 0;
 }

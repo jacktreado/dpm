@@ -3007,7 +3007,7 @@ void dpm::vertexAnneal2Jam2D(dpmMemFn forceCall, double Ftol, double Ptol, doubl
 		rho0 = sqrt(a0.at(0));
 
 		// run Langevin dynamics only if not root searching
-		if (rH < 0){
+		if (rH < 0 && T0 > Tmin){
 			// get dt
 			setdt(dt0);
 

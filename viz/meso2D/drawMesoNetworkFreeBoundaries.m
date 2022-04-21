@@ -5,15 +5,15 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kl1_kb0.2_be250_h0.5_da0.4_dl0.05_cB1.5_t0m0.6_P1e-6_seed10.posctc';
-fstr = '~/Jamming/CellSim/dpm/pos.test';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.2_be100_h0.5_da0.2_dl0.1_cL1_cB1_t0m0.5_P1e-4_seed100.posctc';
+% fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
-idx = phi > 0.395;
+idx = phi > 0.35;
 phi = phi(idx);
 
 % number of frames
@@ -69,18 +69,29 @@ ey = sin(th);
 showverts = 0;
 
 % color by shape or size
-colorOpt = 1;
+colorOpt = 3;
 
 if colorOpt == 1
     % color by real shape
     NCLR = 100;
-    calABins = linspace(0.999*min(calA(:)),1.001*max(calA(:)),NCLR+1);
+%     calABins = linspace(0.999*min(calA(:)),1.001*max(calA(:)),NCLR+1);
+    calABins = linspace(0.99,2.86,NCLR);
+    calABins = [calABins 10];
     cellCLR = jet(NCLR);
 elseif colorOpt == 2
     % color by preferred shape
     NCLR = 100;
     calA0Bins = linspace(0.999*min(calA0(:)),1.001*max(calA0(:)),NCLR+1);
     cellCLR = jet(NCLR);
+elseif colorOpt == 3
+    % color face as gray
+    t0_face_color = [0.9 0.9 0.9];
+    
+    % get bins for preferred curvature
+    NCLRS = 100;
+    t0_bins = linspace(-0.5*pi,0.5*pi,NCLRS-1);
+    t0_bins = [-1e5 t0_bins 1e5];
+    t0_clr_list = jet(NCLRS);
 else
     [nvUQ, ~, IC] = unique(nv);
     IC = reshape(IC,NFRAMES,NCELLS);
@@ -147,8 +158,8 @@ end
 if showverts == 0
     FSTART = 1;
     FSTEP = 1;
-    if NFRAMES > 50
-        FSTEP = 2;
+    if NFRAMES > 80
+        FSTEP = 5;
     elseif NFRAMES > 150
         FSTEP = 10;
     end
@@ -161,10 +172,10 @@ else
 end
 
 % make a movie
-makeAMovie = 0;
+makeAMovie = 1;
 ctccopy = 0;
 if makeAMovie == 1
-    moviestr = 'mesoHMin2D_N64_n32_ca1.14_kb01e-3_be50_da0.05_dl7_P1e-4_h0.5_cL0_cB2_seed59_free.mp4';
+    moviestr = 'mesoHMin2D_N32_n32_ca1.14_kb0.2_be100_h0.5_da0.2_dl0.1_cL1_cB1_t0m0.5_P1e-4_seed100_free.mp4';
 %     moviestr = 'mesoHMin2D_N64_n24_ca1.14_kb01e-3_be100_da0.05_dl0.1_P1e-8_h0.5_cL1_cB1_seed100.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
@@ -182,41 +193,46 @@ for ff = FSTART:FSTEP:FEND
     xf = x(ff,:);
     yf = y(ff,:);
     rf = r(ff,:);
+    t0f = t0(ff,:);
     zctmp = zc(ff,:);
+    zvff = zv(ff,:);
     L = LList(ff,1);
     for nn = 1:NCELLS
         xtmp = xf{nn};
         ytmp = yf{nn};
+        t0tmp = t0f{nn};
         cx = mean(xtmp);
         cy = mean(ytmp);
-        rx = xtmp - cx;
-        ry = ytmp - cy;
-        cx = mod(cx,L);
-        cy = mod(cy,L);
-        xtmp = cx + rx;
-        ytmp = cy + ry;
         rtmp = rf{nn};
         nvtmp = nv(ff,nn);
-        if colorOpt == 2
-            cbin = calA0(ff,nn) > calA0Bins(1:end-1) & calA0(ff,nn) < calA0Bins(2:end);
-            clr = cellCLR(cbin,:);
-        elseif colorOpt == 1
-            cbin = calA(ff,nn) > calABins(1:end-1) & calA(ff,nn) < calABins(2:end);
-            clr = cellCLR(cbin,:);
-        else
-            clr = cellCLR(IC(ff,nn),:);
+        zvtmp = zvff{nn};
+        
+        % get color info
+        switch colorOpt
+            case 1
+                cbin = calA(ff,nn) > calABins(1:end-1) & calA(ff,nn) < calABins(2:end);
+                clr = cellCLR(cbin,:);
+            case 2
+                cbin = calA0(ff,nn) > calA0Bins(1:end-1) & calA0(ff,nn) < calA0Bins(2:end);
+                clr = cellCLR(cbin,:);
+            case 3
+                clr = t0_face_color;
+            otherwise
+                clr = cellCLR(IC(ff,nn),:);
         end
         if showverts == 1
+            vpos = [xtmp, ytmp];
+            patch('Faces',[1:nvtmp 1],'vertices',vpos,'FaceColor','none','EdgeColor','k','Linewidth',1.5,'LineStyle','-');
             for vv = 1:nvtmp
                 rv = rtmp(vv);
                 xplot = xtmp(vv) - rv;
                 yplot = ytmp(vv) - rv;
                 for xx = 0
                     for yy = 0
-                        if nn > 0
-                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',1.5);
+                        if zvtmp(vv) > 0
+                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','k','LineWidth',2);
                         else
-                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','w');
+                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','w','LineWidth',2);
                         end
                     end
                 end
@@ -227,38 +243,31 @@ for ff = FSTART:FSTEP:FEND
             rads = sqrt(rx.^2 + ry.^2);
             xtmp = xtmp + 0.8*rtmp.*(rx./rads);
             ytmp = ytmp + 0.8*rtmp.*(ry./rads);
+            rx = xtmp - cx;
+            ry = ytmp - cy;
+            cx = mod(cx,L);
+            cy = mod(cy,L);
+            xtmp = rx + cx;
+            ytmp = ry + cy;
             for xx = 0
                 for yy = 0
                     vpos = [xtmp + xx*L, ytmp + yy*L];
                     finfo = [1:nvtmp 1];
-                    patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k','Linewidth',1.5,'markersize',10);
+                    if colorOpt == 3
+                        t0_clr = zeros(nvtmp,3);
+                        for vv = 1:nvtmp
+                            t0_bin = t0tmp(vv) > t0_bins(1:end-1) & t0tmp(vv) < t0_bins(2:end);
+                            t0_clr(vv,:) = t0_clr_list(t0_bin,:);
+                        end
+                        patch('Faces',finfo,'vertices',vpos,'FaceVertexCData',t0_clr,'FaceColor',clr,'EdgeColor','interp','Linewidth',3);
+                    else
+                        patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k','Linewidth',1.5,'markersize',10);
+                    end
+%                     text(cx,cy,num2str(nn));
                 end
             end
         end
     end
-    
-%     % plot vv contacts
-%     gijtmp = gijList{ff};
-%     xa = cell2mat(xf');
-%     ya = cell2mat(yf');
-%     NVTOT = sum(nv(ff,:));
-%     for gi = 1:NVTOT
-%         xi = xa(gi);
-%         yi = ya(gi);
-%         for gj = (gi+1):NVTOT
-%             if (gijtmp(gi,gj) == 1)
-%                 dx = xa(gj) - xi;
-%                 dx = dx - L*round(dx/L);
-%                 dy = ya(gj) - yi;
-%                 dy = dy - L*round(dy/L);
-%                 for xx = ctccopy
-%                     for yy = ctccopy
-%                         plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'w-','linewidth',1.5);
-%                     end
-%                 end
-%             end
-%         end
-%     end
         
     % plot box
     plot([0 L L 0 0], [0 0 L L 0], 'k-', 'linewidth', 1.5);

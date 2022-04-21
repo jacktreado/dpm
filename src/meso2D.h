@@ -30,9 +30,10 @@ protected:
 	int NVMAX;
 	int NBUBBLES;
 
-	// bending energy per vertex
+	// perimeter/bending energy per vertex
 	// NOTE: will need to add different Hessian computation
 	std::vector<double> kbi;
+	std::vector<double> kli;
 
 	// vertex-vertex contact network
 	std::vector<bool> gij;
@@ -64,7 +65,6 @@ public:
 
 	// constructor and destructor
 	meso2D(std::string &inputFile, int seed);
-	meso2D(std::string &inputFileStr, double voidBubbleScale, int seed);
 	meso2D(int n, int seed) : dpm(n,seed) { NBUBBLES=0; betaEff=0.0; ctcdel=1.0; ctch=0.5; cL=0.0; aL=1.0; cB=0.0; cKb=0.0; zc.resize(n); NVMAX = n; };
 
 	// overloaded operators
@@ -98,6 +98,7 @@ public:
 	// setters
 	void setNVMAX(int val) { NVMAX = val; };
 	void setkbi(double val) { fill(kbi.begin(), kbi.end(), val); };
+	void setkli(double val) { fill(kli.begin(), kli.end(), val); }
 	void setbetaEff(double val) { betaEff = val; };
 	void setctcdel(double val) { ctcdel = val; };
 	void setctch(double val) { ctch = val; };
@@ -125,10 +126,12 @@ public:
 	void mesoNetworkForceUpdate();
 	void mesoNetworkForceUpdate(double gamma, std::vector<bool> &gijtmp);
 	void mesoPinForceUpdate(std::vector<double>& xpin, double kcspring);
+	void mesoRestrictionForceUpdate(std::vector<int> &gr, std::vector<double> &g0, double eg);
 
 	// integrators
 	void mesoFIRE(meso2DMemFn forceCall, double Ftol, double dt0);
 	void mesoEnthalpyFIRE(meso2DMemFn forceCall, double Ftol, double dPtol, double P0, double dt0);
+	void mesoRestrictionFIRE(std::vector<int> &gr, std::vector<double> &g0, double eg, double Ftol, double dPtol, double P0, double dt0);
 	void mesoShearStrainEnthalpyFIRE(double gamma, double Ftol, double P0, double dt0, std::vector<bool> &gijtmp);
 	void mesoPinFIRE(std::vector<double> &xpin, double Ftol, double dt0, double kcspring);
 	void mesoNetworkNVE(std::ofstream &enout, meso2DMemFn forceCall, double T, double dt0, int NT, int NPRINTSKIP);
@@ -137,28 +140,32 @@ public:
 	// protocols
 	void mesoNetworkExtension(meso2DMemFn forceCall, double Ftol, double dt0, double delShrink, double dphiPrint, double phiMin);
 	void mesoPinExtension(double Ftol, double dt0, double hmax, double dh, double dhprint, double kcspring, int cellskip);
-	void mesoFreeGrowth(meso2DMemFn forceCall, double Ftol, double dt0, double dl0, double da0, double dphiPrint, double a0max);
 	void mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double dPtol, double dt0, double da0, double dl0, double t0_min, double P0, double phiMin, int NMINSKIP);
-	void mesoBubbleEnthalpyMin(meso2DMemFn forceCall, double Ftol, double dPtol, double dt0, double da0, double P0, double phiMin, int NMINSKIP);
+	void mesoRestrictionEnthalpyMin(double eg, double g_add, double g_del, double Ftol, double dPtol, double dt0, double da0, double dl0, double P0, double phiMin, int NMINSKIP);
 
 	// protocol helpers
-	void updateMesophyllBondNetwork(std::vector<bool> &edge_verts);
-	void ageMesophyllShapeParameters(std::vector<bool> &edge_verts, double dl0, double da0, double t0_min);
-	void addMesophyllCellMaterial(std::vector<bool> &edge_verts);
-	void findInterfaceEdges(std::vector<bool> &edge_verts);
-	void computeZ();
-	void ageMesophyllShapeParameters();
-	void relaxByAdding();
-	void addMesophyllCellMaterial(double dl0);
+	void updateMesophyllBondNetwork();
+	void ageMesophyllShapeParameters(double dl0, double da0, double t0_min);
+	void addMesophyllCellMaterial();
 	int mesoBondedCTCS(int gi);
 	int mesoBondedPAIRS(int ci, int cj);
-	void addVertex(int gi, double newl0);
+	void addVertex(int gi);
 	void t0ToCurrent();
 	void t0ToReg();
 	void getMesoVVContactNetwork(std::vector<bool> &gijtmp);
-	double mesoInstantaneousPressure(std::vector<bool> &gijtmp);
 
-	void relaxSmallBubbles();
+	// protocols for gr sims
+	void ageMesophyllWithRestrictions(double da0, double dl0);
+	void addMaterialWithRestrictions(std::vector<int> &gr, std::vector<double>& g0);
+	void addVertexWithRestrictions(std::vector<int> &gr, std::vector<double>& g0, int gi);
+	void spawnGrowthRestrictions(std::vector<int> &gr, std::vector<double> &g0);
+	void addGrowthRestrictions(std::vector<int> &gr, std::vector<double> &g0, double g_add);
+	void delGrowthRestrictions(std::vector<int> &gr, std::vector<double> &g0, double g_del);
+
+
+	// deprecated helpers
+	void computeZ();
+	double mesoInstantaneousPressure(std::vector<bool> &gijtmp);
 
 	// hessian computation & linear response
 	void mesoBendingHessian(Eigen::MatrixXd &Hb, Eigen::MatrixXd &Sb);
@@ -171,6 +178,7 @@ public:
 	// printing functions
 	void printMesoNetwork2D();
 	void printMesoNetworkCTCS2D();
+	void printMesoGrowthRestrictions2D(std::vector<int> &gr);
 	void printMesoPin2D(std::vector<double> &xpin, double h);
 	void printMesoBondNetwork();
 	void printMesoShearConfigCTCS2D(double gamma);

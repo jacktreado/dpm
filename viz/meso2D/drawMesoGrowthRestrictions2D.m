@@ -11,7 +11,7 @@ clc;
 fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
-mesoData = readMesoNetworkCTCS2D(fstr);
+mesoData = readMesoGrowthRestrictions2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
@@ -33,6 +33,7 @@ y = mesoData.y(idx,:);
 r = mesoData.r(idx,:);
 zc = mesoData.zc(idx,:);
 zv = mesoData.zv(idx,:);
+gr = mesoData.gr(idx,:);
 a = mesoData.a(idx,:);
 a0 = mesoData.a0(idx,:);
 l0 = mesoData.l0(idx,:);
@@ -323,7 +324,7 @@ if showverts == 0
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
-    FSTART = 20;
+    FSTART = 2;
     FSTEP = 1;
     FEND = FSTART;
 end
@@ -353,6 +354,7 @@ for ff = FSTART:FSTEP:FEND
     t0f = t0(ff,:);
     zctmp = zc(ff,:);
     zvff = zv(ff,:);
+    grff = gr(ff,:);
     L = LList(ff,1);
     for nn = 1:NCELLS
         xtmp = xf{nn};
@@ -363,6 +365,7 @@ for ff = FSTART:FSTEP:FEND
         rtmp = rf{nn};
         nvtmp = nv(ff,nn);
         zvtmp = zvff{nn};
+        grtmp = grff{nn};
         
         % get color info
         switch colorOpt
@@ -418,30 +421,40 @@ for ff = FSTART:FSTEP:FEND
                 end
             end
         end
+        
+        % draw growth restrictions
+        sztmp = sum(nv(ff,1:(nn-1)));
+        for vv = 1:nvtmp
+            if grtmp(vv) > -1
+                g1tmp = vv;
+                g2tmp = grtmp(vv) - sztmp + 1;
+                plot([xtmp(g1tmp) xtmp(g2tmp)],[ytmp(g1tmp) ytmp(g2tmp)],'k-','linewidth',2.5);
+            end      
+        end
     end
     
     % plot vv contacts
-    gijtmp = gijList{ff};
-    xa = cell2mat(xf');
-    ya = cell2mat(yf');
-    NVTOT = sum(nv(ff,:));
-    for gi = 1:NVTOT
-        xi = xa(gi);
-        yi = ya(gi);
-        for gj = (gi+1):NVTOT
-            if (gijtmp(gi,gj) == 1)
-                dx = xa(gj) - xi;
-                dx = dx - L*round(dx/L);
-                dy = ya(gj) - yi;
-                dy = dy - L*round(dy/L);
-                for xx = ctccopy
-                    for yy = ctccopy
-                        plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'k-','linewidth',1.5);
-                    end
-                end
-            end
-        end
-    end
+%     gijtmp = gijList{ff};
+%     xa = cell2mat(xf');
+%     ya = cell2mat(yf');
+%     NVTOT = sum(nv(ff,:));
+%     for gi = 1:NVTOT
+%         xi = xa(gi);
+%         yi = ya(gi);
+%         for gj = (gi+1):NVTOT
+%             if (gijtmp(gi,gj) == 1)
+%                 dx = xa(gj) - xi;
+%                 dx = dx - L*round(dx/L);
+%                 dy = ya(gj) - yi;
+%                 dy = dy - L*round(dy/L);
+%                 for xx = ctccopy
+%                     for yy = ctccopy
+%                         plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'k-','linewidth',1.5);
+%                     end
+%                 end
+%             end
+%         end
+%     end
         
     % plot box
     plot([0 L L 0 0], [0 0 L L 0], 'k-', 'linewidth', 1.5);
@@ -469,48 +482,4 @@ end
 % close video object
 if makeAMovie == 1
     close(vobj);
-end
-
-return;
-%% Draw individual cell shape dynamics
-
-% pick random cell
-cellidx = 19;
-
-% reset figure for this frame
-figure(20), clf, hold on, box on;
-
-% get geometric info
-xf = x(:,cellidx);
-yf = y(:,cellidx);
-nvf = nv(:,cellidx);
-zvf = zv(:,cellidx);
-frList = [2 6 10 13];
-NFR = length(frList);
-LP = LList(end,1);
-for ii = 1:NFR
-    ff = frList(ii);
-    xtmp = xf{ff};
-    ytmp = yf{ff};
-    zvtmp = zvf{ff};
-    nvtmp = nvf(ff);
-    
-    cx = mean(xtmp);
-    cy = mean(ytmp);
-    xtmp = xtmp - cx;
-    ytmp = ytmp - cy - (ii-1)*0.175*LP;
-    ip1 = [2:nvtmp 1];
-    for vv = 1:nvtmp
-        if zvtmp(vv) <= 0
-            plot([xtmp(vv) xtmp(ip1(vv))],[ytmp(vv) ytmp(ip1(vv))],'-','linewidth',2,'color','g');
-        else
-            plot([xtmp(vv) xtmp(ip1(vv))],[ytmp(vv) ytmp(ip1(vv))],'-','linewidth',2,'color','b');
-        end
-    end
-    axis equal;
-    ax = gca;
-    ax.XTick = [];
-    ax.YTick = [];
-    ax.XLim = [-0.15*LP 0.15*LP];
-    ax.YLim = [-NFR*0.175*LP 0.1*LP];
 end
