@@ -3859,8 +3859,8 @@ void meso2D::addVertex(int gi){
 	l0[gi] = 0.5*oldl0;
 
 	// new preferred angle
-	// t0[gi+1] = newt0;
-	t0[gi+1] = 0.0;
+	t0[gi+1] = newt0;
+	// t0[gi+1] = 0.0;
 
 	// new perimeter energy
 	kli[gi] = 0.5*oldkl;
