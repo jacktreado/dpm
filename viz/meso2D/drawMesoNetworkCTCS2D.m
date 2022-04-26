@@ -6,7 +6,7 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.2_be100_h0.5_da0.2_dl0.1_cL1_cB1_t0m0.5_P1e-4_seed100.posctc';
+% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N24_n32_ca1.14_kb0.1_be50_h0.3_da0.4_dl0.1_cL5_cB1_t0m0.5_P1e-4_seed10.posctc';
 % fstr = 'local/mesoDM2D_data/mesoDM2D_N32_n32_ca1.14_kl1_kb01e-3_be50_da0.02_dl10_P1e-4_seed27.posctc';
 fstr = '~/Jamming/CellSim/dpm/pos.test';
 
@@ -232,8 +232,8 @@ if colorOpt == 1
     % color by real shape
     NCLR = 100;
 %     calABins = linspace(0.999*min(calA(:)),1.001*max(calA(:)),NCLR+1);
-    calABins = linspace(0.99,2.86,NCLR);
-    calABins = [calABins 10];
+    calABins = linspace(0.99,3,NCLR-1);
+    calABins = [calABins 10000];
     cellCLR = jet(NCLR);
 elseif colorOpt == 2
     % color by preferred shape

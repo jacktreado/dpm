@@ -18,26 +18,21 @@
 using namespace std;
 
 // global constants
-const double dispersion = 0.1; 		// polydispersity (fixed)
-const double delShrink = 1e-3;		// fractional change in effective box length during extension
-const double dphiPrint = 0.01;	   	// packing fractions to skip between print steps
 const double boxLengthScale = 2.5; 	// neighbor list box size in units of initial l0
-const double phi0 = 0.5;		   	// initial packing fraction
 const double dt0 = 5e-3;		   	// initial magnitude of time step in units of MD time
 const double Ftol = 1e-12; 			// force tolerance
 const double dPtol = 1e-10;			// pressure change tolerance
 const double phiMin = 0.3;			// minimum packing fraction in decompression algorithm
-const double kl = 1.0;				// perimeter spring stiffness
-const double aL = 1.0; 				// distribution of aging to boundary (when = 1)
-const double kc = 1.0; 				// interaction spring constant
+const double kl = 0.1;				// perimeter spring stiffness
+const double kc = 0.1; 				// interaction spring constant
 const double cKb = 0; 				// change in bending energy
 const int NMINSKIP = 1;				// number of frames to skip output
 const int NVMAXMAG = 5; 			// scale of max number of vertices
 
 // constants related to restrictions
-const double eg = 0.1;
+const double eg = 0.5;
 const double g_add = 2.0;
-const double g_del = 1.01;
+const double g_del = 0.9;
 
 // set parameters
 const double ctcdel = 1.0;
@@ -101,7 +96,6 @@ int main(int argc, char const *argv[])
 	meso2Dobj.setctcdel(ctcdel);
 	meso2Dobj.setctch(ctch);
 	meso2Dobj.setcL(cL);
-	meso2Dobj.setaL(aL);
 	meso2Dobj.setcB(cB);
 	meso2Dobj.setcKb(cKb);
 	meso2Dobj.setkbi(kb0);

@@ -51,6 +51,28 @@ phiA = sum(a,2)./(LList(:,1).*LList(:,2));
 %     phiA(ff) = phitmp;
 % end
 
+% loop over frames, get patch phi
+phipatch = zeros(NFRAMES,1);
+for ff = 1:NFRAMES
+    xf = x(ff,:);
+    yf = y(ff,:);
+    rf = r(ff,:);
+    apatch = zeros(NCELLS,1);
+    for nn = 1:NCELLS
+        xtmp = xf{nn};
+        ytmp = yf{nn};
+        rtmp = rf{nn};
+        cx = mean(xtmp);
+        cy = mean(ytmp);
+        rx = xtmp - cx;
+        ry = ytmp - cy;
+        rads = sqrt(rx.^2 + ry.^2);
+        xtmp = xtmp + 0.8*rtmp.*(rx./rads);
+        ytmp = ytmp + 0.8*rtmp.*(ry./rads);
+        apatch(nn) = polyarea(xtmp,ytmp);
+    end
+    phipatch(ff) = sum(apatch)/(LList(ff,1)*LList(ff,2));
+end
 
 % get preferred shape
 calA0 = zeros(NFRAMES,NCELLS);
@@ -142,7 +164,7 @@ if NFRAMES > 2
      % plot packing fraction and fraction perimeter at void
     figure(16), clf, hold on, box on;
     yyaxis left
-    plot(phi,'ko','markersize',10,'markerfacecolor','b');
+    plot(phipatch,'ko','markersize',10,'markerfacecolor','b');
     h = ylabel('$\phi$','Interpreter','latex');
     h.Color = 'b';
     ax = gca;
@@ -183,7 +205,7 @@ if NFRAMES > 2
     ct65Porosity = totalData.ct65Porosity;
     
     figure(17), clf, hold on, box on;
-    errorbar(max(phi) - phi,mean(calA,2),std(calA,0,2),'-k','linewidth',1.5);
+    errorbar(max(phipatch) - phipatch,mean(calA,2),std(calA,0,2),'-k','linewidth',1.5);
 %     errorbar(porosity,calAMean,calAMin,calAMax,'k>','markersize',10,'markerfacecolor','b');
     errorbar(porosity,calAMeas,dCalAMin,dCalAMax,'k>','markersize',14,'markerfacecolor','r');
     errorbar(ct01Porosity,ct01CalAMean,ct01CalAStd,'ko','markersize',12,'markerfacecolor','b');
@@ -316,15 +338,15 @@ end
 if showverts == 0
     FSTART = 1;
     FSTEP = 1;
-    if NFRAMES > 80
+    if NFRAMES > 100
         FSTEP = 5;
-    elseif NFRAMES > 150
+    elseif NFRAMES > 200
         FSTEP = 20;
     end
     FEND = NFRAMES;
 %     FEND = FSTART;
 else
-    FSTART = 2;
+    FSTART = NFRAMES;
     FSTEP = 1;
     FEND = FSTART;
 end
@@ -333,7 +355,7 @@ end
 makeAMovie = 0;
 ctccopy = 0;
 if makeAMovie == 1
-    moviestr = 'mesoHMin2D_N32_n32_ca1.14_kb0.2_be100_h0.5_da0.2_dl0.1_cL1_cB1_t0m0.5_P1e-4_seed100.mp4';
+    moviestr = 'example_failure_ctcdel0.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -345,7 +367,7 @@ figure(fnum), clf, hold on, box on;
 for ff = FSTART:FSTEP:FEND
     % reset figure for this frame
     figure(fnum), clf, hold on, box on;
-    fprintf('printing frame ff = %d/%d, phi=%0.3g, phi0=%0.3g\n',ff,FEND,phi(ff),phi0(ff));
+    fprintf('printing frame ff = %d/%d, phi=%0.3g, phi0=%0.3g\n',ff,FEND,phipatch(ff),phi0(ff));
     
     % get geometric info
     xf = x(ff,:);
@@ -428,7 +450,7 @@ for ff = FSTART:FSTEP:FEND
             if grtmp(vv) > -1
                 g1tmp = vv;
                 g2tmp = grtmp(vv) - sztmp + 1;
-                plot([xtmp(g1tmp) xtmp(g2tmp)],[ytmp(g1tmp) ytmp(g2tmp)],'k-','linewidth',2.5);
+                plot([xtmp(g1tmp) xtmp(g2tmp)],[ytmp(g1tmp) ytmp(g2tmp)],'k:','linewidth',3);
             end      
         end
     end

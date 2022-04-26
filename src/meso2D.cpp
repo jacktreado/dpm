@@ -1607,8 +1607,6 @@ void meso2D::mesoRestrictionForceUpdate(vector<int> &gr, vector<double> &g0, dou
 			F[NDIM*g2tmp] -= fgx;
 			F[NDIM*g2tmp + 1] -= fgy;
 
-			// cout << "gi = " << gi << ", g2 = " << g2tmp << ", fgx = " << fgx << ", fgy = " << fgy << ", Fg1x = " << F[NDIM*g1tmp] << ", g0 = " << g0tmp << endl;
-
 			// update potential energy
 			U += 0.5 * eg *(dg * dg);
 
@@ -3168,8 +3166,9 @@ void meso2D::mesoRestrictionEnthalpyMin(double eg, double g_add, double g_del, d
 		cout << " 	* ngr 			= " << ngr << endl;
 		cout << endl << endl;
 
-		// break contact network
+		// break contact network, shift bonds
 		updateMesophyllBondNetwork();
+		// shiftMesoBonds();
 
 		// add vertices
 		if (NVTOT < NVMAX)
@@ -3187,7 +3186,7 @@ void meso2D::mesoRestrictionEnthalpyMin(double eg, double g_add, double g_del, d
 			cout << " spawned ngr = " << ngr << " GRs..." << endl;
 		}
 		else{
-			// addGrowthRestrictions(gr,g0,g_add);
+			addGrowthRestrictions(gr,g0,g_add);
 			// delGrowthRestrictions(gr,g0,g_del);
 		}
 
@@ -3313,6 +3312,115 @@ void meso2D::updateMesophyllBondNetwork(){
 				
 
 				// increment global vertex index
+				gi++;
+			}
+		}
+	}
+}
+
+// shift bonds by 1
+void meso2D::shiftMesoBonds(){
+	// local variables
+	int ci, vi, gi, cj, vj, gj, gip1, gim1;
+	double dx, dy, rij, dxim1, dyim1, rim1j, dxip1, dyip1, rip1j;
+	bool isConnected, bondShifted;
+
+
+	// loop over bonds, shift if neighboring bonds are shorter
+	for (ci=0; ci<NCELLS; ci++){
+
+		// loop over other cells to determine which bonds to break
+		for (cj=(ci+1); cj<NCELLS; cj++){
+
+			// use global label of vi
+			gi = szList[ci];
+			for (vi=0; vi<nv[ci]; vi++){
+				// use global label of vj
+				gj = szList[cj];
+				for (vj=0; vj<nv[cj]; vj++){
+					// check if connected, otherwise go to next vertex
+					isConnected = gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2];
+
+					// if connected, check neighbors
+					if (isConnected){
+						// get vertex-vertex distances
+						dx = x[NDIM*gj] - x[NDIM*gi];
+						if (pbc[0])
+							dx -= L[0]*round(dx/L[0]);
+
+						dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
+						if (pbc[1])
+							dy -= L[1]*round(dy/L[1]);
+
+						// true distance
+						rij = sqrt(dx*dx + dy*dy);
+
+						// get neighboring indices
+						gip1 = ip1[gi];
+						gim1 = im1[gi];
+
+						// if gim1<->gj bond is not occupied
+						bondShifted = 0;
+						if (!gij[NVTOT*gim1 + gj - (gim1+1)*(gim1+2)/2]){
+							// get vertex-vertex distances
+							dxim1 = x[NDIM*gj] - x[NDIM*gim1];
+							if (pbc[0])
+								dxim1 -= L[0]*round(dxim1/L[0]);
+
+							dyim1= x[NDIM*gj + 1] - x[NDIM*gim1 + 1];
+							if (pbc[1])
+								dyim1 -= L[1]*round(dyim1/L[1]);
+
+							// true distance between im1 and j
+							rim1j = sqrt(dxim1*dxim1 + dyim1*dyim1);
+
+							// if gim1j distance is smaller than gij distance, shift bond
+							if (rim1j < rij){
+								// swap bonds
+								gij[NVTOT*gim1 + gj - (gim1+1)*(gim1+2)/2] = 1;
+								gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 0;
+
+								// change zv numbers (only on i, j stays the same)
+								zv[gi]--;
+								zv[gim1]++;
+							}
+
+							// label bond as shifted, and skip check bond shift to gip1 
+							bondShifted = 1;
+						}
+
+						// if gip1<->gj bond is not occupied & bond not already shifted
+						if (!gij[NVTOT*gip1 + gj - (gip1+1)*(gip1+2)/2] && !bondShifted){
+							// get vertex-vertex distances
+							dxip1 = x[NDIM*gj] - x[NDIM*gip1];
+							if (pbc[0])
+								dxip1 -= L[0]*round(dxip1/L[0]);
+
+							dyip1= x[NDIM*gj + 1] - x[NDIM*gip1 + 1];
+							if (pbc[1])
+								dyip1 -= L[1]*round(dyip1/L[1]);
+
+							// true distance between im1 and j
+							rip1j = sqrt(dxip1*dxip1 + dyip1*dyip1);
+
+							// if gim1j distance is smaller than gij distance, shift bond
+							if (rip1j < rij){
+								// swap bonds
+								gij[NVTOT*gip1 + gj - (gip1+1)*(gip1+2)/2] = 1;
+								gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 0;
+
+								// change zv numbers (only on i, j stays the same)
+								zv[gi]--;
+								zv[gip1]++;
+							}
+						}
+					}
+
+					// increment global vertex index of vj
+					gj++;
+				}
+
+				// increment global vertex index of vi
 				gi++;
 			}
 		}
@@ -3921,6 +4029,7 @@ void meso2D::t0ToCurrent(){
 	}
 }
 
+
 void meso2D::t0ToReg(){
 	int gi, ci, vi;
 
@@ -4057,7 +4166,7 @@ void meso2D::ageMesophyllWithRestrictions(double da0, double dl0){
 	for (gi=0; gi<NVTOT; gi++){
 		// cell index
 		cindices(ci,vi,gi);
-		dl0_tmp = dl0*(1.0/(1.0 + (2.0*(nvoid[ci]/nv[ci]))));
+		dl0_tmp = dl0*(1.0/(1.0 + (5.0*(nvoid[ci]/nv[ci]))));
 
 		// segment from i to ip1
 		lix = x[NDIM*ip1[gi]] - x[NDIM*gi];
@@ -4093,7 +4202,9 @@ void meso2D::ageMesophyllWithRestrictions(double da0, double dl0){
 			l0[im1[gi]] = dl0_tmp*lim1 + (1.0 - dl0_tmp*(1.0 - cL))*l0[im1[gi]];
 
 			// relax preferred angle
-			t0[gi] = cB*dl0_tmp*ti + (1.0 - cB*dl0_tmp)*t0[gi];
+			// t0[gi] = cB*dl0_tmp*ti + (1.0 - cB*dl0_tmp)*t0[gi];
+			t0[gi] *= 1 - dl0*cB;
+			// t0[gi] = 0.0;
 		}
 		// if ctc, age toward a flat interface
 		else
@@ -4139,9 +4250,9 @@ void meso2D::addMaterialWithRestrictions(vector<int> &gr, vector<double> &g0){
 		// add if void vertex and over extended
 		if (zv[gi] == 0){
 			// if distance between two vertices is more than twice the vertex radius, add
-			if (dlim1 > 4.0*r[gi])
+			if (dlim1 > 2.0*r[gi])
 				growthVerts.push_back(gim1);
-			if (dli > 4.0*r[gi])
+			if (dli > 2.0*r[gi])
 				growthVerts.push_back(gi);
 
 		}
@@ -4296,7 +4407,7 @@ void meso2D::addVertexWithRestrictions(vector<int> &gr, vector<double> &g0, int 
 	int NVVCTS;
 	int d, ci, vi, vj, vip1, vim1, cj, gj, gip1 = ip1[gi];
 	int gk, gjold, gkold;
-	int grtmp;
+	int grtmp, ck, vk;
 	double dx, dy, dr, oldl0, oldkl, newkbi, newt0;
 	double lim1x, lim1y, lip1x, lip1y, sini, cosi, sinip1, cosip1, dti, dtip1;
 
@@ -4304,6 +4415,9 @@ void meso2D::addVertexWithRestrictions(vector<int> &gr, vector<double> &g0, int 
 	NVVCTS = 0.5*NVTOT*(NVTOT-1);
 	vector<bool> gijtmp(NVVCTS,0);
 	gijtmp = gij;
+
+	vector<int> grold;
+	grold = gr;
 
 	// find cell list items
 	cindices(ci,vi,gi);
@@ -4459,7 +4573,7 @@ void meso2D::addVertexWithRestrictions(vector<int> &gr, vector<double> &g0, int 
 		g0.at(gj+1) = g0.at(gj);
 		grtmp = gr.at(gj);
 		if (grtmp > gi)
-			gr.at(gj+1) = ip1[grtmp];
+			gr.at(gj+1) = grtmp + 1;
 		else
 			gr.at(gj+1) = grtmp;
 	}
@@ -4501,7 +4615,22 @@ void meso2D::addVertexWithRestrictions(vector<int> &gr, vector<double> &g0, int 
 	for (gj=0; gj<gi+1; gj++){
 		grtmp = gr[gj];
 		if (grtmp > gi)
-			gr[gj] = ip1[grtmp];
+			gr[gj] = grtmp + 1;
+	}
+
+	// print error for debugging
+	for (gj=0; gj<NVTOT; gj++){
+		cindices(cj,vj,gj);
+		if (cj < NCELLS-1){
+			if ((gr.at(gj) < szList.at(cj) || gr.at(gj) > szList.at(cj+1)) && gr.at(gj) != -1){
+				cerr << " !!!! NOTE: error found, gr pointing outside cell bounds." << endl;
+				cerr << " \t** Adding a vertex to: gi=" << gi << ", ci=" << ci << ", vi=" << vi << ", gr(gi)=" << gr.at(gi) << endl;
+				cindices(ck,vk,gr.at(gj));
+				cerr << " \t** Vertex in question: gj=" << gj << ", cj=" << cj << ", vj=" << vj << ", gr(gj)=" << gr.at(gj) << "  (is vert. " << vk << "/" << nv.at(ck) << " on cell ck=" << ck << "; should be between " << szList.at(cj) << " and " << szList.at(cj+1) << ")" << endl;
+				cerr << " \t** What was added: " << ip1[grold[gj-1]] << ", but should have been " << grold[gj-1] + 1 << endl;
+				exit(1);
+			}
+		}
 	}
 
 
@@ -4581,10 +4710,16 @@ void meso2D::spawnGrowthRestrictions(vector<int> &gr, vector<double> &g0){
 }
 
 // add growth restrictions given contours between restrictions
+// To DO:
+// 	** Don't add restrictions if locally concave (use th to check)
+// 	** Delete if curve becomes concave along boundary
 void meso2D::addGrowthRestrictions(vector<int> &gr, vector<double> &g0, double g_add){
 	// local variables
-	int gi, g1new, g2new, ci, vi, g1tmp, g2tmp, gstart, gnext, dv, dvmax;
+	int gi, g1new, g2new, g1tmp, g2tmp, gstart, gnext, dv, dvmax;
 	double dx, dy, dr, lc = 0.0;
+
+	// determine vertices to add
+	vector<bool> v2add(NVTOT,0);
 
 	// loop over pairs, find place to add
 	cerr << "** Adding Growth Restrictions: " << endl;
@@ -4593,7 +4728,6 @@ void meso2D::addGrowthRestrictions(vector<int> &gr, vector<double> &g0, double g
 			// pairs
 			g1tmp = gi;
 			g2tmp = gr[gi];
-			cindices(g1tmp,ci,vi);
 
 			// contour length
 			lc = 0.0;
@@ -4628,32 +4762,48 @@ void meso2D::addGrowthRestrictions(vector<int> &gr, vector<double> &g0, double g
 				// * new g2 vertex is already occupied (to either gi or ip1[g1new])
 				if (g1new == g2new || g2new == ip1[g1new] || g2new == gr[ip1[g1new]] || g2new == gr[gi])
 					continue;
-
-				// if everything checks, add gr bond
-				gr[g1new] = g2new;
-
-				// also update g0
-				dx = x[NDIM*g2new] - x[NDIM*g1new];
-				if (pbc[0])
-					dx -= L[0]*round(dx/L[0]);
-				dy = x[NDIM*g2new + 1] - x[NDIM*g1new + 1];
-				if (pbc[1])
-					dy -= L[1]*round(dy/L[1]);
-				dr = sqrt(dx*dx + dy*dy);
-				g0[g1new] = dr;
-
-				// print to console
-				cerr << "Adding growth restriction between g1=" << g1new << ", g2=" << g2new << ", as lc/g0=" << lc/g0[gi] << ", new g0=" << g0[g1new] << endl;
+				else
+					v2add[gi] = 1;
 			}
 		}
 	}
+
+	// loop over vertices again, decide which to add
+	for (gi=0; gi<NVTOT; gi++){
+		if (v2add[gi]){
+			// new bonds
+			g1new = ip1[gi];
+			g2new = im1[gr[gi]];
+
+			// add gr bond
+			gr[g1new] = g2new;
+
+			// also update g0
+			dx = x[NDIM*g2new] - x[NDIM*g1new];
+			if (pbc[0])
+				dx -= L[0]*round(dx/L[0]);
+			dy = x[NDIM*g2new + 1] - x[NDIM*g1new + 1];
+			if (pbc[1])
+				dy -= L[1]*round(dy/L[1]);
+			dr = sqrt(dx*dx + dy*dy);
+			g0[g1new] = dr;
+
+			// print to console
+			cerr << "Adding growth restriction between g1=" << g1new << ", g2=" << g2new << ", as lc/g0=" << lc/g0[gi] << ", new g0=" << g0[g1new] << endl;
+		}
+	}
+
+	// clear contents of v2add
+	v2add.clear();
 }
 
 // delete growth restrictions given contours between restrictions
 void meso2D::delGrowthRestrictions(vector<int> &gr, vector<double> &g0, double g_del){
 	// local variables
-	int gi, ginew, ci, vi, g1tmp, g2tmp, gstart, gnext, dv, dvmax;
-	double dx, dy, dr, lc = 0.0, gtmp = 0.0;
+	int gi, ginew, g1tmp, g2tmp, gstart, gnext, dv, dvmax;
+	double dx, dy, dr, vx, vy, lc = 0.0, gtmp = 0.0;
+	bool contourCrossing = 0;
+	bool noContactsFound = 1;
 
 	// loop over pairs, find place to delete
 	cerr << "** Deleting Growth Restrictions: " << endl;
@@ -4662,7 +4812,6 @@ void meso2D::delGrowthRestrictions(vector<int> &gr, vector<double> &g0, double g
 			// pairs
 			g1tmp = gi;
 			g2tmp = gr[gi];
-			cindices(g1tmp,ci,vi);
 
 			// current length
 			dx = x[NDIM*g2tmp] - x[NDIM*g1tmp];
@@ -4673,8 +4822,12 @@ void meso2D::delGrowthRestrictions(vector<int> &gr, vector<double> &g0, double g
 				dy -= L[1]*round(dy/L[1]);
 			gtmp = sqrt(dx*dx + dy*dy);
 
-			// contour length
+			// contour length & crossing check
+			contourCrossing = 0;
+			noContactsFound = 1;
 			lc = 0.0;
+			vx = 0.0;
+			vy = 0.0;
 			gnext = g1tmp;
 			while (gnext != g2tmp){
 				// update
@@ -4690,10 +4843,24 @@ void meso2D::delGrowthRestrictions(vector<int> &gr, vector<double> &g0, double g
 					dy -= L[1]*round(dy/L[1]);
 				dr = sqrt(dx*dx + dy*dy);
 				lc += dr;
+
+				// check contour crossing via cross product with d vector (positive = good, negative = bad)
+				vx += dx;
+				vy += dy;
+				if (vx*dy - vy*dx < 0)
+					contourCrossing = 1;
+
+				// also check if no contacts found
+				if (zv[gnext] > 0)
+					noContactsFound = 0;
 			}
 
 			// if contour length lc is small enough, break
-			if (lc/gtmp < g_del){
+			if (lc/gtmp < g_del || contourCrossing || noContactsFound){
+				if (contourCrossing)
+					cerr << "Because of contour crossing...";
+				else if (noContactsFound)
+					cerr << "Because no contacts found along contour...";
 				cerr << "Deleteing growth restriction between g1=" << gi << ", g2=" << gr[gi] << endl;
 				gr[gi] = -1;
 				g0[gi] = 0.0;
@@ -5816,6 +5983,7 @@ void meso2D::printMesoGrowthRestrictions2D(vector<int> &gr){
 			posout << setw(wnum) << setprecision(pnum) << right << zv.at(gi);
 			posout << setw(wnum) << setprecision(pnum) << right << gr.at(gi);
 			posout << endl;
+			
 		}
 	}
 

@@ -145,6 +145,7 @@ public:
 
 	// protocol helpers
 	void updateMesophyllBondNetwork();
+	void shiftMesoBonds();
 	void ageMesophyllShapeParameters(double dl0, double da0, double t0_min);
 	void addMesophyllCellMaterial();
 	int mesoBondedCTCS(int gi);
