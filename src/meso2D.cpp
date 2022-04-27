@@ -3432,19 +3432,24 @@ void meso2D::ageMesophyllShapeParameters(double dl0, double da0, double t0_min){
 	// local variables
 	int gi, ci, vi;
 	double lix, liy, lim1x, lim1y, lim1, li, ti, sini, cosi;
-	double dl0_tmp;
+	double dl0_tmp, dl0_std, a0_old;
 
 	// count number of void vertices per cell
 	vector<int> nvoid(NCELLS,0);
+	vector<double> pci(NCELLS,0.0);
 
 	// grow areas, radii
 	gi = 0; 
 	for (ci=0; ci<NCELLS; ci++){
-		// grow area
-		a0[ci] *= pow(1 + dl0*da0,2.0);
+		// grow area (exponential)
+		// a0[ci] *= pow(1 + dl0*da0,2.0);
+
+		// grow area (linearly)
+		a0_old = a0[ci];
+		a0[ci] += da0;
 		for (vi=0; vi<nv[ci]; vi++){
 			// grow vertex radius
-			r[gi] *= (1 + da0*dl0);
+			r[gi] *= sqrt(a0[ci]/a0_old);
 
 			// count number of void segments
 			if (zv[gi] == 0)
@@ -3459,7 +3464,8 @@ void meso2D::ageMesophyllShapeParameters(double dl0, double da0, double t0_min){
 	for (gi=0; gi<NVTOT; gi++){
 		// cell index
 		cindices(ci,vi,gi);
-		dl0_tmp = dl0*(1.0/(1.0 + (cL*(nvoid[ci]/nv[ci]))));
+		dl0_std = (0.5*perimeter(ci)/(area(ci)*nv[ci]))*da0;
+		dl0_tmp = dl0*dl0_std*(1.0/(1.0 + (cL*(nvoid[ci]/nv[ci]))));
 
 		// segment from i to ip1
 		lix = x[NDIM*ip1[gi]] - x[NDIM*gi];
@@ -3490,20 +3496,33 @@ void meso2D::ageMesophyllShapeParameters(double dl0, double da0, double t0_min){
 
 		// grow along void areas
 		if (zv[gi] == 0){
+			//  aging + growth
 			// l0[gi] = (1.0 + dl0_tmp)*l0[gi] - (li - l0[gi])*cL;
 			// l0[im1[gi]] = (1.0 + dl0_tmp)*l0[im1[gi]] - (lim1 - l0[im1[gi]])*cL;
-			l0[gi] *= 1.0 + dl0_tmp;
-			l0[im1[gi]] *= 1.0 + dl0_tmp;
-			if (t0[gi] > t0_min + dl0_tmp*cB)
-				t0[gi] -= dl0_tmp*cB;
+
+			// // exponential growth
+			// l0[gi] *= 1.0 + dl0_tmp;
+			// l0[im1[gi]] *= 1.0 + dl0_tmp;
+
+			// logistic growth
+			// l0[gi] += dl0_tmp*l0[gi]*(1 - (l0[gi]/perimeter(ci)));
+
+			// linear growth
+			l0[gi] += dl0_tmp;
+			l0[im1[gi]] += dl0_tmp;
+
+			// drive toward neg curvature
+			if (t0[gi] > t0_min)
+				t0[gi] -= dl0_std*cB;
 			else
-				t0[gi] *= 1 - dl0_tmp*cB;
+				t0[gi] = t0_min;
 		}
 		// if ctc, age toward 0
 		else{
-			t0[gi] *= 1 - dl0*cB;
-			l0[gi] += dl0*(li - l0[gi]);
+			// t0[gi] *= 1 - dl0_std*cB;
+			// l0[gi] += dl0_std;
 		}
+		t0[gi] += dl0_std*((t0[ip1[gi]] - t0[gi]) + (t0[im1[gi]] - t0[gi]));
 	}
 }
 

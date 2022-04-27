@@ -6,7 +6,7 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N24_n32_ca1.14_kb0.1_be50_h0.3_da0.4_dl0.1_cL5_cB1_t0m0.5_P1e-4_seed10.posctc';
+% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.1_be10_h0.2_da0.5_dl0.1_cL2_cB1_t0m0.2_P1e-6_seed12.posctc';
 % fstr = 'local/mesoDM2D_data/mesoDM2D_N32_n32_ca1.14_kl1_kb01e-3_be50_da0.02_dl10_P1e-4_seed27.posctc';
 fstr = '~/Jamming/CellSim/dpm/pos.test';
 
@@ -75,6 +75,11 @@ Sxx = mesoData.S(idx,1);
 Syy = mesoData.S(idx,2);
 Pvirial = 0.5*(Sxx + Syy);
 
+% angle data
+t0mean = cellfun(@mean,t0);
+t0min = cellfun(@min,t0);
+t0max = cellfun(@max,t0);
+
 % print if multiple frames
 if NFRAMES > 2
     
@@ -86,6 +91,15 @@ if NFRAMES > 2
     ax = gca;
     ax.FontSize = 22;
     
+    figure(31), clf, hold on, box on;
+    plot(1:NFRAMES,t0mean./pi,'-','color',[0.5 0.5 0.5],'linewidth',1.2);
+    plot(1:NFRAMES,t0min./pi,':','color',[0.6 0.6 0.6],'linewidth',2);
+    plot(1:NFRAMES,t0max./pi,'--','color',[0.25 0.25 0.25],'linewidth',1.5);
+    xlabel('frame id','Interpreter','latex');
+    ylabel('$\theta_{0k}$','Interpreter','latex');
+    ax = gca;
+    ax.FontSize = 22;
+   
     % plot contact network
     figure(21), clf, hold on, box on;
     plot(2:NFRAMES,zc(2:end,:),'-','color',[0.5 0.5 0.5],'linewidth',1.2);
@@ -128,15 +142,13 @@ if NFRAMES > 2
     
     
     % plot area deviations
-    ea = 0.5*(a./a0 - 1).^2;
     figure(15), clf, hold on, box on;
-    plot(phi,ea,'-','color',[0.5 0.5 0.5],'linewidth',1);
-    plot(phi,mean(ea,2),'k-','linewidth',2.5);
-    xlabel('$\phi$','Interpreter','latex');
-    ylabel('$U_a$','Interpreter','latex');
+    plot(1:NFRAMES,a0,'-','color',[0.5 0.5 0.5],'linewidth',1);
+    plot(1:NFRAMES,mean(a0,2),'k-','linewidth',2.5);
+    xlabel('frames','Interpreter','latex');
+    ylabel('$a_0$','Interpreter','latex');
     ax = gca;
     ax.FontSize = 22;
-    ax.YScale = 'log';
     
      % plot packing fraction and fraction perimeter at void
     figure(16), clf, hold on, box on;
@@ -226,7 +238,7 @@ ey = sin(th);
 showverts = 0;
 
 % color by shape or size
-colorOpt = 1;
+colorOpt = 3;
 
 if colorOpt == 1
     % color by real shape
@@ -314,14 +326,17 @@ end
 % get frames to plot
 if showverts == 0
     FSTART = 1;
-    FSTEP = 1;
-    if NFRAMES > 80
-        FSTEP = 5;
-    elseif NFRAMES > 150
-        FSTEP = 20;
-    end
     FEND = NFRAMES;
 %     FEND = FSTART;
+
+    % set step size
+    FSTEP = 1;
+    DF = FEND - FSTART;
+    if DF > 80
+        FSTEP = 5;
+    elseif DF > 200
+        FSTEP = 20;
+    end
 else
     FSTART = 20;
     FSTEP = 1;
@@ -332,7 +347,7 @@ end
 makeAMovie = 0;
 ctccopy = 0;
 if makeAMovie == 1
-    moviestr = 'mesoHMin2D_N32_n32_ca1.14_kb0.2_be100_h0.5_da0.2_dl0.1_cL1_cB1_t0m0.5_P1e-4_seed100.mp4';
+    moviestr = 'linear_growth_right_direction.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -414,7 +429,7 @@ for ff = FSTART:FSTEP:FEND
                     else
                         patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k','Linewidth',1.5,'markersize',10);
                     end
-%                     text(cx,cy,num2str(nn));
+                    text(cx,cy,num2str(nn));
                 end
             end
         end
