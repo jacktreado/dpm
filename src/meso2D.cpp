@@ -3510,7 +3510,7 @@ void meso2D::ageMesophyllShapeParameters(double dl0, double da0, double t0_min){
 			// dl0_tmp = dl0*dl0_std - cL*(perimeter(ci)/nv[ci])*(dvoidp/voidpseg);
 			// dl0_tmp = (dl0*dl0_std/(mi*nvs)) + cL*dl0_std*(1.0 - (voidpseg/meanvoidp));
 			// dl0_tmp = dl0*dl0_std;
-			dl0_tmp = (1 - cL)*(dpv/mi) + (cL/mi)*(voidpseg - meanvoidp);
+			dl0_tmp = (1 - cL)*(dpv/mi) + (cL/mi)*(meanvoidp - voidpseg);
 
 			// linear growth
 			l0[gi] += dl0_tmp;
