@@ -3507,7 +3507,7 @@ void meso2D::ageMesophyllShapeParameters(double dl0, double da0, double t0_min){
 			dvoidp = voidpseg - (voidp/m);
 			dl0_tmp = dl0*dl0_std - cL*(perimeter(ci)/nv[ci])*(dvoidp/voidpseg);
 			// dl0_tmp = dl0*dl0_std;
-			cout << "*** growing gi = " << gi << " on cell ci = " << ci << " with m = " << m << ":   voidp = " << voidp << ",   voidpseg here = " << voidpseg << ",    so dvoidp here = " << dvoidp << ";  dl0 = " << dl0_std*dl0 << " but dl0_tmp = " << dl0_tmp << endl;
+			// cout << "*** growing gi = " << gi << " on cell ci = " << ci << " with m = " << m << ":   voidp = " << voidp << ",   voidpseg here = " << voidpseg << ",    so dvoidp here = " << dvoidp << ";  dl0 = " << dl0_std*dl0 << " but dl0_tmp = " << dl0_tmp << endl;
 
 			// linear growth
 			l0[gi] += dl0_tmp;
