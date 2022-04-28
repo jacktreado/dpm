@@ -5,8 +5,8 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.2_be100_h0.5_da0.2_dl0.1_cL1_cB1_t0m0.5_P1e-4_seed100.posctc';
-fstr = '~/Jamming/CellSim/dpm/pos.test';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N24_n32_ca1.14_kb0.1_be200_h0.3_da0.2_dl1.5_cL0_cB2_t0m0.3_P1e-6_seed12.posctc';
+% fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);

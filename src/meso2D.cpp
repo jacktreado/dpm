@@ -3430,9 +3430,9 @@ void meso2D::shiftMesoBonds(){
 // age mesophyll shape parameters
 void meso2D::ageMesophyllShapeParameters(double dl0, double da0, double t0_min){
 	// local variables
-	int gi, ci, vi, curr_ci = -1, m;
+	int gi, ci, vi, curr_ci = -1, nvs, mi;
 	double lix, liy, lim1x, lim1y, lim1, li, ti, sini, cosi;
-	double dl0_tmp, dl0_std, a0_old, voidp, voidpseg, dvoidp;
+	double dl0_tmp, dl0_std, a0_old, voidp, voidpseg, dvoidp, meanvoidp, dpv;
 
 	// grow areas, radii
 	for (ci=0; ci<NCELLS; ci++){
@@ -3456,9 +3456,11 @@ void meso2D::ageMesophyllShapeParameters(double dl0, double da0, double t0_min){
 		// cell index
 		cindices(ci,vi,gi);
 		if (ci != curr_ci){
-			voidp = totalVoidPerimeter(ci);
-			m = mesoBondedCTCS(ci);
-			dl0_std = (0.5*perimeter(ci)/(area(ci)*nv[ci]))*da0;
+			voidp = totalVoidPerimeter(ci,nvs);
+			meanvoidp = voidp/nvs;
+			// dl0_std = (0.5*perimeter(ci)/(area(ci)*nv[ci]))*da0;
+			dl0_std = (0.5*(perimeter(ci)/area(ci)))*da0;
+			dpv = (dl0*dl0_std)/nvs;
 			curr_ci = ci;
 		}
 
@@ -3503,11 +3505,12 @@ void meso2D::ageMesophyllShapeParameters(double dl0, double da0, double t0_min){
 			// l0[gi] += dl0_tmp*l0[gi]*(1 - (l0[gi]/perimeter(ci)));
 
 			// compute dl0_tmp based on (1) deviation from void perim seg average and (2) basal growth rate
-			voidpseg = voidPerimeterSegment(gi);
-			dvoidp = voidpseg - (voidp/m);
-			dl0_tmp = dl0*dl0_std - cL*(perimeter(ci)/nv[ci])*(dvoidp/voidpseg);
+			voidpseg = voidPerimeterSegment(gi,mi);
+			// dvoidp = voidpseg - (voidp/nvs);
+			// dl0_tmp = dl0*dl0_std - cL*(perimeter(ci)/nv[ci])*(dvoidp/voidpseg);
+			// dl0_tmp = (dl0*dl0_std/(mi*nvs)) + cL*dl0_std*(1.0 - (voidpseg/meanvoidp));
 			// dl0_tmp = dl0*dl0_std;
-			// cout << "*** growing gi = " << gi << " on cell ci = " << ci << " with m = " << m << ":   voidp = " << voidp << ",   voidpseg here = " << voidpseg << ",    so dvoidp here = " << dvoidp << ";  dl0 = " << dl0_std*dl0 << " but dl0_tmp = " << dl0_tmp << endl;
+			dl0_tmp = (1 - cL)*(dpv/mi) + (cL/mi)*(voidpseg - meanvoidp);
 
 			// linear growth
 			l0[gi] += dl0_tmp;
@@ -3522,15 +3525,15 @@ void meso2D::ageMesophyllShapeParameters(double dl0, double da0, double t0_min){
 		// if ctc, age toward 0
 		else{
 			// t0[gi] *= 1 - dl0_std*cB;
-			l0[gi] += 0.1*dl0_std;
+			// l0[gi] += 0.1*dl0_std;
 		}
-		t0[gi] += dl0_std*((t0[ip1[gi]] - t0[gi]) + (t0[im1[gi]] - t0[gi]));
+		t0[gi] += cB*dl0_std*((t0[ip1[gi]] - t0[gi]) + (t0[im1[gi]] - t0[gi]));
 	}
 }
 
 
 // determine total void perimeter of cell ci
-double meso2D::totalVoidPerimeter(int ci){
+double meso2D::totalVoidPerimeter(int ci, int &nvs){
 	// check input
 	if (ci < 0 || ci >= NCELLS){
 		cout << "In totalVoidPerimeter, ci = " << ci << " and is out of bounds. Ending. " << endl;
@@ -3540,10 +3543,14 @@ double meso2D::totalVoidPerimeter(int ci){
 	// local variables
 	double voidp = 0.0, lix, liy, li;
 	int gi = szList[ci], vi;
+	bool newVoidSeg = 0;
+
+	// also count number of void segments total
+	nvs = 0;
 
 	// compute
 	for (vi=0; vi<nv[ci]; vi++){
-		if (zv[gi] == 0 || zv[ip1[gi]] == 0){
+		if (zv[gi] == 0){
 			// segment length from i to ip1
 			lix = x[NDIM*ip1[gi]] - x[NDIM*gi];
 			if (pbc[0])
@@ -3556,16 +3563,47 @@ double meso2D::totalVoidPerimeter(int ci){
 
 			// add to total void perimeter for this cell
 			voidp += li;
+
+			// also count past segment if not connected
+			if (zv[im1[gi]] > 0){
+				// segment length from im1 to i
+				lix = x[NDIM*im1[gi]] - x[NDIM*gi];
+				if (pbc[0])
+					lix -= L[0]*round(lix/L[0]);
+
+				liy = x[NDIM*im1[gi] + 1] - x[NDIM*gi + 1];
+				if (pbc[1])
+					liy -= L[1]*round(liy/L[1]);
+				li = sqrt(lix*lix + liy*liy);
+
+				// add to total void perimeter for this cell
+				voidp += li;
+			}
+
+			// count
+			if (newVoidSeg == 0){
+				nvs++;
+				newVoidSeg = 1;
+			}
 		}
+		else
+			newVoidSeg = 0;
+
+		// update global vertex label
 		gi++;
 	}
+
+	// remove 1 from count if first + last vertices are void
+	if (zv[szList[ci]] == 0 && zv[im1[szList[ci]]] == 0 && nvs > 1)
+		nvs--;
+
 
 	// return
 	return voidp;
 }
 
 // determine void perimeter that includes vertex gi
-double meso2D::voidPerimeterSegment(int gi){
+double meso2D::voidPerimeterSegment(int gi, int &mi){
 	// check input
 	if (gi < 0 || gi >= NVTOT){
 		cout << "In voidPerimeterSegment, gi = " << gi << " and is out of bounds. Ending. " << endl;
@@ -3575,6 +3613,9 @@ double meso2D::voidPerimeterSegment(int gi){
 	// measure local cluster voidp
 	int k = 0, gcurr = gi, gstart;
 	double voidp = 0.0, lix, liy, li;
+
+	// all count number of individual segments in total void segment
+	mi = 0;
 
 	// find origin of current void segment
 	while (zv[gcurr] == 0 && (gcurr != gi || k == 0)){
@@ -3603,6 +3644,7 @@ double meso2D::voidPerimeterSegment(int gi){
 		gcurr = ip1[gcurr];
 		k++;
 	}
+	mi = k;
 
 	// return if loop back to 
 	return voidp;

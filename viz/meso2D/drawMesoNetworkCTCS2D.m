@@ -6,7 +6,7 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.1_be10_h0.2_da0.5_dl0.1_cL2_cB1_t0m0.2_P1e-6_seed12.posctc';
+% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N24_n32_ca1.14_kb0.1_be200_h0.3_da0.2_dl1.5_cL0_cB2_t0m0.3_P1e-6_seed12.posctc';
 % fstr = 'local/mesoDM2D_data/mesoDM2D_N32_n32_ca1.14_kl1_kb01e-3_be50_da0.02_dl10_P1e-4_seed27.posctc';
 fstr = '~/Jamming/CellSim/dpm/pos.test';
 
@@ -254,13 +254,18 @@ elseif colorOpt == 2
     cellCLR = jet(NCLR);
 elseif colorOpt == 3
     % color face as gray
-    t0_face_color = [0.9 0.9 0.9];
+    t0_face_color = [0.7 0.7 0.7];
     
     % get bins for preferred curvature
     NCLRS = 100;
     t0_bins = linspace(-0.5*pi,0.5*pi,NCLRS-1);
     t0_bins = [-1e5 t0_bins 1e5];
     t0_clr_list = jet(NCLRS);
+elseif colorOpt == 4
+    % color face as gray
+    t0_face_color = [0.9 0.9 0.9];
+    
+    
 else
     [nvUQ, ~, IC] = unique(nv);
     IC = reshape(IC,NFRAMES,NCELLS);
@@ -344,10 +349,10 @@ else
 end
 
 % make a movie
-makeAMovie = 0;
+makeAMovie = 1;
 ctccopy = 0;
 if makeAMovie == 1
-    moviestr = 'linear_growth_bending_relax.mp4';
+    moviestr = 'lin_growth_dece.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -429,7 +434,7 @@ for ff = FSTART:FSTEP:FEND
                     else
                         patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k','Linewidth',1.5,'markersize',10);
                     end
-                    text(cx,cy,num2str(nn));
+%                     text(cx,cy,num2str(nn));
                 end
             end
         end

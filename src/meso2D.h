@@ -157,8 +157,8 @@ public:
 
 	// protocols for gr sims
 	void ageMesophyllWithRestrictions(double da0, double dl0);
-	double totalVoidPerimeter(int ci);
-	double voidPerimeterSegment(int gi);
+	double totalVoidPerimeter(int ci, int &nvs);
+	double voidPerimeterSegment(int gi, int &mi);
 	void addMaterialWithRestrictions(std::vector<int> &gr, std::vector<double>& g0);
 	void addVertexWithRestrictions(std::vector<int> &gr, std::vector<double>& g0, int gi);
 	void spawnGrowthRestrictions(std::vector<int> &gr, std::vector<double> &g0);
