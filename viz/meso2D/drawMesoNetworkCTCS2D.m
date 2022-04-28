@@ -347,7 +347,7 @@ end
 makeAMovie = 0;
 ctccopy = 0;
 if makeAMovie == 1
-    moviestr = 'linear_growth_right_direction.mp4';
+    moviestr = 'linear_growth_bending_relax.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
