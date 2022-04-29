@@ -6,9 +6,9 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N24_n32_ca1.14_kb0.1_be200_h0.3_da0.2_dl1.5_cL0_cB2_t0m0.3_P1e-6_seed12.posctc';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.1_be100_h0.3_da0.01_dl2_cL0.1_cB0.5_t0m0.3_P1e-6_seed10.posctc';
 % fstr = 'local/mesoDM2D_data/mesoDM2D_N32_n32_ca1.14_kl1_kb01e-3_be50_da0.02_dl10_P1e-4_seed27.posctc';
-fstr = '~/Jamming/CellSim/dpm/pos.test';
+% fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);
@@ -337,7 +337,7 @@ if showverts == 0
     % set step size
     FSTEP = 1;
     DF = FEND - FSTART;
-    if DF > 80
+    if DF > 80 && DF <= 200
         FSTEP = 5;
     elseif DF > 200
         FSTEP = 20;
@@ -349,7 +349,7 @@ else
 end
 
 % make a movie
-makeAMovie = 1;
+makeAMovie = 0;
 ctccopy = 0;
 if makeAMovie == 1
     moviestr = 'lin_growth_dece.mp4';
