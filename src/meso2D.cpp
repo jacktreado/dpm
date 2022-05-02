@@ -3505,12 +3505,12 @@ void meso2D::ageMesophyllShapeParameters(double dl0, double da0, double t0_min){
 			// l0[gi] += dl0_tmp*l0[gi]*(1 - (l0[gi]/perimeter(ci)));
 
 			// compute dl0_tmp based on (1) deviation from void perim seg average and (2) basal growth rate
-			voidpseg = voidPerimeterSegment(gi,mi);
+			// voidpseg = voidPerimeterSegment(gi,mi);
 			// dvoidp = voidpseg - (voidp/nvs);
 			// dl0_tmp = dl0*dl0_std - cL*(perimeter(ci)/nv[ci])*(dvoidp/voidpseg);
 			// dl0_tmp = (dl0*dl0_std/(mi*nvs)) + cL*dl0_std*(1.0 - (voidpseg/meanvoidp));
-			// dl0_tmp = dl0*dl0_std;
-			dl0_tmp = (1 - cL)*(dpv/mi) + (cL/mi)*(meanvoidp - voidpseg);
+			dl0_tmp = (dl0*dl0_std)/nv[ci];
+			// dl0_tmp = (1 - cL)*(dpv/mi) + (cL/mi)*(meanvoidp - voidpseg);
 
 			// linear growth
 			l0[gi] += dl0_tmp;
@@ -3518,14 +3518,14 @@ void meso2D::ageMesophyllShapeParameters(double dl0, double da0, double t0_min){
 
 			// drive toward neg curvature
 			if (t0[gi] > t0_min)
-				t0[gi] -= dl0_std*cB;
+				t0[gi] -= (dl0_std/nv[ci])*cB;
 			else
 				t0[gi] = t0_min;
 		}
 		// if ctc, age toward 0
 		else{
 			// t0[gi] *= 1 - dl0_std*cB;
-			// l0[gi] += 0.1*dl0_std;
+			// l0[gi] += 0.01*dl0_std;
 		}
 		t0[gi] += cB*dl0_std*((t0[ip1[gi]] - t0[gi]) + (t0[im1[gi]] - t0[gi]));
 	}
