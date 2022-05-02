@@ -238,7 +238,7 @@ ey = sin(th);
 showverts = 0;
 
 % color by shape or size
-colorOpt = 1;
+colorOpt = 3;
 
 if colorOpt == 1
     % color by real shape
@@ -441,31 +441,31 @@ for ff = FSTART:FSTEP:FEND
         end
     end
     
-%     % plot vv contacts
-%     gijtmp = gijList{ff};
-%     xa = cell2mat(xf');
-%     ya = cell2mat(yf');
-%     NVTOT = sum(nv(ff,:));
-%     for gi = 1:NVTOT
-%         xi = xa(gi);
-%         yi = ya(gi);
-%         for gj = (gi+1):NVTOT
-%             if (gijtmp(gi,gj) == 1)
-%                 dx = xa(gj) - xi;
-%                 dx = dx - L*round(dx/L);
-%                 dy = ya(gj) - yi;
-%                 dy = dy - L*round(dy/L);
-%                 for xx = ctccopy
-%                     for yy = ctccopy
-%                         plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'k-','linewidth',1.5);
-%                     end
-%                 end
-%             end
-%         end
-%     end
+    % plot vv contacts
+    gijtmp = gijList{ff};
+    xa = cell2mat(xf');
+    ya = cell2mat(yf');
+    NVTOT = sum(nv(ff,:));
+    for gi = 1:NVTOT
+        xi = xa(gi);
+        yi = ya(gi);
+        for gj = (gi+1):NVTOT
+            if (gijtmp(gi,gj) == 1)
+                dx = xa(gj) - xi;
+                dx = dx - L*round(dx/L);
+                dy = ya(gj) - yi;
+                dy = dy - L*round(dy/L);
+                for xx = ctccopy
+                    for yy = ctccopy
+                        plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'k-','linewidth',1.5);
+                    end
+                end
+            end
+        end
+    end
         
     % plot box
-%     plot([0 L L 0 0], [0 0 L L 0], 'k-', 'linewidth', 1.5);
+    plot([0 L L 0 0], [0 0 L L 0], 'k-', 'linewidth', 1.5);
     axis equal;
     ax = gca;
     ax.XTick = [];
