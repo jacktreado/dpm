@@ -6,9 +6,9 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N24_n32_ca1.14_kb0.1_be200_h0.3_da0.2_dl1.5_cL0_cB2_t0m0.3_P1e-6_seed12.posctc';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.1_be50_h0.3_da0.1_dl1.5_cL0_cB0_t0m0.5_P1e-6_seed16.posctc';
 % fstr = 'local/mesoDM2D_data/mesoDM2D_N32_n32_ca1.14_kl1_kb01e-3_be50_da0.02_dl10_P1e-4_seed27.posctc';
-fstr = '~/Jamming/CellSim/dpm/pos.test';
+% fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);
@@ -40,16 +40,29 @@ t0 = mesoData.t0(idx,:);
 kb = mesoData.kb(idx,:);
 phi0 = sum(a0,2)./(LList(:,1).*LList(:,2));
 phiA = sum(a,2)./(LList(:,1).*LList(:,2));
-% phiA = zeros(NFRAMES,1);
-% for ff = 1:NFRAMES
-%     phitmp = 0.0;
-%     for nn = 1:NCELLS
-%         phitmp = phitmp + a(ff,nn) + pi*mean(l0{ff,nn})^2*(0.5*nv(ff,nn)-1);
-%     end
-%     phitmp = phitmp/(LList(ff,1)*LList(ff,2));
-%     phiA(ff) = phitmp;
-% end
 
+% loop over frames, get patch phi
+phipatch = zeros(NFRAMES,1);
+for ff = 1:NFRAMES
+    xf = x(ff,:);
+    yf = y(ff,:);
+    rf = r(ff,:);
+    apatch = zeros(NCELLS,1);
+    for nn = 1:NCELLS
+        xtmp = xf{nn};
+        ytmp = yf{nn};
+        rtmp = rf{nn};
+        cx = mean(xtmp);
+        cy = mean(ytmp);
+        rx = xtmp - cx;
+        ry = ytmp - cy;
+        rads = sqrt(rx.^2 + ry.^2);
+        xtmp = xtmp + sin(pi/3)*rtmp.*(rx./rads);
+        ytmp = ytmp + sin(pi/3)*rtmp.*(ry./rads);
+        apatch(nn) = polyarea(xtmp,ytmp);
+    end
+    phipatch(ff) = sum(apatch)/(LList(ff,1)*LList(ff,2));
+end
 
 % get preferred shape
 calA0 = zeros(NFRAMES,NCELLS);
@@ -132,7 +145,7 @@ if NFRAMES > 2
     figure(50), clf, hold on, box on;
     clr = jet(NZCHECK);
     for cc = 1:NZCHECK
-        plot(phi(2)-phi(2:end),zpop(2:end,cc),'-','linewidth',2,'color',clr(cc,:));
+        plot(phipatch(2)-phipatch(2:end),zpop(2:end,cc),'-','linewidth',2,'color',clr(cc,:));
     end
     ylabel('$z$','Interpreter','latex');
     xlabel('$1-\phi$','Interpreter','latex');
@@ -153,7 +166,7 @@ if NFRAMES > 2
      % plot packing fraction and fraction perimeter at void
     figure(16), clf, hold on, box on;
     yyaxis left
-    plot(phi,'ko','markersize',10,'markerfacecolor','b');
+    plot(phipatch,'ko','markersize',10,'markerfacecolor','b');
     h = ylabel('$\phi$','Interpreter','latex');
     h.Color = 'b';
     ax = gca;
@@ -194,7 +207,7 @@ if NFRAMES > 2
     ct65Porosity = totalData.ct65Porosity;
     
     figure(17), clf, hold on, box on;
-    errorbar(max(phi) - phi,mean(calA,2),std(calA,0,2),'-k','linewidth',1.5);
+    errorbar(max(phipatch) - phipatch,mean(calA,2),std(calA,0,2),'-k','linewidth',1.5);
 %     errorbar(porosity,calAMean,calAMin,calAMax,'k>','markersize',10,'markerfacecolor','b');
     errorbar(porosity,calAMeas,dCalAMin,dCalAMax,'k>','markersize',14,'markerfacecolor','r');
     errorbar(ct01Porosity,ct01CalAMean,ct01CalAStd,'ko','markersize',12,'markerfacecolor','b');
@@ -419,8 +432,8 @@ for ff = FSTART:FSTEP:FEND
             rx = xtmp - cx;
             ry = ytmp - cy;
             rads = sqrt(rx.^2 + ry.^2);
-            xtmp = xtmp + 0.8*rtmp.*(rx./rads);
-            ytmp = ytmp + 0.8*rtmp.*(ry./rads);
+            xtmp = xtmp + sin(pi/3)*rtmp.*(rx./rads);
+            ytmp = ytmp + sin(pi/3)*rtmp.*(ry./rads);
             for xx = -1:1
                 for yy = -1:1
                     vpos = [xtmp + xx*L, ytmp + yy*L];
@@ -435,7 +448,7 @@ for ff = FSTART:FSTEP:FEND
                     else
                         patch('Faces',finfo,'vertices',vpos,'FaceColor',clr,'EdgeColor','k','Linewidth',1.5,'markersize',10);
                     end
-                    text(cx,cy,num2str(nn));
+%                     text(cx,cy,num2str(nn));
                 end
             end
         end

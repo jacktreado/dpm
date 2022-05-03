@@ -12,9 +12,6 @@ else
     fprintf('Found %d file using pattern %s, processing...\n',NSIMS,fpattern);
 end
 
-% extract number of cells
-NCELLS = sscanf(fpattern,'mesoHMin2D_N%f_');
-
 %% Loop over files, save information
 
 % files to skip
@@ -28,6 +25,7 @@ nvList = cell(NSIMS,1);
 LList = cell(NSIMS,1);
 phiList = cell(NSIMS,1);
 % polyList = cell(NSIMS,1);
+aList = cell(NSIMS,1);
 calAList = cell(NSIMS,1);
 calA0List = cell(NSIMS,1);
 SxxList = cell(NSIMS,1);
@@ -64,6 +62,7 @@ for ss = 1:NSIMS
     L = mesoData.L(2:NFRAMES,:);
     x = mesoData.x(2:NFRAMES,:);
     y = mesoData.y(2:NFRAMES,:);
+    r = mesoData.r(2:NFRAMES,:);
     zc = mesoData.zc(2:NFRAMES,:);
     a0 = mesoData.a0(2:NFRAMES,:);
     l0 = mesoData.l0(2:NFRAMES,:);
@@ -71,7 +70,6 @@ for ss = 1:NSIMS
     kb = mesoData.kb(2:NFRAMES,:);
     S = mesoData.S(2:NFRAMES,:);
     P = mesoData.P(2:NFRAMES);
-    phi = mesoData.phi(2:NFRAMES);
     p = mesoData.p(2:NFRAMES,:);
     a = mesoData.a(2:NFRAMES,:);
 %     polyList{ss} = polyListTmp(2:NFRAMES);
@@ -90,6 +88,29 @@ for ss = 1:NSIMS
     
     % box
     LList{ss} = L;
+    
+    % loop over frames, get patch phi
+    phi = zeros(NFRAMES,1);
+    for ff = 1:NFRAMES
+        xf = x(ff,:);
+        yf = y(ff,:);
+        rf = r(ff,:);
+        apatch = zeros(NCELLS,1);
+        for nn = 1:NCELLS
+            xtmp = xf{nn};
+            ytmp = yf{nn};
+            rtmp = rf{nn};
+            cx = mean(xtmp);
+            cy = mean(ytmp);
+            rx = xtmp - cx;
+            ry = ytmp - cy;
+            rads = sqrt(rx.^2 + ry.^2);
+            xtmp = xtmp + sin(pi/3)*rtmp.*(rx./rads);
+            ytmp = ytmp + sin(pi/3)*rtmp.*(ry./rads);
+            apatch(nn) = polyarea(xtmp,ytmp);
+        end
+        phi(ff) = sum(apatch)/(L(ff,1)*L(ff,2));
+    end
     
     % preferred shape / cx
     calA0 = zeros(NFRAMES,NCELLS);
@@ -111,8 +132,9 @@ for ss = 1:NSIMS
     cyList{ss} = cy;
     calA0List{ss} = calA0;
 
-    % actual shape
+    % geometry
     calAList{ss} = p.^2./(4.0*pi*a);
+    aList{ss} = a;
     
     % packing fraction
     phiList{ss} = phi;
@@ -143,6 +165,7 @@ for ss = 1:NSIMS
 %     saveStruct.polyList = polyList(svidx,:);
     saveStruct.calA0List = calA0List(svidx,:);
     saveStruct.calAList = calAList(svidx,:);
+    saveStruct.aList = aList(svidx,:);
     saveStruct.zList = zList(svidx,:);
     saveStruct.SxxList = SxxList(svidx,:);
     saveStruct.SxyList = SxyList(svidx,:);
@@ -165,7 +188,7 @@ fprintf('Computing ensemble averages\n');
 NFRAMESList = saveStruct.NFRAMESList;
 
 % number of porosity bins
-nporobins = 25;
+nporobins = 30;
 
 % % polygon type info
 % minpoly = 3;
@@ -179,6 +202,7 @@ calAList = saveStruct.calAList;
 % polyList = saveStruct.polyList;
 % LList = saveStruct.LList;
 zList = saveStruct.zList;
+aList = saveStruct.aList;
 
 % lists for later ensemble averaging
 NFRAMETOT = sum(NFRAMESList);
@@ -190,6 +214,8 @@ calAStds = zeros(NFRAMETOT,1);
 % polyAreaList = zeros(NFRAMETOT,NPOLYCHECK);
 zMeans = zeros(NFRAMETOT,1);
 zStds = zeros(NFRAMETOT,1);
+aMeans = zeros(NFRAMETOT,1);
+aStds = zeros(NFRAMETOT,1);
 
 
 % construct binned porosity (skip first frame, always)
@@ -257,6 +283,11 @@ for ss = 1:NSIMS
     zMeans(last:next) = mean(ztmp,2);
     zStds(last:next) = std(ztmp,0,2);
     
+    % get particle size information
+    atmp = aList{ss};
+    aMeans(last:next) = mean(atmp,2);
+    aStds(last:next) = std(atmp,0,2);
+    
     % update for next time
     last = next + 1;
 end
@@ -266,6 +297,7 @@ poro_bc = 0.5*(poro_be(2:end) + poro_be(1:end-1));
 % ensemble averaged data
 calA = zeros(nporobins,2);
 z = zeros(nporobins,2);
+a = zeros(nporobins,2);
 % npoly = zeros(nporobins,2);
 % polytypeMean = zeros(nporobins,NPOLYCHECK);
 % polytypeStd = zeros(nporobins,NPOLYCHECK);
@@ -288,6 +320,8 @@ for bb = 1:nporobins
     z(bb,1) = mean(zMeans(binidx));
     z(bb,2) = mean(zStds(binidx));
     
+    a(bb,1) = mean(aMeans(binidx));
+    a(bb,2) = mean(aStds(binidx));
 %     npoly(bb,1) = mean(npolys(binidx));
 %     npoly(bb,2) = std(npolys(binidx));
 %     
@@ -302,6 +336,7 @@ end
 saveStruct.poro_bc = poro_bc;
 saveStruct.calA = calA;
 saveStruct.z = z;
+saveStruct.a = a;
 % saveStruct.npoly = npoly;
 % saveStruct.polytypeMean = polytypeMean;
 % saveStruct.polytypeStd = polytypeStd;
