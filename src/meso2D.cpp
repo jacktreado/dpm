@@ -3517,11 +3517,11 @@ void meso2D::ageMesophyllShapeParameters(double dl0, double da0, double t0_min){
 			l0[im1[gi]] += dl0_tmp;
 
 			// drive toward neg curvature
-			// if (t0[gi] > t0_min)
-			// 	t0[gi] -= (dl0_std/nv[ci])*cB;
-			// else
-			// 	t0[gi] = t0_min;
-			t0[gi] += (dl0_std/nv[ci])*((t0_min/(mi+2)) - t0[gi]);
+			if (t0[gi] > t0_min)
+				t0[gi] -= (dl0_std/nv[ci]);
+			else
+				t0[gi] = t0_min;
+			// t0[gi] += (dl0_std/nv[ci])*((t0_min/(mi+2)) - t0[gi]);
 		}
 		// if ctc, age toward 0
 		else{

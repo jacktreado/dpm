@@ -6,9 +6,9 @@ close all;
 clc;
 
 % create file name
-fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.1_be50_h0.3_da0.1_dl1.5_cL0_cB0_t0m0.5_P1e-6_seed16.posctc';
+% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.1_be50_h0.5_da0.2_dl1.5_cL0.1_cB1_t0m0.3_P1e-6_seed12.posctc';
 % fstr = 'local/mesoDM2D_data/mesoDM2D_N32_n32_ca1.14_kl1_kb01e-3_be50_da0.02_dl10_P1e-4_seed27.posctc';
-% fstr = '~/Jamming/CellSim/dpm/pos.test';
+fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);
@@ -344,7 +344,7 @@ end
 % get frames to plot
 if showverts == 0
     FSTART = 1;
-%     FEND = 1;
+%     FEND = FSTART;
     FEND = NFRAMES;
 
     % set step size
