@@ -6,7 +6,7 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.1_be50_h0.5_da0.2_dl1.5_cL0.1_cB1_t0m0.3_P1e-6_seed12.posctc';
+% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.2_be200_h0.25_da0.5_dl6_cL0.5_cB1_t0m0.5_P1e-6_seed14.posctc';
 % fstr = 'local/mesoDM2D_data/mesoDM2D_N32_n32_ca1.14_kl1_kb01e-3_be50_da0.02_dl10_P1e-4_seed27.posctc';
 fstr = '~/Jamming/CellSim/dpm/pos.test';
 
@@ -15,7 +15,7 @@ mesoData = readMesoNetworkCTCS2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
-idx = phi > 0.3;
+idx = phi > 0.48;
 NSKIP = 0;
 idx(1:NSKIP) = zeros(NSKIP,1);
 phi = phi(idx);
@@ -208,7 +208,7 @@ if NFRAMES > 2
     
     figure(17), clf, hold on, box on;
     errorbar(max(phipatch) - phipatch,mean(calA,2),std(calA,0,2),'-k','linewidth',1.5);
-%     errorbar(porosity,calAMean,calAMin,calAMax,'k>','markersize',10,'markerfacecolor','b');
+    errorbar(porosity,calAMean,calAMin,calAMax,'k>','markersize',10,'markerfacecolor','b');
     errorbar(porosity,calAMeas,dCalAMin,dCalAMax,'k>','markersize',14,'markerfacecolor','r');
     errorbar(ct01Porosity,ct01CalAMean,ct01CalAStd,'ko','markersize',12,'markerfacecolor','b');
     errorbar(ct17Porosity,ct17CalAMean,ct17CalAStd,'ks','markersize',12,'markerfacecolor','g');
@@ -274,11 +274,6 @@ elseif colorOpt == 3
     t0_bins = linspace(-0.5*pi,0.5*pi,NCLRS-1);
     t0_bins = [-1e5 t0_bins 1e5];
     t0_clr_list = jet(NCLRS);
-elseif colorOpt == 4
-    % color face as gray
-    t0_face_color = [0.9 0.9 0.9];
-    
-    
 else
     [nvUQ, ~, IC] = unique(nv);
     IC = reshape(IC,NFRAMES,NCELLS);
@@ -356,7 +351,7 @@ if showverts == 0
         FSTEP = 20;
     end
 else
-    FSTART = 20;
+    FSTART = NFRAMES;
     FSTEP = 1;
     FEND = FSTART;
 end
@@ -370,6 +365,14 @@ if makeAMovie == 1
     vobj.FrameRate = 15;
     open(vobj);
     ctccopy = -1:1;
+end
+
+% construct dl array for coloring
+dl = cell(NFRAMES,NCELLS);
+for ff = 1:NFRAMES
+    for nn = 1:NCELLS
+        dl{ff,nn} = zeros(nv(ff,nn),1);
+    end
 end
 
 fnum = 1;
@@ -402,7 +405,6 @@ for ff = FSTART:FSTEP:FEND
             case 1
                 cbin = calA(ff,nn) > calABins(1:end-1) & calA(ff,nn) < calABins(2:end);
                 clr = cellCLR(cbin,:);
-%                 clr = [1 1 1];
             case 2
                 cbin = calA0(ff,nn) > calA0Bins(1:end-1) & calA0(ff,nn) < calA0Bins(2:end);
                 clr = cellCLR(cbin,:);
@@ -413,7 +415,7 @@ for ff = FSTART:FSTEP:FEND
         end
         if showverts == 1
             vpos = [xtmp, ytmp];
-            patch('Faces',[1:nvtmp 1],'vertices',vpos,'FaceColor','none','EdgeColor','k','Linewidth',1.5,'LineStyle','-');
+            patch('Faces',[1:nvtmp 1],'vertices',vpos,'FaceColor','none','EdgeColor','k','Linewidth',3,'LineStyle','-');
             for vv = 1:nvtmp
                 rv = rtmp(vv);
                 xplot = xtmp(vv) - rv;
@@ -519,7 +521,7 @@ xf = x(:,cellidx);
 yf = y(:,cellidx);
 nvf = nv(:,cellidx);
 zvf = zv(:,cellidx);
-frList = [2 6 10 13];
+frList = [1 round(0.05*NFRAMES) round(0.1*NFRAMES) round(0.15*NFRAMES) round(0.2*NFRAMES) round(0.25*NFRAMES) round(0.6*NFRAMES) NFRAMES];
 NFR = length(frList);
 LP = LList(end,1);
 for ii = 1:NFR
@@ -532,7 +534,8 @@ for ii = 1:NFR
     cx = mean(xtmp);
     cy = mean(ytmp);
     xtmp = xtmp - cx;
-    ytmp = ytmp - cy - (ii-1)*0.175*LP;
+    ytmp = ytmp - cy;
+%     ytmp = ytmp - cy - (ii-1)*0.175*LP;
     ip1 = [2:nvtmp 1];
     for vv = 1:nvtmp
         if zvtmp(vv) <= 0
@@ -546,5 +549,6 @@ for ii = 1:NFR
     ax.XTick = [];
     ax.YTick = [];
     ax.XLim = [-0.15*LP 0.15*LP];
-    ax.YLim = [-NFR*0.175*LP 0.1*LP];
+    ax.YLim = [-0.15*LP 0.15*LP];
+%     ax.YLim = [-NFR*0.175*LP 0.1*LP];
 end

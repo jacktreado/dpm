@@ -4,7 +4,12 @@
 
 // Compilation command:
 // g++ -O3 --std=c++11 -I src main/meso2D/readInMesoNetwork2D.cpp src/*.cpp -o meso.o
-// ./meso.o meso_n24.input 0.1 200 0.3 0.2 1.5 0 2 0.3 1e-6 12 pos.test
+// ./meso.o meso_n16.input 0.2 100 0.5 0.5 6 0.5 1 0.2 1e-6 12 pos.test
+// 
+// 
+// NOTE 05/04/22: Imporved network formation! Changed t0 to always relax to neighbors, but now cB controls
+// rate of decrease of void t0. ALSO, realized that its better when da, dl are larger! Can generate good looking
+// structures. As of 05/04/22, commiting to github + putting on cluster
 
 
 // header files

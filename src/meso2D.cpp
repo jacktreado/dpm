@@ -3086,6 +3086,7 @@ void meso2D::mesoNetworkEnthalpyMin(meso2DMemFn forceCall, double Ftol, double d
 
 		// break contact network
 		updateMesophyllBondNetwork();
+		// shiftMesoBonds();
 
 		// add vertices
 		if (NVTOT < NVMAX)
@@ -3244,33 +3245,52 @@ void meso2D::updateMesophyllBondNetwork(){
 					// check if connected, otherwise go to next vertex
 					isConnected = gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2];
 
-					if (isConnected){
-						// contact distance
-						sij = r[gi] + r[gj];
+					// contact distance
+					sij = r[gi] + r[gj];
 
-						// get vertex-vertex distances
-						dx = x[NDIM*gj] - x[NDIM*gi];
-						if (pbc[0])
-							dx -= L[0]*round(dx/L[0]);
+					// get vertex-vertex distances
+					dx = x[NDIM*gj] - x[NDIM*gi];
+					if (pbc[0])
+						dx -= L[0]*round(dx/L[0]);
 
-						dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
-						if (pbc[1])
-							dy -= L[1]*round(dy/L[1]);
+					dy = x[NDIM*gj + 1] - x[NDIM*gi + 1];
+					if (pbc[1])
+						dy -= L[1]*round(dy/L[1]);
 
-						// true distance
-						rij = sqrt(dx*dx + dy*dy);
+					// true distance
+					rij = sqrt(dx*dx + dy*dy);
 
-						// only check bond if extended
-						if (rij > sij){
-							// change in energy from bond breaking
-							dU = 1.0 - 0.5*(pow(1 - (rij/sij),2.0)/h2);
+					// if extended, check to destroy
+					if (rij > sij && isConnected){
+						// change in energy from bond breaking
+						dU = 1.0 - 0.5*(pow(1 - (rij/sij),2.0)/h2);
 
-							// only break stochastically at edges
-							canBreak = (zv[ip1[gi]] == 0 || zv[im1[gi]] == 0) || (zv[ip1[gj]] == 0 || zv[im1[gj]] == 0);
+						// only break stochastically at edges
+						canBreak = (zv[ip1[gi]] == 0 || zv[im1[gi]] == 0) || (zv[ip1[gj]] == 0 || zv[im1[gj]] == 0);
 
-							// remove if bond detaching decreases energy
-							if (dU < 0){
-								// remove vertex-vertex bond
+						// remove if bond detaching decreases energy
+						if (dU < 0){
+							// remove vertex-vertex bond
+							gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 0;
+
+							// remove single cell-cell contact
+							cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]--;
+
+							// update contact lists 
+							zc[ci]--;
+							zc[cj]--;
+
+							zv[gi]--;
+							zv[gj]--;
+						}
+						else{
+							// else, remove conditionally
+							poff = exp(-(betaEff*dU)/zij);
+							rdraw = drand48();
+
+							// detach
+							if (poff > rdraw && canBreak){
+								// detach vv contact
 								gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 0;
 
 								// remove single cell-cell contact
@@ -3283,29 +3303,24 @@ void meso2D::updateMesophyllBondNetwork(){
 								zv[gi]--;
 								zv[gj]--;
 							}
-							else{
-								// else, remove conditionally
-								poff = exp(-(betaEff*dU)/zij);
-								rdraw = drand48();
-
-								// detach
-								if (poff > rdraw && canBreak){
-									// detach vv contact
-									gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 0;
-
-									// remove single cell-cell contact
-									cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]--;
-
-									// update contact lists 
-									zc[ci]--;
-									zc[cj]--;
-
-									zv[gi]--;
-									zv[gj]--;
-								}
-							}
 						}
 					}
+					// // else, reattach
+					// else if (rij < sij && !isConnected){
+					// 	// add vertex-vertex bond
+					// 	gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 1;
+
+					// 	// add single cell-cell contact
+					// 	cij[NCELLS*ci + cj - (ci+1)*(ci+2)/2]++;
+
+					// 	// update contact lists 
+					// 	zc[ci]++;
+					// 	zc[cj]++;
+
+					// 	zv[gi]++;
+					// 	zv[gj]++;
+					// }
+
 					// increment global vertex index
 					gj++;
 				}
@@ -3322,7 +3337,7 @@ void meso2D::updateMesophyllBondNetwork(){
 void meso2D::shiftMesoBonds(){
 	// local variables
 	int ci, vi, gi, cj, vj, gj, gip1, gim1;
-	double dx, dy, rij, dxim1, dyim1, rim1j, dxip1, dyip1, rip1j;
+	double dx, dy, rij, dxim1, dyim1, rim1j, dxip1, dyip1, rip1j, sij;
 	bool isConnected, bondShifted;
 
 
@@ -3354,64 +3369,67 @@ void meso2D::shiftMesoBonds(){
 
 						// true distance
 						rij = sqrt(dx*dx + dy*dy);
+						sij = r[gi] + r[gj];
 
-						// get neighboring indices
-						gip1 = ip1[gi];
-						gim1 = im1[gi];
+						if (rij > sij){
+							// get neighboring indices
+							gip1 = ip1[gi];
+							gim1 = im1[gi];
 
-						// if gim1<->gj bond is not occupied
-						bondShifted = 0;
-						if (!gij[NVTOT*gim1 + gj - (gim1+1)*(gim1+2)/2]){
-							// get vertex-vertex distances
-							dxim1 = x[NDIM*gj] - x[NDIM*gim1];
-							if (pbc[0])
-								dxim1 -= L[0]*round(dxim1/L[0]);
+							// if gim1<->gj bond is not occupied
+							bondShifted = 0;
+							if (!gij[NVTOT*gim1 + gj - (gim1+1)*(gim1+2)/2]){
+								// get vertex-vertex distances
+								dxim1 = x[NDIM*gj] - x[NDIM*gim1];
+								if (pbc[0])
+									dxim1 -= L[0]*round(dxim1/L[0]);
 
-							dyim1= x[NDIM*gj + 1] - x[NDIM*gim1 + 1];
-							if (pbc[1])
-								dyim1 -= L[1]*round(dyim1/L[1]);
+								dyim1= x[NDIM*gj + 1] - x[NDIM*gim1 + 1];
+								if (pbc[1])
+									dyim1 -= L[1]*round(dyim1/L[1]);
 
-							// true distance between im1 and j
-							rim1j = sqrt(dxim1*dxim1 + dyim1*dyim1);
+								// true distance between im1 and j
+								rim1j = sqrt(dxim1*dxim1 + dyim1*dyim1);
 
-							// if gim1j distance is smaller than gij distance, shift bond
-							if (rim1j < rij){
-								// swap bonds
-								gij[NVTOT*gim1 + gj - (gim1+1)*(gim1+2)/2] = 1;
-								gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 0;
+								// if gim1j distance is smaller than gij distance, shift bond
+								if (rim1j < rij){
+									// swap bonds
+									gij[NVTOT*gim1 + gj - (gim1+1)*(gim1+2)/2] = 1;
+									gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 0;
 
-								// change zv numbers (only on i, j stays the same)
-								zv[gi]--;
-								zv[gim1]++;
+									// change zv numbers (only on i, j stays the same)
+									zv[gi]--;
+									zv[gim1]++;
+								}
+
+								// label bond as shifted, and skip check bond shift to gip1 
+								bondShifted = 1;
 							}
 
-							// label bond as shifted, and skip check bond shift to gip1 
-							bondShifted = 1;
-						}
+							// if gip1<->gj bond is not occupied & bond not already shifted
+							if (!gij[NVTOT*gip1 + gj - (gip1+1)*(gip1+2)/2] && !bondShifted){
+								// get vertex-vertex distances
+								dxip1 = x[NDIM*gj] - x[NDIM*gip1];
+								if (pbc[0])
+									dxip1 -= L[0]*round(dxip1/L[0]);
 
-						// if gip1<->gj bond is not occupied & bond not already shifted
-						if (!gij[NVTOT*gip1 + gj - (gip1+1)*(gip1+2)/2] && !bondShifted){
-							// get vertex-vertex distances
-							dxip1 = x[NDIM*gj] - x[NDIM*gip1];
-							if (pbc[0])
-								dxip1 -= L[0]*round(dxip1/L[0]);
+								dyip1= x[NDIM*gj + 1] - x[NDIM*gip1 + 1];
+								if (pbc[1])
+									dyip1 -= L[1]*round(dyip1/L[1]);
 
-							dyip1= x[NDIM*gj + 1] - x[NDIM*gip1 + 1];
-							if (pbc[1])
-								dyip1 -= L[1]*round(dyip1/L[1]);
+								// true distance between im1 and j
+								rip1j = sqrt(dxip1*dxip1 + dyip1*dyip1);
 
-							// true distance between im1 and j
-							rip1j = sqrt(dxip1*dxip1 + dyip1*dyip1);
+								// if gim1j distance is smaller than gij distance, shift bond
+								if (rip1j < rij){
+									// swap bonds
+									gij[NVTOT*gip1 + gj - (gip1+1)*(gip1+2)/2] = 1;
+									gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 0;
 
-							// if gim1j distance is smaller than gij distance, shift bond
-							if (rip1j < rij){
-								// swap bonds
-								gij[NVTOT*gip1 + gj - (gip1+1)*(gip1+2)/2] = 1;
-								gij[NVTOT*gi + gj - (gi+1)*(gi+2)/2] = 0;
-
-								// change zv numbers (only on i, j stays the same)
-								zv[gi]--;
-								zv[gip1]++;
+									// change zv numbers (only on i, j stays the same)
+									zv[gi]--;
+									zv[gip1]++;
+								}
 							}
 						}
 					}
@@ -3432,7 +3450,7 @@ void meso2D::ageMesophyllShapeParameters(double dl0, double da0, double t0_min){
 	// local variables
 	int gi, ci, vi, curr_ci = -1, nvs, mi;
 	double lix, liy, lim1x, lim1y, lim1, li, ti, sini, cosi;
-	double dl0_tmp, dl0_std, a0_old, voidp, voidpseg, dvoidp, meanvoidp, dpv;
+	double dl0_tmp, dl0_std, a0_old, voidp, voidpseg, dvoidp, meanvoidp, dpv, calAtmp;
 
 	// grow areas, radii
 	for (ci=0; ci<NCELLS; ci++){
@@ -3462,6 +3480,9 @@ void meso2D::ageMesophyllShapeParameters(double dl0, double da0, double t0_min){
 			dl0_std = (0.5*(perimeter(ci)/area(ci)))*da0;
 			dpv = (dl0*dl0_std)/nvs;
 			curr_ci = ci;
+
+			// also measure instantaneous calA, don't grow if exceeds
+			calAtmp = pow(perimeter(ci),2.0)/(4.0*PI*area(ci));
 		}
 
 		// segment from i to ip1
@@ -3510,7 +3531,12 @@ void meso2D::ageMesophyllShapeParameters(double dl0, double da0, double t0_min){
 			// dl0_tmp = dl0*dl0_std - cL*(perimeter(ci)/nv[ci])*(dvoidp/voidpseg);
 			// dl0_tmp = (dl0*dl0_std/(mi*nvs)) + cL*dl0_std*(1.0 - (voidpseg/meanvoidp));
 			// dl0_tmp = (dl0*dl0_std)/nv[ci];
-			dl0_tmp = ((dl0*dl0_std)/nv[ci])*((1 - cL) + cL*((meanvoidp - voidpseg)/perimeter(ci)));
+
+			// grow based on either constant linear (cL=0) or relax toward average (cL=1)
+			if (calAtmp < calAmax)
+				dl0_tmp = ((dl0*dl0_std)/nv[ci])*((1 - cL) + cL*((meanvoidp - voidpseg)/perimeter(ci)));
+			else
+				dl0_tmp = dl0_std/nv[ci];
 
 			// linear growth
 			l0[gi] += dl0_tmp;
@@ -3518,17 +3544,17 @@ void meso2D::ageMesophyllShapeParameters(double dl0, double da0, double t0_min){
 
 			// drive toward neg curvature
 			if (t0[gi] > t0_min)
-				t0[gi] -= (dl0_std/nv[ci]);
+				t0[gi] -= cB*(dl0_std/nv[ci]);
 			else
 				t0[gi] = t0_min;
-			// t0[gi] += (dl0_std/nv[ci])*((t0_min/(mi+2)) - t0[gi]);
+			// t0[gi] += cB*(dl0_std/nv[ci])*((t0_min/(mi+2)) - t0[gi]);
 		}
 		// if ctc, age toward 0
 		else{
-			// t0[gi] *= 1 - dl0_std*cB;
+			// t0[gi] *= 1 - (dl0_std/nv[ci]);
 			// l0[gi] += 0.01*dl0_std;
 		}
-		t0[gi] += cB*(dl0_std/nv[ci])*((t0[ip1[gi]] - t0[gi]) + (t0[im1[gi]] - t0[gi]));
+		t0[gi] += (dl0_std/nv[ci])*((t0[ip1[gi]] - t0[gi]) + (t0[im1[gi]] - t0[gi]));
 	}
 }
 
@@ -3690,9 +3716,9 @@ void meso2D::addMesophyllCellMaterial(){
 		// add if void vertex and over extended
 		if (zv[gi] == 0){
 			// if distance between two vertices is more than twice the vertex radius, add
-			if (dlim1 > 4.0*r[gi])
+			if (dlim1 > 3.0*r[gi])
 				growthVerts.push_back(gim1);
-			if (dli > 4.0*r[gi])
+			if (dli > 3.0*r[gi])
 				growthVerts.push_back(gi);
 
 		}
