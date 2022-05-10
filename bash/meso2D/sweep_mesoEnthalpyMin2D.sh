@@ -78,7 +78,6 @@ for f in "${flist[@]}"; do
 		for mf in "${mflist[@]}"; do
 			# get test matfile name
 			mftest=${mf##*/}
-			echo $mftest
 
 			# test matfile
 			if [[ $mftest == $mftmp ]]; then
