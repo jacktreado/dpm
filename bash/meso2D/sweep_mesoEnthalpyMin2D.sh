@@ -100,7 +100,7 @@ for f in "${flist[@]}"; do
 	# add to task file
 	let nfsubmit=$nfsubmit+1
 	MCODE="addpath ~/dpm/viz/meso2D; processMesoEnthalpyMin2D('$simdatadir','$searchstr','$mftmp'); quit"
-	echo "$MCODE" >> $taskf
+	echo matlab -nodisplay -r \""$MCODE"\" >> $taskf
 done
 
 # test if task file was created
@@ -127,12 +127,13 @@ echo \#SBATCH -n 1 >> $slurmf
 echo \#SBATCH -p $partition >> $slurmf
 echo \#SBATCH -J $job_name >> $slurmf
 echo \#SBATCH -o $runout >> $slurmf
+echo module load MATLAB >> $slurmf
 echo sed -n \"\$\{SLURM_ARRAY_TASK_ID\}p\" "$taskf" \| /bin/bash >> $slurmf
 cat $slurmf
 
 # run sbatch file
 echo -- running on slurm in partition $partition
-echo sbatch -t $time $slurmf
+sbatch -t $time $slurmf
 
 
 
