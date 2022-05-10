@@ -15,10 +15,10 @@ partition=$2
 time=$3
 
 # get list of all data directories 
-flist=($(ls -d "$simtypedir"))
+flist=($(ls -d "$simtypedir"/*))
 
 # also get list of matfiles
-mflist=($(ls "$savedir"/"*.mat"))
+mflist="$savedir"/"*.mat"
 
 # Count number of directories, error if empty
 let nf=0
