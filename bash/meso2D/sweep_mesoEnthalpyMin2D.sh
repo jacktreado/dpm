@@ -76,9 +76,13 @@ for f in "${flist[@]}"; do
 	if [[ $forceRecalc != 1 ]]; then
 		mffound=0
 		for mf in "${mflist[@]}"; do
+			# get test matfile name
+			mftest=${mf##*/}
+			mftest="$mftest""_processed.mat"
+
 			# test matfile
-			if [[ $mf == $mftmp ]]; then
-				echo "\+\+" Found matfile $mf, skipping
+			if [[ $mftest == $mftmp ]]; then
+				echo "\+\+" Found matfile $mftest, skipping
 				mffound=1
 				break
 			fi
