@@ -18,7 +18,7 @@ time=$3
 flist=($(ls -d "$simtypedir"/*))
 
 # also get list of matfiles
-mflist="$savedir"/"*.mat"
+mflist=($("$savedir"/"*.mat"))
 
 # Count number of directories, error if empty
 let nf=0
@@ -62,6 +62,12 @@ for f in "${flist[@]}"; do
 	simdatadir=$f
 	simname=${f##*/}
 	searchstr="$simname"_seed
+
+	# skip if you have found matfiles directory
+	if [[ $simname == matfiles ]]; then
+		echo Found matfiles directory, skipping.
+		continue
+	fi
 
 	# tmp matfile
 	mftmp="$simname""_processed.mat"
