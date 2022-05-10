@@ -13,9 +13,9 @@ using namespace std;
 
 int main(){
 	// local variables
-	int NCELLS = 16, nsmall = 24, seed = 1;
-	double phi0 = 0.6, dphi0 = 5e-3, calA0 = 1.13, smallfrac = 0.5, sizefrac = 1.4, Ftol = 1e-10, Ptol = 1e-6, dt0 = 2e-2;
-	double ka = 1.0, kl = 1.0, kb = 0, kc = 1.0, thA = 0.0, thK = 0.0, boxLengthScale = 2.5, l1 = 0.0, l2 = 0.0;
+	int NCELLS = 36, nsmall = 32, seed = 1;
+	double phi0 = 0.5, dphi0 = 0.05, calA0 = 1.0, smallfrac = 0.5, sizefrac = 1.4, Ftol = 1e-10, Ptol = 1e-2, dt0 = 1e-1;
+	double ka = 1.0, kl = 1.0, kb = 0.01, kc = 1.0, thA = 1.0, thK = 4.0, boxLengthScale = 2.5, l1 = 0.0, l2 = 0.0, disp = 0.0;
 
 	// options for attraction
 	bool useAttraction = 0;
@@ -58,8 +58,8 @@ int main(){
 		forceUpdate = &dpm::repulsiveForceUpdate;
 
 	// initialize particles are bidisperse
-	configobj2D.bidisperse2D(calA0, nsmall, smallfrac, sizefrac);
-	// configobj2D.gaussian2D(0.0, calA0, nsmall);
+	// configobj2D.bidisperse2D(calA0, nsmall, smallfrac, sizefrac);
+	configobj2D.gaussian2D(disp, calA0, nsmall);
 
 	// set preferred angle to sinusoidal
 	configobj2D.sinusoidalPreferredAngle(thA, thK);
@@ -72,7 +72,7 @@ int main(){
 
 	// compress with annealing
 	double trun = 50.0;
-	double T0 = 1e-3;
+	double T0 = 1e-2;
 	configobj2D.vertexAnneal2Jam2D(forceUpdate, Ftol, Ptol, dt0, dphi0, T0, trun, 1);
 
 	// say goodbye

@@ -6,16 +6,16 @@ close all;
 clc;
 
 % create file name
-% fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.2_be200_h0.25_da0.5_dl6_cL0.5_cB1_t0m0.5_P1e-6_seed14.posctc';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.4_be100_h1_da0.01_dl1.1_cL0.5_cB4_t0m0.3_P1e-6_seed13.posctc';
 % fstr = 'local/mesoDM2D_data/mesoDM2D_N32_n32_ca1.14_kl1_kb01e-3_be50_da0.02_dl10_P1e-4_seed27.posctc';
-fstr = '~/Jamming/CellSim/dpm/pos.test';
+% fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
 mesoData = readMesoNetworkCTCS2D(fstr);
 
 % packing fraction (only take frames with phi > 0.25)
 phi = mesoData.phi;
-idx = phi > 0.48;
+idx = phi > 0.45;
 NSKIP = 0;
 idx(1:NSKIP) = zeros(NSKIP,1);
 phi = phi(idx);
@@ -251,7 +251,7 @@ ey = sin(th);
 showverts = 0;
 
 % color by shape or size
-colorOpt = 3;
+colorOpt = 1;
 
 if colorOpt == 1
     % color by real shape
@@ -351,7 +351,7 @@ if showverts == 0
         FSTEP = 20;
     end
 else
-    FSTART = NFRAMES;
+    FSTART = 10;
     FSTEP = 1;
     FEND = FSTART;
 end
@@ -360,7 +360,7 @@ end
 makeAMovie = 0;
 ctccopy = 0;
 if makeAMovie == 1
-    moviestr = 'grow_contact_dl0.01.mp4';
+    moviestr = 'mesoHMin2D_N32_n32_ca1.14_kb0.4_be200_h1_da0.5_dl5_cL0.5_cB4_t0m0.5_P1e-6_seed11.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -413,7 +413,7 @@ for ff = FSTART:FSTEP:FEND
             otherwise
                 clr = cellCLR(IC(ff,nn),:);
         end
-        if showverts == 1
+        if showverts == 1 && (nn == 29 || nn == 6)
             vpos = [xtmp, ytmp];
             patch('Faces',[1:nvtmp 1],'vertices',vpos,'FaceColor','none','EdgeColor','k','Linewidth',3,'LineStyle','-');
             for vv = 1:nvtmp
@@ -423,14 +423,14 @@ for ff = FSTART:FSTEP:FEND
                 for xx = -1:1
                     for yy = -1:1
                         if zvtmp(vv) > 0
-                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','b','LineWidth',2);
+                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',2);
                         else
-                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor','w','LineWidth',2);
+                            rectangle('Position',[xplot + xx*L, yplot + yy*L, 2.0*rv, 2.0*rv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr,'LineWidth',2);
                         end
                     end
                 end
             end
-        else
+        elseif showverts == 0
             rx = xtmp - cx;
             ry = ytmp - cy;
             rads = sqrt(rx.^2 + ry.^2);
@@ -456,28 +456,28 @@ for ff = FSTART:FSTEP:FEND
         end
     end
     
-    % plot vv contacts
-    gijtmp = gijList{ff};
-    xa = cell2mat(xf');
-    ya = cell2mat(yf');
-    NVTOT = sum(nv(ff,:));
-    for gi = 1:NVTOT
-        xi = xa(gi);
-        yi = ya(gi);
-        for gj = (gi+1):NVTOT
-            if (gijtmp(gi,gj) == 1)
-                dx = xa(gj) - xi;
-                dx = dx - L*round(dx/L);
-                dy = ya(gj) - yi;
-                dy = dy - L*round(dy/L);
-                for xx = ctccopy
-                    for yy = ctccopy
-                        plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'k-','linewidth',1.5);
-                    end
-                end
-            end
-        end
-    end
+%     % plot vv contacts
+%     gijtmp = gijList{ff};
+%     xa = cell2mat(xf');
+%     ya = cell2mat(yf');
+%     NVTOT = sum(nv(ff,:));
+%     for gi = 1:NVTOT
+%         xi = xa(gi);
+%         yi = ya(gi);
+%         for gj = (gi+1):NVTOT
+%             if (gijtmp(gi,gj) == 1)
+%                 dx = xa(gj) - xi;
+%                 dx = dx - L*round(dx/L);
+%                 dy = ya(gj) - yi;
+%                 dy = dy - L*round(dy/L);
+%                 for xx = ctccopy
+%                     for yy = ctccopy
+%                         plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'k-','linewidth',1.5);
+%                     end
+%                 end
+%             end
+%         end
+%     end
         
     % plot box
     plot([0 L L 0 0], [0 0 L L 0], 'k-', 'linewidth', 1.5);
@@ -511,7 +511,7 @@ return;
 %% Draw individual cell shape dynamics
 
 % pick random cell
-cellidx = 19;
+cellidx = 10;
 
 % reset figure for this frame
 figure(20), clf, hold on, box on;
@@ -521,7 +521,8 @@ xf = x(:,cellidx);
 yf = y(:,cellidx);
 nvf = nv(:,cellidx);
 zvf = zv(:,cellidx);
-frList = [1 round(0.05*NFRAMES) round(0.1*NFRAMES) round(0.15*NFRAMES) round(0.2*NFRAMES) round(0.25*NFRAMES) round(0.6*NFRAMES) NFRAMES];
+% frList = [1 round(0.05*NFRAMES) round(0.1*NFRAMES) round(0.15*NFRAMES) round(0.2*NFRAMES) round(0.25*NFRAMES) round(0.6*NFRAMES) NFRAMES];
+frList = [1 4 8 10 12 14];
 NFR = length(frList);
 LP = LList(end,1);
 for ii = 1:NFR

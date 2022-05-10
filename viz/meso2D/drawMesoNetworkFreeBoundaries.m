@@ -5,7 +5,7 @@ close all;
 clc;
 
 % create file name
-fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.2_be100_h0.5_da0.2_dl2_cL0.5_cB1_t0m0.5_P1e-6_seed11.posctc';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.4_be200_h1_da0.5_dl5_cL0.5_cB4_t0m0.5_P1e-6_seed11.posctc';
 % fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
@@ -34,6 +34,29 @@ l0 = mesoData.l0(idx,:);
 t0 = mesoData.t0(idx,:);
 kb = mesoData.kb(idx,:);
 phi0 = sum(a0,2)./(LList(:,1).*LList(:,2));
+
+% loop over frames, get patch phi
+phipatch = zeros(NFRAMES,1);
+for ff = 1:NFRAMES
+    xf = x(ff,:);
+    yf = y(ff,:);
+    rf = r(ff,:);
+    apatch = zeros(NCELLS,1);
+    for nn = 1:NCELLS
+        xtmp = xf{nn};
+        ytmp = yf{nn};
+        rtmp = rf{nn};
+        cx = mean(xtmp);
+        cy = mean(ytmp);
+        rx = xtmp - cx;
+        ry = ytmp - cy;
+        rads = sqrt(rx.^2 + ry.^2);
+        xtmp = xtmp + sin(pi/3)*rtmp.*(rx./rads);
+        ytmp = ytmp + sin(pi/3)*rtmp.*(ry./rads);
+        apatch(nn) = polyarea(xtmp,ytmp);
+    end
+    phipatch(ff) = sum(apatch)/(LList(ff,1)*LList(ff,2));
+end
 
 % get preferred shape
 calA0 = zeros(NFRAMES,NCELLS);
@@ -69,7 +92,7 @@ ey = sin(th);
 showverts = 0;
 
 % color by shape or size
-colorOpt = 3;
+colorOpt = 1;
 
 if colorOpt == 1
     % color by real shape
@@ -156,15 +179,15 @@ end
 
 % get frames to plot
 if showverts == 0
-    FSTART = 1;
+    FSTART = 24;
     FSTEP = 1;
     if NFRAMES > 80
         FSTEP = 5;
     elseif NFRAMES > 150
         FSTEP = 10;
     end
-    FEND = NFRAMES;
-%     FEND = FSTART;
+%     FEND = NFRAMES;
+    FEND = FSTART;
 else
     FSTART = 2;
     FSTEP = 1;
@@ -187,7 +210,7 @@ figure(fnum), clf, hold on, box on;
 for ff = FSTART:FSTEP:FEND
     % reset figure for this frame
     figure(fnum), clf, hold on, box on;
-    fprintf('printing frame ff = %d/%d, phi=%0.3g, phi0=%0.3g\n',ff,FEND,phi(ff),phi0(ff));
+    fprintf('printing frame ff = %d/%d, phi=%0.3g, phi0=%0.3g\n',ff,FEND,phipatch(ff),phi0(ff));
     
     % get geometric info
     xf = x(ff,:);

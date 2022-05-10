@@ -42,7 +42,7 @@ end
 vizdir = pwd;
 fname = [fpattern '.pos'];
 fstr = [vizdir '/' datadir '/' fname];
-% fstr = '../../pos.test';
+fstr = '../../pos.test';
 
 % read in data
 dpmData = readDPMConfig(fstr);
@@ -72,19 +72,19 @@ phi = dpmData.phi;
 %% Draw cells
 
 % show vertices or not
-showverts = 1;
+showverts = 0;
 
 % get cell colors
 [nvUQ, ~, IC] = unique(nv);
 NUQ = length(nvUQ);
-allClr = jet(6);
+allClr = jet(4*NUQ);
 cellCLR = allClr(1:NUQ,:);
 
 % get frames to plot
 if showverts == 0
     FSTART = 1;
     FSTEP = 1;
-    FEND = NFRAMES;
+    FEND = NFRAMES-1;
 %     FEND = FSTART;
 else
     FSTART = 1;
@@ -93,9 +93,9 @@ else
 end
 
 % make a movie
-makeAMovie = 0;
+makeAMovie = 1;
 if makeAMovie == 1
-    moviestr = 'compress2jamming_calA1.06.mp4';
+    moviestr = 'compress_w_kb_square_T.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -214,8 +214,8 @@ if NFRAMES > 5
 %     ax.YScale = 'log';
     
     figure(12), clf, hold on, box on;
-    plot(phi,calA,'-','color',[0.5 0.5 0.5],'linewidth',1.2);
-    errorbar(phi,mean(calA,2),std(calA,0,2),'k--','linewidth',2);
+    plot(phi(1:NFRAMES-1),calA(1:NFRAMES-1,:),'-','color',[0.5 0.5 0.5],'linewidth',1.2);
+    errorbar(phi(1:NFRAMES-1),mean(calA(1:NFRAMES-1,:),2),std(calA(1:NFRAMES-1,:),0,2),'k--','linewidth',2);
     
     xlabel('$\phi$','Interpreter','latex');
     ylabel('$\mathcal{A}$','Interpreter','latex');
