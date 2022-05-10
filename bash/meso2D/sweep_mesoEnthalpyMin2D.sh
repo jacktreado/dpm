@@ -98,8 +98,9 @@ for f in "${flist[@]}"; do
 	fi
 
 	# add to task file
+	savestr="$savedir"/"$mftmp"
 	let nfsubmit=$nfsubmit+1
-	MCODE="addpath ~/dpm/viz/meso2D; processMesoEnthalpyMin2D('$simdatadir','$searchstr','$mftmp'); quit"
+	MCODE="addpath ~/dpm/viz/meso2D; processMesoEnthalpyMin2D('$simdatadir','$searchstr','$savestr'); quit"
 	echo matlab -nodisplay -r \""$MCODE"\" >> $taskf
 done
 
