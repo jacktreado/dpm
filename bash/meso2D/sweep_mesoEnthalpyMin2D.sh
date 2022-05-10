@@ -75,7 +75,7 @@ for f in "${flist[@]}"; do
 	# if not recalc, check if matfile already exists
 	if [[ $forceRecalc != 1 ]]; then
 		mffound=0
-		for mf in "$mflist[@]"; do
+		for mf in "${mflist[@]}"; do
 			# test matfile
 			if [[ $mf == $mftmp ]]; then
 				echo "\+\+" Found matfile $mf, skipping
