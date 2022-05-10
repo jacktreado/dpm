@@ -18,7 +18,7 @@ time=$3
 flist=($(ls -d "$simtypedir"))
 
 # also get list of matfiles
-mflist=($(ls -d "$savedir"))
+mflist=($(ls "$savedir"/"*.mat"))
 
 # Count number of directories, error if empty
 let nf=0
