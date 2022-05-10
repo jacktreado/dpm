@@ -78,7 +78,6 @@ for f in "${flist[@]}"; do
 		for mf in "${mflist[@]}"; do
 			# get test matfile name
 			mftest=${mf##*/}
-			mftest="$mftest""_processed.mat"
 			echo $mftest
 
 			# test matfile
