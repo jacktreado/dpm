@@ -22,7 +22,7 @@ mflist=($(ls "$savedir"/"*.mat"))
 
 # Count number of directories, error if empty
 let nf=0
-for f in "$flist[@]"; do
+for f in "${flist[@]}"; do
 	let nf=$nf+1
 done
 if [[ $nf -eq 0 ]]; then
@@ -38,7 +38,7 @@ fi
 
 # Count number of matfiles, set forceRecalc to 1 if empty
 let nmf=0
-for f in "$mflist[@]"; do
+for f in "${mflist[@]}"; do
 	let nmf=$nmf+1
 done
 if [[ $nmf -eq 0 && $forceRecalc -eq 0 ]]; then
@@ -57,7 +57,7 @@ taskf=tasks/sweep_mesoEnthalpyMin2D.task
 rm -f $taskf
 
 let nfsubmit=0
-for f in "$flist[@]"; do
+for f in "${flist[@]}"; do
 	# get sim name & details
 	simdatadir=$f
 	simname=${f##*/}
