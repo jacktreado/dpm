@@ -32,7 +32,7 @@ const double dt0 = 1e-2;		   	// initial magnitude of time step in units of MD t
 const double Ftol = 1e-12; 			// force tolerance
 const double dPtol = 1e-10;			// pressure change tolerance
 const double phiMin = 0.3;			// minimum packing fraction in decompression algorithm
-const double kl = 0.5;				// perimeter spring stiffness
+const double kl = 1.0;				// perimeter spring stiffness
 const double aL = 1.0; 				// distribution of aging to boundary (when = 1)
 const double kc = 1.0; 				// interaction spring constant
 const double cKb = 0; 				// change in bending energy
