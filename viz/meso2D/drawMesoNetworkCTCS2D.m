@@ -6,7 +6,7 @@ close all;
 clc;
 
 % create file name
-fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.4_be100_h1_da0.01_dl1.1_cL0.5_cB4_t0m0.3_P1e-6_seed13.posctc';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N128_n32_ca1.14_kb0.4_be500_h1.5_da0.5_dl5_cL0.5_cB4_t0m0.3_P1e-6_seed12.posctc';
 % fstr = 'local/mesoDM2D_data/mesoDM2D_N32_n32_ca1.14_kl1_kb01e-3_be50_da0.02_dl10_P1e-4_seed27.posctc';
 % fstr = '~/Jamming/CellSim/dpm/pos.test';
 
@@ -163,22 +163,22 @@ if NFRAMES > 2
     ax = gca;
     ax.FontSize = 22;
     
-     % plot packing fraction and fraction perimeter at void
+    % plot packing fraction and fraction perimeter at void
     figure(16), clf, hold on, box on;
-    yyaxis left
-    plot(phipatch,'ko','markersize',10,'markerfacecolor','b');
-    h = ylabel('$\phi$','Interpreter','latex');
-    h.Color = 'b';
-    ax = gca;
-    ax.YColor = 'b';
-    ax.YLim = [0 1];
     yyaxis right
-    plot(P,'ks','markersize',10,'markerfacecolor','r');
+    plot(1:NFRAMES-1,P(2:NFRAMES),'ks','markersize',10,'markerfacecolor','r');
     h = ylabel('$P$','Interpreter','latex');
     h.Color = 'r';
     ax = gca;
     ax.YColor = 'r';
     ax.YLim = [0 2*mean(P)];
+    yyaxis left
+    plot(1:NFRAMES-1,phipatch(2:NFRAMES),'ko','markersize',10,'markerfacecolor','b');
+    h = ylabel('$\phi$','Interpreter','latex');
+    h.Color = 'b';
+    ax = gca;
+    ax.YColor = 'b';
+    ax.YLim = [0 1];
     xlabel('frame','Interpreter','latex');
     ax.FontSize = 24;
     ax.XLim = [1 NFRAMES];
@@ -380,7 +380,7 @@ figure(fnum), clf, hold on, box on;
 for ff = FSTART:FSTEP:FEND
     % reset figure for this frame
     figure(fnum), clf, hold on, box on;
-    fprintf('printing frame ff = %d/%d, phi=%0.3g, phi0=%0.3g\n',ff,FEND,phi(ff),phi0(ff));
+    fprintf('printing frame ff = %d/%d, phi=%0.3g, phi0=%0.3g\n',ff,FEND,phipatch(ff),phi0(ff));
     
     % get geometric info
     xf = x(ff,:);
@@ -488,7 +488,7 @@ for ff = FSTART:FSTEP:FEND
     ax.XLim = [-0.25 1.25]*L;
     ax.YLim = [-0.25 1.25]*L;
     
-    % colorbar
+%     colorbar
 %     colormap(jet);
 %     cb = colorbar;
 %     cb.Ticks = [];
@@ -511,7 +511,7 @@ return;
 %% Draw individual cell shape dynamics
 
 % pick random cell
-cellidx = 10;
+cellidx = 5;
 
 % reset figure for this frame
 figure(20), clf, hold on, box on;
@@ -522,7 +522,7 @@ yf = y(:,cellidx);
 nvf = nv(:,cellidx);
 zvf = zv(:,cellidx);
 % frList = [1 round(0.05*NFRAMES) round(0.1*NFRAMES) round(0.15*NFRAMES) round(0.2*NFRAMES) round(0.25*NFRAMES) round(0.6*NFRAMES) NFRAMES];
-frList = [1 4 8 10 12 14];
+frList = [3:19];
 NFR = length(frList);
 LP = LList(end,1);
 for ii = 1:NFR
@@ -540,9 +540,9 @@ for ii = 1:NFR
     ip1 = [2:nvtmp 1];
     for vv = 1:nvtmp
         if zvtmp(vv) <= 0
-            plot([xtmp(vv) xtmp(ip1(vv))],[ytmp(vv) ytmp(ip1(vv))],'-','linewidth',2,'color','g');
+            plot([xtmp(vv) xtmp(ip1(vv))],[ytmp(vv) ytmp(ip1(vv))],'-','linewidth',3,'color','r');
         else
-            plot([xtmp(vv) xtmp(ip1(vv))],[ytmp(vv) ytmp(ip1(vv))],'-','linewidth',2,'color','b');
+            plot([xtmp(vv) xtmp(ip1(vv))],[ytmp(vv) ytmp(ip1(vv))],'-','linewidth',5,'color','k');
         end
     end
     axis equal;
