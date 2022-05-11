@@ -251,7 +251,7 @@ ey = sin(th);
 showverts = 0;
 
 % color by shape or size
-colorOpt = 1;
+colorOpt = 3;
 
 if colorOpt == 1
     % color by real shape
@@ -338,9 +338,9 @@ end
 
 % get frames to plot
 if showverts == 0
-    FSTART = 1;
-%     FEND = FSTART;
-    FEND = NFRAMES;
+    FSTART = 21;
+    FEND = FSTART;
+%     FEND = NFRAMES;
 
     % set step size
     FSTEP = 1;
