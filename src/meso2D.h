@@ -42,10 +42,11 @@ protected:
 	std::vector<int> zc;
 	std::vector<int> zv;
 
-	// pressure
-	// NOTE: force routines will compute the partial dUdL first, need to add \sum_i F_i * r_i 
-	// if you need instantaneous pressure contribution to minimized pressure
-	double Pinst; 
+	// stress components
+	// NOTE: force routines will compute the partial dUd(strain) first, need to add \sum_i F_i * r_i 
+	// if you need instantaneous stress contribution
+	double Pinst;
+	double Sinst;
 
 	// adhesion parameters
 	double betaEff;			// probability to break contact
@@ -93,6 +94,7 @@ public:
 
 	// getters
 	double getPinst() { return Pinst; };
+	double getSinst() { return Sinst; };
 
 
 	// setters

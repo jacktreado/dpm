@@ -545,7 +545,6 @@ void meso2D::initializeMesophyllBondNetwork(){
 	}
 }
 
-
 // initialize bonds between overlapping CELLS
 void meso2D::initializeMesoBubbleBondNetwork(){
 	// local variables
@@ -750,8 +749,9 @@ void meso2D::mesoRepulsiveVertexForces(){
 							// increase potential energy
 							U += 0.5 * kc * pow((1 - (rij / sij)), 2.0);
 
-							// add to dUdL contribution to pressure
+							// add to stress
 							Pinst -= ftmp*(rij/L[0]);
+							Sinst -= ftmp*((dx*dy)/rij);
 
 							// add to virial stress
 							stress[0] += (dx * fx)/(L[0] * L[1]);
@@ -823,6 +823,7 @@ void meso2D::mesoRepulsiveVertexForces(){
 
 								// add to dUdL contribution to pressure
 								Pinst -= ftmp*(rij/L[0]);
+								Sinst -= ftmp*((dx*dy)/rij);
 
 								// add to virial stress
 								stress[0] += (dx * fx)/(L[0] * L[1]);
@@ -989,8 +990,9 @@ void meso2D::mesoShapeForces(){
 		// update potential energy
 		U += 0.5 * kl *(dli * dli);
 
-		// update pressure
+		// update contribution to stress
 		Pinst += ((kl * li)/(L[0] * l0i)) * dli;
+		Sinst += ((kl * lix *liy)/(l0i * li)) * dli;
 
 		// -- Bending force
 		fbip1 = kbi[ip1[gi]];
@@ -1043,6 +1045,10 @@ void meso2D::mesoShapeForces(){
 
 			// update potential energy
 			U += 0.5 * kbi[gi] * (dti * dti);
+
+			// update contribution to shear stress
+			// Sinst += (kbi[gi] * (nim1x*nim1x - nix*nix)) * dti;
+			Sinst += (kbi[gi] * (nix*nix - nim1x*nim1x)) * dti;
 		}
 
 		// update old coordinates
@@ -1100,6 +1106,9 @@ void meso2D::mesoShapeForces(double gamma){
 
 				// update potential energy
 				U += 0.5 * ka * (da * da);
+
+				// update pressure
+				Pinst += ((2.0 * ka * atmp)/(a0tmp * L[0])) * da;
 
 				// shape force parameters
 				fa = ka * (da / a0tmp);
@@ -1214,6 +1223,10 @@ void meso2D::mesoShapeForces(double gamma){
 		// update potential energy
 		U += 0.5 * kl * (dli * dli);
 
+		// update contribution to stress
+		Pinst += ((kl * li)/(L[0] * l0i)) * dli;
+		Sinst += ((kl * lix *liy)/(l0i * li)) * dli;
+
 		// -- Bending force
 		fbip1 = kbi[ip1[gi]];
 		fbi = kbi[gi];
@@ -1268,6 +1281,9 @@ void meso2D::mesoShapeForces(double gamma){
 
 			// update potential energy
 			U += 0.5 * kbi[gi] * (dti * dti);
+
+			// update contribution to shear stress
+			Sinst += (kbi[gi] * (nim1x*nim1x - nix*nix)) * dti;
 		}
 
 		// update old coordinates
@@ -1299,11 +1315,12 @@ void meso2D::mesoShapeForces(double gamma){
 void meso2D::mesoNetworkForceUpdate(){
 	// local variables
 	int i, gi, gj, ci, cj, vi, vj;
-	double rij, sij, zij, dx, dy, fx, fy, ftmp, Fvirial;
+	double rij, sij, zij, dx, dy, fx, fy, ftmp, Fvdiag, Fvxy;
 
 	// normal update (shape + repulsive forces) from base class
 	resetForcesAndEnergy();
 	Pinst = 0.0;
+	Sinst = 0.0;
 	mesoShapeForces();
 	mesoRepulsiveVertexForces();
 
@@ -1361,21 +1378,28 @@ void meso2D::mesoNetworkForceUpdate(){
 					stress[1] += (dy*fy)/(L[0]*L[1]);
 					stress[2] += (0.5*(dx*fy + dy*fx))/(L[0]*L[1]);
 
-					// add to dUdL
+					// add to stress
 					Pinst -= ftmp*(rij/L[0]);
+					Sinst -= ftmp*((dx*dy)/rij);
 				}
 			}
 		}
 	}
 
 	// virial force contribution to pressure
-	Fvirial = 0.0;
-	for (i=0; i<vertDOF; i++)
-		Fvirial += F[i]*x[i];
-	Fvirial /= 2.0*L[0]*L[1];
+	Fvdiag = 0.0;
+	Fvxy = 0.0;
+	for (i=0; i<vertDOF; i++){
+		Fvdiag += F[i]*x[i];
+		if (i % NDIM == 0)
+			Fvxy += F[i]*x[i+1];
+	}
+	Fvdiag /= 2.0*L[0]*L[1];
+	Fvxy /= L[0]*L[1];
 
 	// finalize computation of pressure
-	Pinst = Fvirial - (Pinst/(2.0*L[0]));
+	Pinst = Fvdiag - (Pinst/(2.0*L[0]));
+	Sinst = Fvxy - (Sinst/(L[0]*L[1]));
 }
 
 
@@ -1383,10 +1407,12 @@ void meso2D::mesoNetworkForceUpdate(){
 // NOTE: add Pinst contribution to pressure measurement, need to figure out Sinst (shear stress) from shape contribution
 void meso2D::mesoNetworkForceUpdate(double gamma, vector<bool> &gijtmp){
 	// local variables
-	int gi, gj, ci, cj, vi, vj, im, NVVCTS;
-	double rij, sij, zij, dx, dy, fx, fy, ftmp;
+	int i, gi, gj, ci, cj, vi, vj, im, NVVCTS;
+	double rij, sij, zij, dx, dy, fx, fy, ftmp, Fvdiag, Fvxy;
 
 	// normal update (shape + repulsive forces) from base class
+	Pinst = 0.0;
+	Sinst = 0.0;
 	resetForcesAndEnergy();
 	mesoShapeForces(gamma);
 
@@ -1448,9 +1474,28 @@ void meso2D::mesoNetworkForceUpdate(double gamma, vector<bool> &gijtmp){
 				stress[0] += (dx*fx)/(L[0]*L[1]);
 				stress[1] += (dy*fy)/(L[0]*L[1]);
 				stress[2] += (0.5*(dx*fy + dy*fx))/(L[0]*L[1]);
+
+				// add to dUdL
+				Pinst -= ftmp*(rij/L[0]);
+				Sinst -= ftmp*((dx*dy)/rij);
 			}
 		}
 	}
+
+	// virial force contribution to pressure
+	Fvdiag = 0.0;
+	Fvxy = 0.0;
+	for (i=0; i<vertDOF; i++){
+		Fvdiag += F[i]*x[i];
+		if (i % NDIM == 0)
+			Fvxy += F[i]*x[i+1];
+	}
+	Fvdiag /= 2.0*L[0]*L[1];
+	Fvxy /= L[0]*L[1];
+
+	// finalize computation of pressure
+	Pinst = Fvdiag - (Pinst/(2.0*L[0]));
+	Sinst = Fvxy - (Sinst/(L[0]*L[1]));
 }
 
 
@@ -2429,9 +2474,7 @@ void meso2D::mesoShearStrainEnthalpyFIRE(double gamma, double Ftol, double P0, d
 
 		// update forces at fixed shear strain, FIXED CONTACT NETWORK
 		mesoNetworkForceUpdate(gamma, gijtmp);
-
-		// update instantaneous pressure
-		P = 0.5*(stress[0] + stress[1]);
+		P = Pinst;
 
 		// VV VELOCITY UPDATE #2
 		for (i=0; i<vertDOF; i++)
@@ -6310,7 +6353,6 @@ void meso2D::printMesoShearConfigCTCS2D(double gamma){
 	posout << setw(w) << left << "NEWFR" << " " << endl;
 	posout << setw(w) << left << "NUMCL" << setw(w) << left << NCELLS << endl;
 	posout << setw(w) << left << "PACKF" << setw(wnum) << setprecision(pnum) << left << vertexPackingFraction2D() << endl;
-	posout << setw(w) << left << "GAMMA" << setw(wnum) << setprecision(pnum) << left << gamma << endl;
 
 	// print contact info
 	posout << setw(w) << left << "CTCTS";
@@ -6331,12 +6373,12 @@ void meso2D::printMesoShearConfigCTCS2D(double gamma){
 
 	// print stress info
 	posout << setw(w) << left << "STRSS";
-	posout << setw(wnum) << setprecision(pnum) << left << stress.at(0);
-	posout << setw(wnum) << setprecision(pnum) << left << stress.at(1);
-	posout << setw(wnum) << setprecision(pnum) << left << stress.at(2);
+	posout << setw(wnum) << setprecision(pnum) << left << gamma;
+	posout << setw(wnum) << setprecision(pnum) << left << Pinst;
+	posout << setw(wnum) << setprecision(pnum) << left << Sinst;
 	posout << endl;
 
-	// print coordinate for rest of the cells
+	// print- coordinate for rest of the cells
 	for (ci=0; ci<NCELLS; ci++){
 		// compute number of contacts with other cells
 		zctmp = 0;

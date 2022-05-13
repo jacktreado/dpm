@@ -7,23 +7,6 @@ clc;
 
 % create file name
 
-% parameters
-Nstr = '32';
-nstr = '32';
-castr = '1.08';
-kb0str = '1e-4';
-bestr = '4.5';
-hstr = '0.2';
-cLstr = '5';
-aLstr = '1';
-cBstr = '0';
-cKbstr = '0';
-
-
-% seed
-seed = 5;
-seedstr = num2str(seed);
-
 % file name str
 fstr = '~/Jamming/CellSim/dpm/pos.test';
 
@@ -40,9 +23,11 @@ NFRAMES = sum(idx);
 
 % sim info
 NCELLS = mesoData.NCELLS;
-gamma = mesoData.gamma(idx);
 nv = mesoData.nv(idx,:);
-LList = mesoData.L;
+LList = mesoData.L(idx,:);
+gamma = mesoData.gamma(idx);
+P = mesoData.P(idx,:);
+S = mesoData.S(idx,:);
 x = mesoData.x(idx,:);
 y = mesoData.y(idx,:);
 r = mesoData.r(idx,:);
@@ -72,28 +57,23 @@ p = mesoData.p(idx,:);
 a = mesoData.a(idx,:);
 calA = p.^2./(4.0*pi*a);
 
-% stress data
-S = mesoData.S(idx,:);
-P = 0.5*(S(:,1) + S(:,2));
-
 % print shear stress
-Sxy = S(:,3);
 dgamma = gamma(2) - gamma(1);
 
 % get linear approx
-m = (Sxy(2)-Sxy(1))/dgamma;
-b = Sxy(1) - m*gamma(1);
+m = (S(2)-S(1))/dgamma;
+b = S(1) - m*gamma(1);
 yfit = m*gamma + b;
 
 figure(11), clf, hold on, box on;
-plot(gamma,Sxy,'-ks','markersize',10);
+plot(gamma,S,'-ks','markersize',10);
 plot(gamma,yfit,'k-','linewidth',2);
 xlabel('$\gamma$','Interpreter','latex');
 ylabel('$\Sigma_{xy}$','Interpreter','latex');
 ax = gca;
 ax.FontSize = 22;
 
-G = -0.5*(Sxy(3:end) - Sxy(1:end-2))/dgamma;
+G = -0.5*(S(3:end) - S(1:end-2))/dgamma;
 figure(12), clf, hold on, box on;
 plot(gamma(2:end-1),G,'-ks','markersize',10);
 xlabel('$\gamma$','Interpreter','latex');

@@ -16,22 +16,21 @@ NCELLS      = textscan(fid,'NUMCL %f',1,'HeaderLines',1);
 NCELLS      = NCELLS{1};
 phitmp      = textscan(fid,'PACKF %f',1);
 fline       = fgetl(fid);
-gammatmp    = textscan(fid,'GAMMA %f',1);
-fline       = fgetl(fid);
 ctcs_str    = fgetl(fid);
 ctcstmp     = sscanf(ctcs_str(6:end),'%f');
 Ltmp        = textscan(fid,'BOXSZ %f %f',1);
 fline       = fgetl(fid);
-Stmp        = textscan(fid,'STRSS %f %f %f',1);
+STtmp       = textscan(fid,'STRSS %f %f %f',1);
 
 % cells to save 
 NFRAMES = 1e6;
 
 phi     = zeros(NFRAMES,1);
-gamma   = zeros(NFRAMES,1);
 ctcs    = cell(NFRAMES,1);
 L       = zeros(NFRAMES,2);
-S       = zeros(NFRAMES,3);
+gamma   = zeros(NFRAMES,1);
+P       = zeros(NFRAMES,1);
+S       = zeros(NFRAMES,1);
 
 nv      = zeros(NFRAMES,NCELLS);
 zc      = zeros(NFRAMES,NCELLS);
@@ -56,20 +55,17 @@ while ~feof(fid)
     % get packing fraction
     phi(nf) = phitmp{1};
     
-    % get shear strain
-    gamma(nf) = gammatmp{1};
-    
     % save contact info
     ctcs{nf} = ctcstmp;
     
     % get box length
     L(nf,1) = Ltmp{1};
     L(nf,2) = Ltmp{2};
-    
-    % get stress info
-    S(nf,1) = Stmp{1};
-    S(nf,2) = Stmp{2};
-    S(nf,3) = Stmp{3}; 
+        
+    % save stress info
+    gamma(nf) = STtmp{1};
+    P(nf) = STtmp{2};
+    S(nf) = STtmp{3};
     
     % get info about deformable particle
     for nn = 1:NCELLS
@@ -125,10 +121,6 @@ while ~feof(fid)
         phitmp          = textscan(fid,'PACKF %f',1);                   
         fline = fgetl(fid);
         
-        % read in shear strain
-        gammatmp        = textscan(fid,'GAMMA %f',1);
-        fline           = fgetl(fid);
-        
         % update contact info
         ctcs_str        = fgetl(fid);
         ctcstmp         = sscanf(ctcs_str(6:end),'%f');
@@ -138,7 +130,7 @@ while ~feof(fid)
         fline = fgetl(fid);
         
         % get new stress info
-        Stmp            = textscan(fid,'STRSS %f %f %f',1);
+        STtmp           = textscan(fid,'STRSS %f %f %f',1);
         fline = fgetl(fid);
     end
 end
@@ -147,9 +139,10 @@ end
 if (nf < NFRAMES)
     NFRAMES = nf-1;
     phi(nf:end) = [];
-    gamma(nf:end) = [];
     L(nf:end,:) = [];
-    S(nf:end,:) = [];
+    gamma(nf:end) = [];
+    P(nf:end) = [];
+    S(nf:end) = [];
     
     nv(nf:end,:) = [];
     zc(nf:end,:) = [];
@@ -172,8 +165,9 @@ fclose(fid);
 % store cell pos data into struct
 dpmConfigData               = struct('NFRAMES',NFRAMES,'NCELLS',NCELLS);
 dpmConfigData.phi           = phi;
-dpmConfigData.gamma         = gamma;
 dpmConfigData.L             = L;
+dpmConfigData.gamma         = gamma;
+dpmConfigData.P             = P;
 dpmConfigData.S             = S;
 
 dpmConfigData.nv            = nv;

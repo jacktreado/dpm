@@ -15,14 +15,14 @@ int main(){
 	// local variables
 	int seed = 1;
 	double Ftol = 1e-12, Ptol = 1e-6, dt0 = 0.01, dphi0 = 0.01;
-	double boxLengthScale = 2.5, betaEff = 50.0, ctcdel = 1.0, ctch = 0.5, cL = 0, aL = 1.0, cB = 0.0, cKb = 0.0, kl = 1.0, kc = 1.0, kb0 = 1e-3;
+	double boxLengthScale = 2.5, betaEff = 50.0, ctcdel = 1.0, ctch = 0.5, cL = 0, aL = 1.0, cB = 0.0, cKb = 0.0, kl = 1.0, kc = 1.0, kb0 = 0.0;
 	double P0 = 1e-6, dPtol = 1e-10;
 
 	// pointer to dpm member function (should pt to null)
 	dpmMemFn jammingForceUpdate = nullptr;
 	meso2DMemFn mesoForceUpdate = nullptr;
 
-	string inputf = "meso.input";
+	string inputf = "meso_n16.input";
 	string posf = "pos.test";
 	string shearf = "shear.test";
 
@@ -49,7 +49,7 @@ int main(){
 	meso2Dobj.setkc(kc);
 
 	// relax configuration at constant pressure using network + bending
-	meso2Dobj.initializeMesophyllBondNetwork();
+	// meso2Dobj.initializeMesophyllBondNetwork();
 	meso2Dobj.t0ToCurrent();
 	meso2Dobj.mesoFIRE(&meso2D::mesoNetworkForceUpdate, Ftol, dt0);
 	meso2Dobj.t0ToCurrent();
@@ -79,7 +79,7 @@ int main(){
 	mesoSaveObj = meso2Dobj;
 
 	// -- Compute G numerically AT FIXED PRESSURE
-	double dgamma = 1e-8;
+	double dgamma = 1e-9;
 	double gamma = 0.0;
 	int NGAMMA = 10;
 	int k = 0;
@@ -92,8 +92,8 @@ int main(){
 
 	// save initial shear stress and potential energy
 	UList.at(0) 		= meso2Dobj.getU();
-	pList.at(0) 		= 0.5*(meso2Dobj.getstress(0) + meso2Dobj.getstress(1));
-	sxyList.at(0) 		= meso2Dobj.getstress(2);
+	pList.at(0) 		= meso2Dobj.getPinst();
+	sxyList.at(0) 		= meso2Dobj.getSinst();
 
 	// loop over shear strains gamma, relax using FIRE, compute change in Sxy
 	for (k=0; k<NGAMMA; k++){
@@ -105,8 +105,8 @@ int main(){
 
 		// save mechanical information
 		UList.at(k+1) 		= meso2Dobj.getU();
-		pList.at(k+1) 		= 0.5*(meso2Dobj.getstress(0) + meso2Dobj.getstress(1));
-		sxyList.at(k+1) 	= meso2Dobj.getstress(2);
+		pList.at(k+1) 		= meso2Dobj.getPinst();
+		sxyList.at(k+1) 	= meso2Dobj.getSinst();
 
 		// print
 		meso2Dobj.printMesoShearConfigCTCS2D(gamma);
@@ -169,6 +169,7 @@ int main(){
 	// print
 	cout << "G modulus:" << endl;
 	gamma = 0.0;
+	cout << setprecision(12);
 	for (k=0; k<NGAMMA-1; k++){
 		cout << "k = " << k << ", gamma = " << gamma << ";   U = " << UList.at(k) << ";   P = " << pList.at(k) << ";    sxy = " << sxyList.at(k) << ";   G_sxy = " << G_sxy_list.at(k) << endl;
 		gamma += dgamma;
