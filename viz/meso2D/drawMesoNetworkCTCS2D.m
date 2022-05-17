@@ -6,7 +6,7 @@ close all;
 clc;
 
 % create file name
-fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.05_be200_h0.5_da0.5_dl5_cL0.5_cB4_t0m0.3_P1e-7_seed100.posctc';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.4_be100_h1_da0.07_dl5_cL0.5_cB4_t0m0.3_P1e-6_seed100.posctc';
 % fstr = 'local/mesoDM2D_data/mesoDM2D_N32_n32_ca1.14_kl1_kb01e-3_be50_da0.02_dl10_P1e-4_seed27.posctc';
 % fstr = '~/Jamming/CellSim/dpm/pos.test';
 
@@ -251,7 +251,7 @@ ey = sin(th);
 showverts = 0;
 
 % color by shape or size
-colorOpt = 3;
+colorOpt = 1;
 
 if colorOpt == 1
     % color by real shape
@@ -347,7 +347,9 @@ if showverts == 0
     DF = FEND - FSTART;
     if DF > 80 && DF <= 400
         FSTEP = 5;
-    elseif DF > 400
+    elseif DF > 400 && DF <= 800
+        FSTEP = 10;
+    elseif DF > 800
         FSTEP = 20;
     end
 else
@@ -358,9 +360,9 @@ end
 
 % make a movie
 makeAMovie = 0;
-ctccopy = 0;
+ctccopy = 1;
 if makeAMovie == 1
-    moviestr = 'mesoHMin2D_N32_n32_ca1.14_kb0.4_be200_h1_da0.5_dl5_cL0.5_cB4_t0m0.5_P1e-6_seed11.mp4';
+    moviestr = 'mesoHMin2D_N32_n32_ca1.14_kb0.4_be100_h1_da0.05_dl5_cL0.5_cB4_t0m0.3_P1e-6_seed10.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
