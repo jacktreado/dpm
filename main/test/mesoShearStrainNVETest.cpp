@@ -16,14 +16,14 @@ using namespace std;
 int main(){
 	// local variables
 	int seed = 1;
-	double Ftol = 1e-12, dt0 = 0.02, dphi0 = 0.01;
+	double Ftol = 1e-12, dt0 = 0.01, dphi0 = 0.01;
 	double boxLengthScale = 2.5, betaEff = 50.0, ctcdel = 1.0, ctch = 0.5, cL = 0, aL = 1.0, cB = 0.0, cKb = 0.0, kl = 1.0, kc = 1.0, kb0 = 1e-3;
 
 	// pointer to dpm member function (should pt to null)
 	dpmMemFn jammingForceUpdate = nullptr;
 	meso2DMemFn mesoForceUpdate = nullptr;
 
-	string inputf = "meso.input";
+	string inputf = "meso_n16.input";
 	string posf = "pos.test";
 	string enf = "energy.test";
 
@@ -50,7 +50,7 @@ int main(){
 	meso2Dobj.setcB(cB);
 	meso2Dobj.setcKb(cKb);
 	meso2Dobj.setkbi(kb0);
-	meso2Dobj.setkl(kl);
+	meso2Dobj.setkli(kl);
 	meso2Dobj.setkc(kc);
 
 	// relax configuration using network + bending
@@ -66,17 +66,17 @@ int main(){
 	// initialize contact network
 	meso2Dobj.getMesoVVContactNetwork(gijtmp);
 
-	// set gamma and temperature
-	double gamma = 0.01;
-	double dgamma = 0.001;
-	int NGAMMA = 2;
-	double T = 5e-2;
+	// // set gamma and temperature
+	double gamma = 1e-7;
+	// double dgamma = 0.001;
+	// int NGAMMA = 2;
+	double T = 1e-3;
 
-	// relax at that gamma
-	for (int gg = 0; gg < NGAMMA; gg++){
-		meso2Dobj.mesoShearStrainFIRE(gamma, Ftol, dt0, gijtmp);
-		gamma += dgamma;
-	}
+	// // relax at that gamma
+	// for (int gg = 0; gg < NGAMMA; gg++){
+	// 	meso2Dobj.mesoShearStrainFIRE(gamma, Ftol, dt0, gijtmp);
+	// 	gamma += dgamma;
+	// }
 
 	// run NVE protocol at fixed shear strain
 	int NT = 1e6;

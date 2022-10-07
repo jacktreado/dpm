@@ -13,16 +13,17 @@ using namespace std;
 
 int main(){
 	// local variables
-	int seed = 1;
-	double Ftol = 1e-12, Ptol = 1e-6, dt0 = 0.01, dphi0 = 0.01;
-	double boxLengthScale = 2.5, betaEff = 50.0, ctcdel = 1.0, ctch = 0.5, cL = 0, aL = 1.0, cB = 0.0, cKb = 0.0, kl = 1.0, kc = 1.0, kb0 = 1e-3;
-	double P0 = 1e-6, dPtol = 1e-10;
+	int seed = 1, NMINSKIP = 1;
+	double Ftol = 1e-12, Ptol = 1e-6, dt0 = 0.005, dphi0 = 0.01;
+	double boxLengthScale = 2.5, betaEff = 200.0, ctcdel = 1.0, ctch = 1, cL = 0.5, aL = 1.0, cB = 4.0, cKb = 0.0, kl = 1.0, kc = 1.0, kb0 = 0.4;
+	double P0 = 1e-6, dPtol = 1e-10, phiMin = 0.9, da0 = 0.5, dl0 = 5.0, t0_min = 0.3;
+	t0_min *= -0.5*PI;
 
 	// pointer to dpm member function (should pt to null)
 	dpmMemFn jammingForceUpdate = nullptr;
 	meso2DMemFn mesoForceUpdate = nullptr;
 
-	string inputf = "meso.input";
+	string inputf = "meso_n16.input";
 	string posf = "pos.test";
 
 	// instantiate object
@@ -50,6 +51,13 @@ int main(){
 	meso2Dobj.initializeMesophyllBondNetwork();
 	meso2Dobj.t0ToCurrent();
 	meso2Dobj.mesoFIRE(&meso2D::mesoNetworkForceUpdate, Ftol, dt0);
+	meso2Dobj.t0ToCurrent();
+
+	// run stretching simulation to create network
+	// set max # of vertices
+	int NVMAX = 5*meso2Dobj.getNVTOT();
+	meso2Dobj.setNVMAX(NVMAX);
+	meso2Dobj.mesoNetworkEnthalpyMin(&meso2D::mesoNetworkForceUpdate, Ftol, dPtol, dt0, da0, dl0, t0_min, P0, phiMin, NMINSKIP);
 
 	// get fixed contact network for G and B computation
 	int NVTOT = meso2Dobj.getNVTOT();

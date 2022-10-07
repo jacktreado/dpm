@@ -45,7 +45,7 @@ int main(){
 	meso2Dobj.setcB(cB);
 	meso2Dobj.setcKb(cKb);
 	meso2Dobj.setkbi(kb0);
-	meso2Dobj.setkl(kl);
+	meso2Dobj.setkli(kl);
 	meso2Dobj.setkc(kc);
 
 	// relax configuration at constant pressure using network + bending
@@ -79,15 +79,16 @@ int main(){
 	mesoSaveObj = meso2Dobj;
 
 	// -- Compute G numerically AT FIXED PRESSURE
-	double dgamma = 1e-9;
+	double dgamma = 1e-8;
 	double gamma = 0.0;
-	int NGAMMA = 10;
+	int NGAMMA = 20;
 	int k = 0;
 
 	// save shear stress and potential energy
 	vector<double> UList(NGAMMA+1,0.0);
 	vector<double> pList(NGAMMA+1,0.0);
 	vector<double> sxyList(NGAMMA+1,0.0);
+	vector<double> sxyUList(NGAMMA,0.0);
 	vector<double> VList(NGAMMA+1,0.0);
 
 	// save initial shear stress and potential energy
@@ -107,6 +108,10 @@ int main(){
 		UList.at(k+1) 		= meso2Dobj.getU();
 		pList.at(k+1) 		= meso2Dobj.getPinst();
 		sxyList.at(k+1) 	= meso2Dobj.getSinst();
+
+		// compute approx sxy by dU
+		if (k > 0)
+			sxyUList.at(k)	 	= -0.5*(UList.at(k+1) - UList.at(k-1))/dgamma;
 
 		// print
 		meso2Dobj.printMesoShearConfigCTCS2D(gamma);
@@ -171,7 +176,7 @@ int main(){
 	gamma = 0.0;
 	cout << setprecision(12);
 	for (k=0; k<NGAMMA-1; k++){
-		cout << "k = " << k << ", gamma = " << gamma << ";   U = " << UList.at(k) << ";   P = " << pList.at(k) << ";    sxy = " << sxyList.at(k) << ";   G_sxy = " << G_sxy_list.at(k) << endl;
+		cout << "k = " << k << ", gamma = " << gamma << ";   U = " << UList.at(k) << ";   P = " << pList.at(k) << ";    sxyU = " << sxyUList.at(k)/VList.at(k) << ";	sxy = " << sxyList.at(k) << ";   G_sxy = " << G_sxy_list.at(k) << endl;
 		gamma += dgamma;
 	}
 

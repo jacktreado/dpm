@@ -6,7 +6,7 @@ close all;
 clc;
 
 % create file name
-fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.4_be100_h1_da0.07_dl5_cL0.5_cB4_t0m0.3_P1e-6_seed100.posctc';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.1_be300_h1_da0.5_dl5_cL0.5_cB4_t0m0.3_P1e-7_seed100.posctc';
 % fstr = 'local/mesoDM2D_data/mesoDM2D_N32_n32_ca1.14_kl1_kb01e-3_be50_da0.02_dl10_P1e-4_seed27.posctc';
 % fstr = '~/Jamming/CellSim/dpm/pos.test';
 
@@ -63,6 +63,8 @@ for ff = 1:NFRAMES
     end
     phipatch(ff) = sum(apatch)/(LList(ff,1)*LList(ff,2));
 end
+dporo = max(phipatch) - phipatch;
+FCMP = NFRAMES;
 
 % get preferred shape
 calA0 = zeros(NFRAMES,NCELLS);
@@ -197,6 +199,7 @@ if NFRAMES > 2
     ct01CalAMean = totalData.ct01CalAMean;
     ct01CalAStd = totalData.ct01CalAStd;
     ct01Porosity = totalData.ct01Porosity;
+    [~,FCMP] = min(abs(dporo - ct01Porosity));
     
     ct17CalAMean = totalData.ct17CalAMean;
     ct17CalAStd = totalData.ct17CalAStd;
@@ -338,8 +341,12 @@ end
 
 % get frames to plot
 if showverts == 0
-    FSTART = 1;
+    % single frame
+%     FSTART = FCMP;
 %     FEND = FSTART;
+
+    % movie frames
+    FSTART = 1;
     FEND = NFRAMES;
 
     % set step size
@@ -359,10 +366,10 @@ else
 end
 
 % make a movie
-makeAMovie = 0;
-ctccopy = 1;
+makeAMovie = 1;
+ctccopy = 0;
 if makeAMovie == 1
-    moviestr = 'mesoHMin2D_N32_n32_ca1.14_kb0.4_be100_h1_da0.05_dl5_cL0.5_cB4_t0m0.3_P1e-6_seed10.mp4';
+    moviestr = 'mesoHMin2D_N32_n32_ca1.14_kb0.1_be300_h1_da0.5_dl5_cL0.5_cB4_t0m0.3_P1e-7_seed100.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -379,10 +386,12 @@ end
 
 fnum = 1;
 figure(fnum), clf, hold on, box on;
+fstretch = zeros(NFRAMES,1);
 for ff = FSTART:FSTEP:FEND
+% for ff = [1 13 17 21]
     % reset figure for this frame
     figure(fnum), clf, hold on, box on;
-    fprintf('printing frame ff = %d/%d, phi=%0.3g, phi0=%0.3g\n',ff,FEND,phipatch(ff),phi0(ff));
+    fprintf('printing frame ff = %d/%d, phi=%0.3g, dporo=%0.3g, dphi=%0.3g\n',ff,FEND,phipatch(ff),dporo(ff),1-dporo(ff));
     
     % get geometric info
     xf = x(ff,:);
@@ -458,28 +467,46 @@ for ff = FSTART:FSTEP:FEND
         end
     end
     
-%     % plot vv contacts
+    % plot vv contacts
 %     gijtmp = gijList{ff};
 %     xa = cell2mat(xf');
 %     ya = cell2mat(yf');
+%     ra = cell2mat(rf');
 %     NVTOT = sum(nv(ff,:));
+%     nstretch = 0;
 %     for gi = 1:NVTOT
 %         xi = xa(gi);
 %         yi = ya(gi);
+%         ri = ra(gi);
 %         for gj = (gi+1):NVTOT
+%             dx = xa(gj) - xi;
+%             dx = dx - L*round(dx/L);
+%             dy = ya(gj) - yi;
+%             dy = dy - L*round(dy/L);
+%             bl = sqrt(dx*dx + dy*dy);
+%             sij = ri + ra(gj);
 %             if (gijtmp(gi,gj) == 1)
-%                 dx = xa(gj) - xi;
-%                 dx = dx - L*round(dx/L);
-%                 dy = ya(gj) - yi;
-%                 dy = dy - L*round(dy/L);
+%                 if bl > sij 
+%                     bondclr = 'r';
+%                     nstretch = nstretch + 1;
+%                 else
+%                     bondclr = 'k';
+%                 end
 %                 for xx = ctccopy
 %                     for yy = ctccopy
-%                         plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'k-','linewidth',1.5);
+%                         plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,[bondclr '-'],'linewidth',2.5);
+%                     end
+%                 end
+%             elseif bl < sij
+%                 for xx = ctccopy
+%                     for yy = ctccopy
+%                         plot([xi, xi + dx] + xx*L,[yi, yi + dy] + yy*L,'k-','linewidth',2.5);
 %                     end
 %                 end
 %             end
 %         end
 %     end
+%     fstretch(ff) = nstretch/(0.5*NVTOT*(NVTOT-1));
         
     % plot box
     plot([0 L L 0 0], [0 0 L L 0], 'k-', 'linewidth', 1.5);
@@ -501,6 +528,15 @@ for ff = FSTART:FSTEP:FEND
         currframe = getframe(gcf);
         writeVideo(vobj,currframe);
     end
+end
+
+if length(FSTART:FSTEP:FEND) == NFRAMES
+    figure(200), clf, hold on, box on;
+    plot(1:NFRAMES,fstretch,'-k','linewidth',2);
+    xlabel('frames','Interpreter','latex');
+    ylabel('$f_{\rm stretch}$','Interpreter','latex');
+    ax = gca;
+    ax.FontSize = 24;
 end
 
 

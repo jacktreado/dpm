@@ -143,6 +143,47 @@ dpm::~dpm() {
 		posout.close();
 }
 
+
+
+
+/******************************
+
+	G E O M E T R Y 
+
+*******************************/
+
+// compute distance between vertices along dimension d
+double dpm::deltaX(const int gi, const int gj, const int d){
+	// local variables
+	double dx = 0.0;
+
+	// compute
+	dx = getx(gj, d) - getx(gi, d);
+	if (getpbc(d))
+		dx = dx - getL(d) * round(dx / getL(d));
+
+	// return
+	return dx;
+}
+
+// get distance
+double dpm::deltaR(const int gi, const int gj){
+	double dx, dr = 0.0;
+	for (int d=0; d<NDIM; d++){
+		dx = deltaX(gi, gj, d);
+		dr += dx * dx;
+	}
+	return sqrt(dr);
+}
+
+// get distance with components
+double dpm::deltaR(const int gi, const int gj, double &dx, double &dy){
+	dx = deltaX(gi, gj, 0);
+	dy = deltaX(gi, gj, 1);
+	return sqrt(dx*dx + dy*dy);
+}
+
+
 /******************************
 
 	C E L L   S H A P E
@@ -850,7 +891,7 @@ void dpm::initializePositions2D(double phi0, double Ftol) {
 				// check distances
 				if (rij < sij) {
 					// force magnitude
-					ftmp = kc * (1.0 - (rij / sij)) / sij;
+					ftmp = (1.0 - (rij / sij)) / sij;
 
 					// add to vectorial force
 					for (d = 0; d < NDIM; d++)
@@ -1055,6 +1096,20 @@ void dpm::initializeNeighborLinkedList2D(double boxLengthScale) {
 			U P D A T I N G
 
 *******************************/
+
+// Velocity Verlet half-step update to velocity
+void dpm::vvVelUpdate(){
+	for (int i = 0; i < vertDOF; i++){
+		v[i] += 0.5 * dt * F[i];
+	}
+}
+
+// Velocity Verlet full-step update to positions
+void dpm::vvPosUpdate(){
+	for (int i = 0; i < vertDOF; i++){
+		x[i] += dt * v[i];
+	}
+}
 
 // sort vertices into neighbor linked list
 void dpm::sortNeighborLinkedList2D() {
@@ -1265,6 +1320,7 @@ void dpm::drawVelocities2D(double T) {
 	}
 }
 
+
 /******************************
 
 	D P M  F O R C E 
@@ -1272,12 +1328,6 @@ void dpm::drawVelocities2D(double T) {
 			U P D A T E S
 
 *******************************/
-
-void dpm::resetForcesAndEnergy() {
-	fill(F.begin(), F.end(), 0.0);
-	fill(stress.begin(), stress.end(), 0.0);
-	U = 0.0;
-}
 
 void dpm::shapeForces2D() {
 	// local variables

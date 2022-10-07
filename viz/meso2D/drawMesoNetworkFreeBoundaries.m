@@ -5,7 +5,7 @@ close all;
 clc;
 
 % create file name
-fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb0.4_be100_h1_da0.5_dl5_cL0.5_cB4_t0m0.2_P1e-3_seed14.posctc';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.1_be300_h1_da0.5_dl5_cL0.5_cB4_t0m0.3_P1e-7_seed100.posctc';
 % fstr = '~/Jamming/CellSim/dpm/pos.test';
 
 % read in data
@@ -187,15 +187,15 @@ end
 
 % get frames to plot
 if showverts == 0
-    FSTART = 19;
+    FSTART = 1;
     FSTEP = 1;
     if NFRAMES > 80
         FSTEP = 5;
     elseif NFRAMES > 150
         FSTEP = 10;
     end
-%     FEND = NFRAMES;
-    FEND = FSTART;
+    FEND = NFRAMES;
+%     FEND = FSTART;
 else
     FSTART = 4;
     FSTEP = 1;
@@ -203,10 +203,10 @@ else
 end
 
 % make a movie
-makeAMovie = 0;
+makeAMovie = 1;
 ctccopy = 0;
 if makeAMovie == 1
-    moviestr = 'mesoHMin2D_N64_n32_ca1.14_kb0.4_be100_h1_da0.5_dl5_cL0.5_cB4_t0m0.2_P1e-3_seed14_free.mp4';
+    moviestr = 'mesoHMin2D_N32_n32_ca1.14_kb0.1_be300_h1_da0.5_dl5_cL0.5_cB4_t0m0.3_P1e-7_seed100.mp4';
 %     moviestr = 'mesoHMin2D_N64_n24_ca1.14_kb01e-3_be100_da0.05_dl0.1_P1e-8_h0.5_cL1_cB1_seed100.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
@@ -308,14 +308,14 @@ for ff = FSTART:FSTEP:FEND
     ax.YTick = [];
     ax.XLim = [-0.25 1.25]*LList(end,1);
     ax.YLim = [-0.25 1.25]*LList(end,2);
-    
-    colorbar
-    colormap(jet);
-    cb = colorbar;
-    cb.Ticks = linspace(0,1,NCB);
-    cb.TickLabels = cbtickcell;
-    cb.TickLabelInterpreter = 'latex';
-    cb.FontSize = 24;
+%     
+%     colorbar
+%     colormap(jet);
+%     cb = colorbar;
+%     cb.Ticks = linspace(0,1,NCB);
+%     cb.TickLabels = cbtickcell;
+%     cb.TickLabelInterpreter = 'latex';
+%     cb.FontSize = 24;
     
     % if making a movie, save frame
     if makeAMovie == 1

@@ -50,7 +50,7 @@ const double finc = 1.1;
 const double fdec = 0.5;
 const double falpha = 0.99;
 
-const int NSKIP = 20000;
+const int NSKIP = 2000;
 const int NMIN = 10;
 const int NNEGMAX = 1000;
 const int NDELAY = 20;
@@ -151,9 +151,9 @@ public:
 	double getr(int gi) { return r[gi]; };
 
 	// dynamic cell info
-	double getx(int gi, int d) { return x[NDIM * gi + d]; };
-	double getv(int gi, int d) { return v[NDIM * gi + d]; };
-	double getF(int gi, int d) { return F[NDIM * gi + d]; };
+	double getx(int gi, int d) { return x.at(NDIM * gi + d); };
+	double getv(int gi, int d) { return v.at(NDIM * gi + d); };
+	double getF(int gi, int d) { return F.at(NDIM * gi + d); };
 	double getU() { return U; };
 
 	// get stress info
@@ -191,6 +191,15 @@ public:
 	void setl1(double val) { l1 = val; };
 	void setl2(double val) { l2 = val; };
 
+	// Updates
+	void addx(double val, int gi, int d) { x.at(NDIM * gi + d) += val; };
+	void addv(double val, int gi, int d) { v.at(NDIM * gi + d) += val; };
+	void addF(double val, int gi, int d) { F.at(NDIM * gi + d) += val; };
+	void addU(double val) { U += val; };
+
+	void vvVelUpdate();
+	void vvPosUpdate();
+
 	// File openers
 	void openPosObject(std::string &str)
 	{
@@ -202,6 +211,15 @@ public:
 		else
 			std::cout << "** Opening pos file " << str << " ..." << std::endl;
 	}
+
+	// Basic geometry
+	double deltaX(const int gi, const int gj, const int d);
+	double deltaR(const int gi, const int gj);
+	double deltaR(const int gi, const int gj, double &dx, double &dy);
+	double segX(const int gi, const int d) { return deltaX(gi, ip1[gi], d); };
+	double seg(const int gi) { return deltaR(gi, ip1[gi]); };
+	double unitDelX(const int gi, const int gj, const int d) { return deltaX(gi, gj, d) / deltaR(gi, gj); };
+	double unitSegX(const int gi, const int d) { return segX(gi, d) / seg(gi); }; 
     
 	// Initialize particles (two dimensions)
 	void monodisperse2D(int n);
@@ -220,8 +238,7 @@ public:
 	int removeRattlers();
 	void drawVelocities2D(double T);
 
-	// force definitions
-	void resetForcesAndEnergy();
+	void resetForcesAndEnergy() { fill(F.begin(), F.end(), 0.0); fill(stress.begin(), stress.end(), 0.0); U = 0.0; };
 	void shapeForces2D();
 	void vertexRepulsiveForces2D();
 	void vertexRepulsiveForces2D(double gamma);

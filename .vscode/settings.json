@@ -1,0 +1,8 @@
+{
+    "cmake.configureOnOpen": true,
+    "files.associations": {
+        "complex": "cpp",
+        "vector": "cpp",
+        "iostream": "cpp"
+    }
+}

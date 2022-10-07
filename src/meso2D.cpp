@@ -86,6 +86,7 @@ meso2D::meso2D(string &inputFileStr,int seed) : dpm(2) {
 	stress.at(1) = s2;
 	stress.at(2) = s3;
 	Pinst = 0.0;
+	Sinst = 0.0;
 
 	// szList and nv (keep track of global vertex indices)
 	nv.resize(NCELLS);
@@ -160,7 +161,6 @@ meso2D::meso2D(string &inputFileStr,int seed) : dpm(2) {
 	// seed random number generator
 	srand48(seed);
 }
-
 
 // overloaded equal operator (copy everything except outputs) (for Lees-Edwards shear test)
 void meso2D::operator=(const meso2D &rhs){
@@ -988,11 +988,11 @@ void meso2D::mesoShapeForces(){
 		F[NDIM*gi + 1] 	+= fly;
 		
 		// update potential energy
-		U += 0.5 * kl *(dli * dli);
+		U += 0.5 * kli[gi] *(dli * dli);
 
 		// update contribution to stress
-		Pinst += ((kl * li)/(L[0] * l0i)) * dli;
-		Sinst += ((kl * lix *liy)/(l0i * li)) * dli;
+		Pinst += ((fli * li)/L[0]) * dli;
+		Sinst += ((fli * lix *liy)/li) * dli;
 
 		// -- Bending force
 		fbip1 = kbi[ip1[gi]];
@@ -1211,8 +1211,8 @@ void meso2D::mesoShapeForces(double gamma){
 		dli 	= (li/l0i) - 1.0;
 
 		// segment forces
-		flim1 	= kli[gi]/l0im1;
-		fli 	= kli[im1[gi]]/l0i;
+		flim1 	= kli[im1[gi]]/l0im1;
+		fli 	= kli[gi]/l0i;
 
 		// add to forces
 		flx 			= (fli*dli*lix/li) - (flim1*dlim1*lim1x/lim1);
@@ -1221,11 +1221,11 @@ void meso2D::mesoShapeForces(double gamma){
 		F[NDIM*gi + 1] 	+= fly;
 
 		// update potential energy
-		U += 0.5 * kl * (dli * dli);
+		U += 0.5 * kli[gi] * (dli * dli);
 
 		// update contribution to stress
-		Pinst += ((kl * li)/(L[0] * l0i)) * dli;
-		Sinst += ((kl * lix *liy)/(l0i * li)) * dli;
+		Pinst += ((fli * li)/L[0]) * dli;
+		Sinst += ((fli * lix *liy)/li) * dli;
 
 		// -- Bending force
 		fbip1 = kbi[ip1[gi]];
@@ -1283,7 +1283,7 @@ void meso2D::mesoShapeForces(double gamma){
 			U += 0.5 * kbi[gi] * (dti * dti);
 
 			// update contribution to shear stress
-			Sinst += (kbi[gi] * (nim1x*nim1x - nix*nix)) * dti;
+			Sinst += (kbi[gi] * (nix*nix - nim1x*nim1x)) * dti;
 		}
 
 		// update old coordinates
