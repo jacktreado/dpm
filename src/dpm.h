@@ -183,6 +183,7 @@ public:
 	void setpbc(int d, bool val) { pbc.at(d) = val; };
 	void setNCELLS(int val) { NCELLS = val; };
 	void setL(int d, double val) { L.at(d) = val; };
+	void setdt_pure(double val) { dt = val; };
 	void setdt(double val);
 	void setka(double val) { ka = val; };
 	void setkl(double val) { kl = val; };
@@ -190,6 +191,7 @@ public:
 	void setkc(double val) { kc = val; };
 	void setl1(double val) { l1 = val; };
 	void setl2(double val) { l2 = val; };
+	void setComV(const int ci,  const int d, double val) { int gi; for (int vi=0; vi<nv[ci]; vi++) {gi = gindex(ci, vi); v.at(NDIM * gi + d) = val / nv[ci];} };
 
 	// Updates
 	void addx(double val, int gi, int d) { x.at(NDIM * gi + d) += val; };

@@ -14,12 +14,9 @@
 	Jack Treado, 09/13/22
 * 
 	TO DO:
-		* Add bonding mechanism
+		* Add bonding mechanism (NOW USING LINKING-BONDS. FOR SHARED SEGMENTS, SEE ADSSCM2D CLASS)
 		* Write force update function for circulolines in 2D
-			* In normal shape force, add pressure and shear stress calculation
-			* Write a shape force for bonded system
-				* This will also need a pressure and shear stress
-			* Add variables for bond length deletion cutoff
+			* In normal shape force, add shear stress calculation
 		* Incorporate constant-density vertex remapping (birth and death of i based on li and li-1)
 		* Debug, make sure energy conserved with stick circuloline potential
 		* Add compression-as-initialization protocol with FIRE for purely repulsive circlolines
@@ -30,17 +27,18 @@
 
 #include "dpm.h"
 
-class adcm2D : public dpm{
+class adcm2D : public dpm {
 protected:
+
+	// preferred surface density of vertices
+	double targetLength;
 
 	// array of surface tensions
 	std::vector<double> st;
 
-	// arrays for bonds
-	std::vector<int> bonds;
-	std::vector<int> new_bonds;
-	std::vector<int> labels;		
-	std::vector<double> tproj;		// tproj[gi] is projection of vert gi onto edge bonds[gi]
+	// // linking bonds arrays
+	// std::vector<double *> link_loc;	 	// store locations of each linker on cell surface
+	// std::vector<int *> link_end; 		// store vertices that the ends of each linker are attached to, will need to update in add / delete 
 
 	// motility parameters
 	double v0, Dr, Ds;
@@ -59,9 +57,6 @@ public:
 	// constructor and destructor
 	adcm2D(int numcells, int numverts, double sizeDisp, double phi0, double boxLengthScale, double clScale, double gam0, int seed);
 
-	// initialization
-	void nphCompression(double P0, double Ptol, double Ftol);
-
 	// setup potential function pointer
 	void useRepulsiveForce() { pwFrc = &adcm2D::SRRepulsivePWForce; }; 
 	void useAttractiveForce() { pwFrc = &adcm2D::SRAttractivePWForce; }; 
@@ -74,10 +69,14 @@ public:
 	double getVertexEdgeProjection(const int gv, const int ge);
 	double edge2VertexDistance(const int gv, const int ge, double &hx, double &hy, double &tev);
 
+	// dynamic cell vertices
+	void checkVertices();
+	void addVertex(const int gk);
+	void deleteVertex(const int gk);
+
 	// force update
-	// NOTE: shape force is called before interaction force because, if bonds are present,
-	// you should compute bonded shape forces before you change the network
-	void adcm2DForceUpdate() { U = 0.0; Pinst = 0.0; Sinst = 0.0; fill(F.begin(), F.end(), 0.0); (*this.*shpFrc)(); circuloLinePWForceUpdate();  stressUpdate(); };
+	void adcm2DForceUpdate() { checkVertices(); U = 0.0; Pinst = 0.0; Sinst = 0.0; fill(F.begin(), F.end(), 0.0); (*this.*shpFrc)(); circuloLinePWForceUpdate(); stressUpdate(); };
+	// void adcm2DForceUpdate() { U = 0.0; Pinst = 0.0; Sinst = 0.0; fill(F.begin(), F.end(), 0.0); (*this.*shpFrc)(); circuloLinePWForceUpdate(); stressUpdate(); };
 
 	// interaction forces
 	void circuloLinePWForceUpdate();
@@ -92,10 +91,6 @@ public:
 
 	// stresses
 	void stressUpdate();
-
-	// bond dynamics
-	void updateBonds();
-	void deleteVertex(const int gk);
 
 	// -- Simulation Functions
 

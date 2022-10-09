@@ -160,7 +160,7 @@ double dpm::deltaX(const int gi, const int gj, const int d){
 	// compute
 	dx = getx(gj, d) - getx(gi, d);
 	if (getpbc(d))
-		dx = dx - getL(d) * round(dx / getL(d));
+		dx -= getL(d) * round(dx / getL(d));
 
 	// return
 	return dx;
@@ -989,8 +989,8 @@ void dpm::initializeNeighborLinkedList2D(double boxLengthScale) {
 	// print to console
 	cout << "** initializing neighbor linked list, boxLengthScale = " << boxLengthScale;
 
-	// get largest radius as llscale
-	llscale = 2.0 * (*max_element(r.begin(),r.end()));
+	// get typical perimeter segment as llscale
+	llscale = perimeter(0) / nv.at(0);
 
 	// initialize box length vectors
 	NBX = 1;

@@ -57,10 +57,10 @@ end
 % get frames to plot
 if showverts == 0
     % single frame
-%     FSTART = 1;
+%     FSTART = NFRAMES;
 %     FEND = FSTART;
 
-    % movie frames
+%     % movie frames
     FSTART = 1;
     FEND = NFRAMES;
 

@@ -42,16 +42,8 @@ adcm2D::adcm2D(int numcells, int numverts, double sizeDisp, double phi0, double 
 	st.resize(NVTOT);
 	fill(st.begin(), st.end(), gam0);
 
-	// initialize bond arrays
-	bonds.resize(NVTOT);
-	labels.resize(NVTOT);
-	new_bonds.resize(NVTOT);
-	tproj.resize(NVTOT);
-
-	fill(bonds.begin(), bonds.end(), -1);
-	fill(labels.begin(), labels.end(), -1);
-	fill(new_bonds.begin(), new_bonds.end(), -1);
-	fill(tproj.begin(), tproj.end(), 0.0);
+	// target length (based on circle with numverts equally-spaced & unit area)
+	targetLength = (2.0 * sqrt(PI)) / numverts ;
 
 	// rescale radii to be some fraction of l0
 	for (int gi=0; gi<NVTOT; gi++)
@@ -67,14 +59,10 @@ adcm2D::adcm2D(int numcells, int numverts, double sizeDisp, double phi0, double 
 
 	// initialize cell centers
 	initializePositions2D(phi0, 1e-10);
-
+	
 	// initialize neighbor linked list
 	initializeNeighborLinkedList2D(boxLengthScale);
 }
-
-
-
-
 
 
 
@@ -151,10 +139,10 @@ double adcm2D::edge2VertexDistance(const int gv, const int ge, double &hx, doubl
 // force update for circulolines
 void adcm2D::circuloLinePWForceUpdate(){
 	// local variables
-	int bi, bj, pi, pj, gi, gj;
+	int bi, bj, pi, pj, gi, gj, ci, vi, cj, vj;
 
-	// always reset new_bonds to be equal to bonds
-	new_bonds = bonds;
+	// sort particles
+	sortNeighborLinkedList2D();
 
 	// loop over cell collision linked list boxes
 	for (bi = 0; bi < NBX; bi++) {
@@ -166,6 +154,9 @@ void adcm2D::circuloLinePWForceUpdate(){
 			// real particle index
 			gi = pi - 1;
 
+			// cell index of gi
+			cindices(ci, vi, gi);
+
 			// next particle in list
 			pj = list[pi];
 
@@ -174,7 +165,10 @@ void adcm2D::circuloLinePWForceUpdate(){
 				// real index of pj
 				gj = pj - 1;
 
-				if (gj == ip1[gi] || gj == im1[gi]) {
+				// cell index of gj
+				cindices(cj, vj, gj);
+
+				if (ci == cj) {
 					pj = list[pj];
 					continue;
 				}
@@ -222,6 +216,8 @@ void adcm2D::circuloLinePWForceUpdate(){
 }
 
 // short-range (SR) repulsive pairwise force between two circulolines
+// TO DO
+// -- Debug segment to segment forces
 void adcm2D::SRRepulsivePWForce(const int gi, const int gj, bool &vert_gi_on_edge_gj, bool &vert_gj_on_edge_gi){
 	// local variables
 	double tij, tji;
@@ -241,14 +237,16 @@ void adcm2D::SRRepulsivePWForce(const int gi, const int gj, bool &vert_gi_on_edg
 	double dx = deltaX(gi, gj, 0);
 	double dy = deltaX(gi, gj, 1);
 	double dr = sqrt(dx * dx + dy * dy);
-		
+
 	// Gut check distance
 	double lij = 0.5 * (seg(gi) + seg(gj));
 	double dlijApprox = 0.5 * (dr + deltaR(gip1, gjp1));
-	if (dlijApprox < 4.0 * lij) {
+	if (dlijApprox < 80.0 * lij) {
 		// projection of vertex j onto edge i
-		hr_i2j = edge2VertexDistance(gi, gj, hx_i2j, hy_i2j, tij);
-		hr_j2i = edge2VertexDistance(gj, gi, hx_j2i, hy_j2i, tji);
+		hr_j2i = edge2VertexDistance(gj, gi, hx_j2i, hy_j2i, tij);
+
+		// projection of vertex i onto edge j
+		hr_i2j = edge2VertexDistance(gi, gj, hx_i2j, hy_i2j, tji);
 		
 		// check determine force based on projection
 		if (tij < 0 && dr < sij){
@@ -269,14 +267,14 @@ void adcm2D::SRRepulsivePWForce(const int gi, const int gj, bool &vert_gi_on_edg
 			// add to pressure
 			Pinst += ftmp * (dr / L[0]);
 		}
-		else if (tij > 0 && tij < 1 && hr_i2j < sij) {
+		else if (tij > 0 && tij < 1 && hr_j2i < sij) {
 			// report
-			vert_gi_on_edge_gj = 1;
+			vert_gj_on_edge_gi = 1;
 
 			// force info
-			ftmp = -(kc / sij) * (1 - (hr_i2j / sij));	// NOTE: this is -1 x mag of the force, it just sticks to convention that dfx is > 0 for forces on gi
-			dfx = ftmp * (hx_i2j / hr_i2j);
-			dfy = ftmp * (hy_i2j / hr_i2j);
+			ftmp = -(kc / sij) * (1 - (hr_j2i / sij));	// NOTE: this is -1 x mag of the force, it just sticks to convention that dfx is > 0 for forces on gi
+			dfx = ftmp * (hx_j2i / hr_j2i);
+			dfy = ftmp * (hy_j2i / hr_j2i);
 
 			// add to force (distribute so torque is balanced)
 			addF(dfx * (1 - tij), gi, 0);
@@ -287,21 +285,21 @@ void adcm2D::SRRepulsivePWForce(const int gi, const int gj, bool &vert_gi_on_edg
 			addF(-dfy, gj, 1);
 
 			// add to potential energy
-			addU(0.5 * kc * pow(1 - (hr_i2j / sij), 2.0));
+			addU(0.5 * kc * pow(1 - (hr_j2i / sij), 2.0));
 
 			// add to pressure
-			Pinst += ftmp * (hr_i2j / L[0]);
+			Pinst += ftmp * (hr_j2i / L[0]);
 		}
 
 		// also check projection from edge j to vertex i (same as tij case, but note use of -dx and -dy)
-		if (tji > 0 && tji < 1 && hr_j2i < sij) {
+		if (tji > 0 && tji < 1 && hr_i2j < sij && false) {
 			// report
-			vert_gj_on_edge_gi = 1;
+			vert_gi_on_edge_gj = 1;
 
 			// force info
-			ftmp = -(kc / sij) * (1 - (hr_j2i / sij));	// NOTE: this is -1 x mag of the force, it just sticks to convention that dfx is > 0 for forces on gi
-			dfx = ftmp * (hx_j2i / hr_j2i);
-			dfy = ftmp * (hy_j2i / hr_j2i);
+			ftmp = -(kc / sij) * (1 - (hr_i2j / sij));	// NOTE: this is -1 x mag of the force, it just sticks to convention that dfx is > 0 for forces on gi
+			dfx = ftmp * (hx_i2j / hr_i2j);
+			dfy = ftmp * (hy_i2j / hr_i2j);
 
 			// add to force (distribute so torque is balanced)
 			addF(-dfx, gi, 0);
@@ -312,13 +310,111 @@ void adcm2D::SRRepulsivePWForce(const int gi, const int gj, bool &vert_gi_on_edg
 			addF(dfy * tji, gjp1, 1);
 			
 			// add to potential energy
+			addU(0.5 * kc * pow(1 - (hr_i2j / sij), 2.0));
+
+			// add to pressure
+			Pinst += ftmp * (hr_i2j / L[0]);
+		}
+	}
+}
+
+/*
+// short-range (SR) attractive pairwise force between two circulolines
+void adcm2D::SRAttractivePWForce(const int gi, const int gj){
+	// local variables
+	double tij, tji;
+	double hr_i2j, hr_j2i, hx_i2j, hx_j2i, hy_i2j, hy_j2i;
+	double ftmp, dfx, dfy;
+
+	// contact distance
+	double sij = r[gi] + r[gj];
+
+	// indices
+	int gip1 = ip1[gi];
+	int gim1 = im1[gi];
+	int gjp1 = ip1[gj];
+	int gjm1 = im1[gj];
+
+	// distance between vertex i and j
+	double dx = deltaX(gi, gj, 0);
+	double dy = deltaX(gi, gj, 1);
+	double dr = sqrt(dx * dx + dy * dy);
+
+	// Gut check distance
+	double lij = 0.5 * (seg(gi) + seg(gj));
+	double dlijApprox = 0.5 * (dr + deltaR(gip1, gjp1));
+	if (dlijApprox < 80.0 * lij) {
+		// projection of vertex j onto edge i
+		hr_j2i = edge2VertexDistance(gj, gi, hx_j2i, hy_j2i, tij);
+
+		// projection of vertex i onto edge j
+		hr_i2j = edge2VertexDistance(gi, gj, hx_i2j, hy_i2j, tji);
+		
+		// check determine force based on projection
+		if (tij < 0 && dr < sij){
+			// force info
+			ftmp = -(kc / sij) * (1 - (dr / sij));	// NOTE: -1 x mag of the force, it keeps to convention that dfx is > 0 for forces on gi
+			dfx = ftmp * (dx / dr);
+			dfy = ftmp * (dy / dr);
+
+			// add to force
+			addF(dfx, gi, 0);
+			addF(dfy, gi, 1);
+			addF(-dfx, gj, 0);
+			addF(-dfy, gj, 1);
+
+			// add to potential energy
+			addU(0.5 * kc * pow(1 - (dr / sij), 2.0));
+
+			// add to pressure
+			Pinst += ftmp * (dr / L[0]);
+		}
+		else if (tij > 0 && tij < 1 && hr_j2i < sij) {
+			// force info
+			ftmp = -(kc / sij) * (1 - (hr_j2i / sij));	// NOTE: this is -1 x mag of the force, it just sticks to convention that dfx is > 0 for forces on gi
+			dfx = ftmp * (hx_j2i / hr_j2i);
+			dfy = ftmp * (hy_j2i / hr_j2i);
+
+			// add to force (distribute so torque is balanced)
+			addF(dfx * (1 - tij), gi, 0);
+			addF(dfy * (1 - tij), gi, 1);
+			addF(dfx * tij, gip1, 0);
+			addF(dfy * tij, gip1, 1);
+			addF(-dfx, gj, 0);
+			addF(-dfy, gj, 1);
+
+			// add to potential energy
 			addU(0.5 * kc * pow(1 - (hr_j2i / sij), 2.0));
 
 			// add to pressure
 			Pinst += ftmp * (hr_j2i / L[0]);
 		}
+
+		// also check projection from edge j to vertex i (same as tij case, but note use of -dx and -dy)
+		if (tji > 0 && tji < 1 && hr_i2j < sij && false) {
+			// force info
+			ftmp = -(kc / sij) * (1 - (hr_i2j / sij));	// NOTE: this is -1 x mag of the force, it just sticks to convention that dfx is > 0 for forces on gi
+			dfx = ftmp * (hx_i2j / hr_i2j);
+			dfy = ftmp * (hy_i2j / hr_i2j);
+
+			// add to force (distribute so torque is balanced)
+			addF(-dfx, gi, 0);
+			addF(-dfy, gi, 1);
+			addF(dfx * (1 - tji), gj, 0);
+			addF(dfy * (1 - tji), gj, 1);
+			addF(dfx * tji, gjp1, 0);
+			addF(dfy * tji, gjp1, 1);
+			
+			// add to potential energy
+			addU(0.5 * kc * pow(1 - (hr_i2j / sij), 2.0));
+
+			// add to pressure
+			Pinst += ftmp * (hr_i2j / L[0]);
+		}
 	}
 }
+*/
+
 
 // shape forces for systems with only surface tension (ASSUMING kb, kl == 0)
 void adcm2D::adcm2DShapeForces(){
@@ -338,8 +434,8 @@ void adcm2D::adcm2DShapeForces(){
 		if (ci < NCELLS) {
 			if (gi == szList[ci]) {
 				// shape information
-				nvtmp = nv[ci];
-				a0tmp = a0[ci];
+				nvtmp = nv.at(ci);
+				a0tmp = a0.at(ci);
 
 				// compute area deviation
 				atmp = area(ci);
@@ -378,11 +474,11 @@ void adcm2D::adcm2DShapeForces(){
 				cy /= nvtmp;
 
 				// get coordinates relative to center of mass
-				rix = x[NDIM * gi] - cx;
-				riy = x[NDIM * gi + 1] - cy;
+				rix = x.at(NDIM * gi) - cx;
+				riy = x.at(NDIM * gi + 1) - cy;
 
-				rim1x = x[NDIM * im1[gi]] - cx;
-				rim1y = x[NDIM * im1[gi] + 1] - cy;
+				rim1x = x.at(NDIM * im1[gi]) - cx;
+				rim1y = x.at(NDIM * im1[gi] + 1) - cy;
 				if (pbc[0])
 					rim1x -= L[0] * round(rim1x / L[0]);
 				if (pbc[1])
@@ -395,99 +491,53 @@ void adcm2D::adcm2DShapeForces(){
 				// increment cell index
 				ci++;
 			}
-
-			// get next adjacent vertices
-			rip1x = x[NDIM * ip1[gi]] - cx;
-			rip1y = x[NDIM * ip1[gi] + 1] - cy;
-			if (pbc[0])
-				rip1x -= L[0] * round(rip1x / L[0]);
-			if (pbc[1])
-				rip1y -= L[1] * round(rip1y / L[1]);
-
-			// -- Area force
-
-			// add to force
-			F[NDIM * gi] += 0.5 * fa * (rim1y - rip1y);
-			F[NDIM * gi + 1] += 0.5 * fa * (rip1x - rim1x);
-
-			// -- Surface tension force
-
-			// segment lengths
-			lix = rip1x - rix;
-			liy = rip1y - riy;
-			li = sqrt(lix * lix + liy * liy);
-
-			// add to force
-			F[NDIM * gi] += (st[gi] * (lix / li)) - (st[im1[gi]] * (lim1x / lim1));
-			F[NDIM * gi + 1] += (st[gi] * (liy / li)) - (st[im1[gi]] * (lim1y / lim1));
-
-			// add to potential energy
-			U += st[gi] * li;
-
-			// add to pressure and shear stress (TO DO: add shear stress)
-			// NOTE: this is not yet the pressure, just the contribution from \partial U / \partial L
-			Pinst += (st[gi] * li) / L[0];
-
-			// update old coordinates
-			rim1x = rix;
-			rix = rip1x;
-
-			rim1y = riy;
-			riy = rip1y;
-
-			// update segment vectors
-			lim1x = lix;
-			lim1y = liy;
-			lim1 = li;
 		}
+
+		// get next adjacent vertices
+		rip1x = x[NDIM * ip1[gi]] - cx;
+		rip1y = x[NDIM * ip1[gi] + 1] - cy;
+		if (pbc[0])
+			rip1x -= L[0] * round(rip1x / L[0]);
+		if (pbc[1])
+			rip1y -= L[1] * round(rip1y / L[1]);
+
+		// -- Area force
+
+		// add to force
+		F[NDIM * gi] += 0.5 * fa * (rim1y - rip1y);
+		F[NDIM * gi + 1] += 0.5 * fa * (rip1x - rim1x);
+
+		// -- Surface tension force
+
+		// segment lengths
+		lix = rip1x - rix;
+		liy = rip1y - riy;
+		li = sqrt(lix * lix + liy * liy);
+
+		// add to force
+		F[NDIM * gi] += (st[gi] * (lix / li)) - (st[im1[gi]] * (lim1x / lim1));
+		F[NDIM * gi + 1] += (st[gi] * (liy / li)) - (st[im1[gi]] * (lim1y / lim1));
+
+		// add to potential energy
+		U += st[gi] * li;
+
+		// add to pressure and shear stress (TO DO: add shear stress)
+		// NOTE: this is not yet the pressure, just the contribution from \partial U / \partial L
+		Pinst += (st[gi] * li) / L[0];
+
+		// update old coordinates
+		rim1x = rix;
+		rix = rip1x;
+
+		rim1y = riy;
+		riy = rip1y;
+
+		// update segment vectors
+		lim1x = lix;
+		lim1y = liy;
+		lim1 = li;
 	}
 }
-
-
-
-// -- Shared Segment Forces
-
-// pairwise force between two circulolines that may or may not be bonded
-void adcm2D::checkBondPWForce(const int gi, const int gj){
-	// local variables
-	bool vert_gi_on_edge_gj, vert_gj_on_edge_gi = 0;
-	double hx_1, hy_1, hx_2, hy_2, hr_1, hr_2, t_1, t_2;
-
-	// if not bonded, use sr repulsive pw force. 
-	if (bonds.at(gi) != bonds.at(gj)){
-		// update force
-		SRRepulsivePWForce(gi, gj, vert_gi_on_edge_gj, vert_gj_on_edge_gi);
-
-		// check whether to add to new_bonds list for later (vertex gi onto edge gj)
-		if (vert_gi_on_edge_gj && bonds.at(gj) == -1 && bonds.at(gj) == -1){
-			if (new_bonds.at(gi) == -1)
-				new_bonds.at(gi) = gj;
-			else {
-				hr_1 = edge2VertexDistance(gi, gj, hx_1, hy_1, t_1);
-				hr_2 = edge2VertexDistance(gi, new_bonds.at(gi), hx_2, hy_2, t_2);
-				if (hr_1 < hr_2)
-					new_bonds.at(gi) = gj;
-			}
-			
-		}
-
-		// same as above, but also check vertex gj onto edge gi
-		if (vert_gj_on_edge_gi && bonds.at(gj) == -1 && bonds.at(gj) == -1){
-			if (new_bonds.at(gj) == -1)
-				new_bonds.at(gj) = gi;
-			else {
-				hr_1 = edge2VertexDistance(gj, gi, hx_1, hy_1, t_1);
-				hr_2 = edge2VertexDistance(gj, new_bonds.at(gj), hx_2, hy_2, t_2);
-				if (hr_1 < hr_2)
-					new_bonds.at(gj) = gi;
-			}
-		}
-	}
-}
-
-// shape forces for systems with shared segment dynamics
-// TO DO
-// -- copy from adcm2D::adcm2DShapeForces(), but include tij computation, shared forces
 
 
 // update stresses
@@ -521,27 +571,45 @@ void adcm2D::stressUpdate(){
 
 *******************************/
 
-// update bonds based on new_bonds
-void adcm2D::updateBonds(){
+// check vertices to see if some should be deleted or added
+void adcm2D::checkVertices(){
 	// local variables
 	int gi;
+	double li;
 
-	// loop over bonds, add new bonds, delete bonds from small segments
+	// lists for deletion and addition
+	vector<int> verts2Del;
+	vector<int> verts2Add;
+
+	// loop over all vertices, check length, delete first
 	for (gi=0; gi<NVTOT; gi++){
-		// check to add bond at gi
-		if (new_bonds.at(gi) > -1 && bonds.at(gi) == -1)
-			bonds.at(gi) = new_bonds.at(gi);
+		// get segment length
+		li = seg(gi);
+		if (li < 0.5 * targetLength)
+			verts2Del.push_back(gi);
 	}
 
-	// reset new_bonds to -1
-	fill(new_bonds.begin(), new_bonds.end(), -1);
+	// loop over vertices to delete, delete them
+	for (gi=0; gi<verts2Del.size(); gi++)
+		deleteVertex(verts2Del.at(gi) - gi);
+
+	// loop over all vertices 
+	for (gi=0; gi<NVTOT; gi++){
+		// get new segment length
+		li = seg(gi);
+		if (li > 2.0 * targetLength)
+			verts2Add.push_back(gi);
+	}
+
+	// loop over vertices to add, add them
+	for (gi=0; gi<verts2Add.size(); gi++)
+		addVertex(verts2Add.at(gi) + gi);
 }
 
-
-// delete vertex at particular location
+// delete vertex, reorganize indexing
 void adcm2D::deleteVertex(const int gk){
 	// local variables
-	int ck, vk;
+	int ck, vk, ci, vi, vim1, vip1;
 	int gi, d;
 
 	// get cell level information
@@ -551,11 +619,6 @@ void adcm2D::deleteVertex(const int gk){
 	for (gi=gk+1; gi<NVTOT; gi++){
 		// shift things in NVTOT x 1 arrays
 		r.at(gi - 1) = r.at(gi);
-		l0.at(gi - 1) = l0.at(gi);
-		t0.at(gi - 1) = t0.at(gi);
-		bonds.at(gi - 1) = bonds.at(gi);
-		labels.at(gi - 1) = bonds.at(gi);
-		tproj.at(gi - 1) = tproj.at(gi);
 		st.at(gi - 1) = st.at(gi);
 
 		// shift things in NVTOT x NDIM arrays
@@ -569,24 +632,121 @@ void adcm2D::deleteVertex(const int gk){
 	// delete entries in vectors
 	list.pop_back();
 	r.pop_back();
-	l0.pop_back();
-	t0.pop_back();
-	bonds.pop_back();
-	labels.pop_back();
-	tproj.pop_back();
 	st.pop_back();
+	im1.pop_back();
+	ip1.pop_back();
 	for (d=0; d<NDIM; d++){
 		x.pop_back();
 		v.pop_back();
 		F.pop_back();
 	}
-		
 
 	// change NVTOT
 	NVTOT--;
+	vertDOF -= NDIM;
+	nv.at(ck)--;
+
+	// recompute szList
+	for (ci=1; ci<NCELLS; ci++)
+		szList.at(ci) = szList.at(ci-1) + nv.at(ci-1);
+
+	// resort ip1 and im1 based on new number of vertices
+	for (ci=0; ci<NCELLS; ci++) {
+		// vertex indexing
+		for (vi = 0; vi < nv.at(ci); vi++) {
+			// wrap local indices
+			vim1 = (vi - 1 + nv.at(ci)) % nv.at(ci);
+			vip1 = (vi + 1) % nv.at(ci);
+
+			// get global wrapped indices
+			gi = gindex(ci, vi);
+			im1.at(gi) = gindex(ci, vim1);
+			ip1.at(gi) = gindex(ci, vip1);
+		}
+	}
 }
 
+// add vertex, reorganize indexing
+void adcm2D::addVertex(const int gk){
+	// local variables
+	int ck, vk, ci, vi, vim1, vip1;
+	int gi, d;
+	double dx, dy, xnew, ynew;
 
+	// get cell level information
+	cindices(ck, vk, gk);
+
+	// determine new vertex position
+	dx = segX(gk, 0);
+	dy = segX(gk, 1);
+	xnew = getx(gk, 0) + 0.5 * dx;
+	ynew = getx(gk, 1) + 0.5 * dy;
+
+	// add entries in vectors
+	list.push_back(0);
+	r.push_back(0.0);
+	st.push_back(0.0);
+	im1.push_back(0);
+	ip1.push_back(0);
+	for (d=0; d<NDIM; d++){
+		x.push_back(0.0);
+		v.push_back(0.0);
+		F.push_back(0.0);
+	}
+
+	// loop over all vertices, reshuffle and overwrite, push back all vectors
+	for (gi = NVTOT-1; gi > gk; gi--){
+		// shift things in NVTOT x 1 arrays
+		r.at(gi + 1) = r.at(gi);
+		st.at(gi + 1) = st.at(gi);
+
+		// shift things in NVTOT x NDIM arrays
+		for (d=0; d<NDIM; d++){
+			x.at(NDIM * (gi + 1) + d) = x.at(NDIM * gi + d);
+			v.at(NDIM * (gi + 1) + d) = v.at(NDIM * gi + d);
+			F.at(NDIM * (gi + 1) + d) = F.at(NDIM * gi + d);
+		}
+	}
+		
+
+	// change NVTOT
+	NVTOT++;
+	vertDOF += NDIM;
+	nv.at(ck)++;
+
+	// recompute szList
+	for (ci = 1; ci < NCELLS; ci++)
+		szList.at(ci) = szList.at(ci-1) + nv.at(ci-1);
+
+	// resort ip1 and im1 based on new number of vertices
+	for (ci = 0; ci < NCELLS; ci++) {
+		// vertex indexing
+		for (vi = 0; vi < nv.at(ci); vi++) {
+			// wrap local indices
+			vim1 = (vi - 1 + nv.at(ci)) % nv.at(ci);
+			vip1 = (vi + 1) % nv.at(ci);
+
+			// get global wrapped indices
+			gi = gindex(ci, vi);
+			im1.at(gi) = gindex(ci, vim1);
+			ip1.at(gi) = gindex(ci, vip1);
+		}
+	}
+
+	// new vertex position
+	x[NDIM*(gk + 1)] = xnew;
+	x[NDIM*(gk + 1) + 1] = ynew;
+
+	// new forces + velocity
+	v[NDIM*(gk + 1)] = 0.0;
+	v[NDIM*(gk + 1) + 1] = 0.0;
+	F[NDIM*(gk + 1)] = 0.0;
+	F[NDIM*(gk + 1) + 1] = 0.0;
+
+	// surface tension and radius
+	r[gk + 1] = r[gk];
+	st[gk + 1] = st[gk];
+}
 
 
 
@@ -612,7 +772,7 @@ void adcm2D::nve(int NT, double dt0, double T0, bool printDynamics){
 	int tt, d;
 
 	// set dt
-	setdt(dt0);
+	dt = dt0;
 
 	// initialize energies
 	adcm2DForceUpdate();
@@ -673,7 +833,7 @@ void adcm2D::nphFIRE(double Ftol, double dPtol, double P0, double dt0, bool prin
 	int npPos, npNeg, fireit;
 
 	// set dt based on geometric parameters
-	setdt(dt0);
+	dt = dt0;
 
 	// Initialize FIRE variables
 	PFIRE  		= 0;	
@@ -681,8 +841,8 @@ void adcm2D::nphFIRE(double Ftol, double dPtol, double P0, double dt0, bool prin
 	vnorm 		= 0;
 	alpha   	= alpha0;
 
-	dtmax   	= 20.0*dt;
-	dtmin   	= 1e-1*dt;
+	dtmax   	= 20.0 * dt;
+	dtmin   	= 0.1 * dt;
 
 	npPos      	= 0;
 	npNeg      	= 0;

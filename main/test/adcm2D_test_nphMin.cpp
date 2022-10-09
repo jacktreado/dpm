@@ -11,18 +11,18 @@ using namespace std;
 
 int main() {
     // input variables
-    int numcells = 10;
-    int numverts = 24;
+    int numcells = 12;
+    int numverts = 16;
     double sizeDisp = 0.1;
-    double phi0 = 0.3;
+    double phi0 = 0.45;
     double boxLengthScale = 3.0;
-    double clScale = 0.1;
-    double gam0 = 0.05;
+    double clScale = 0.5;
+    double gam0 = 0.01;
     double kc = 0.5;
     int seed = 1;
 
     // NPH specific constants
-    double Ftol = 1e-10;
+    double Ftol = 1e-12;
     double P0 = 1e-6;
     double dPtol = Ftol;
     double dt0 = 0.01;
@@ -40,13 +40,13 @@ int main() {
     adcm2DSimObj.setkc(kc);
 
     // run NPH min protocol
-    // adcm2DSimObj.nphFIRE(Ftol, dPtol, P0, dt0, true);
-    // adcm2DSimObj.printADCM2DConfiguration();
+    adcm2DSimObj.nphFIRE(Ftol, dPtol, P0, dt0, true);
+    adcm2DSimObj.printADCM2DConfiguration();
 
     // run nve 
-    int NT = 2e6;
-    double T0 = 0.01;
-    adcm2DSimObj.nve(NT, dt0, T0, true);
+    // int NT = 2e6;
+    // double T0 = 1e-6;
+    // adcm2DSimObj.nve(NT, dt0, T0, true);
 
     return 0;
 }
