@@ -31,9 +31,6 @@ phiA = sum(a,2)./(LList(:,1).*LList(:,2));
 % color by shape or size
 colorOpt = 0;
 
-% show vertices or not
-showverts = 0;
-
 % color option
 if colorOpt == 1
     % color by real shape
@@ -55,29 +52,24 @@ end
 
 
 % get frames to plot
-if showverts == 0
-    % single frame
-%     FSTART = NFRAMES;
-%     FEND = FSTART;
 
-%     % movie frames
-    FSTART = 1;
-    FEND = NFRAMES;
+% single frame
+FSTART = NFRAMES;
+FEND = FSTART;
 
-    % set step size
-    FSTEP = 1;
-    DF = FEND - FSTART;
-    if DF > 80 && DF <= 400
-        FSTEP = 5;
-    elseif DF > 400 && DF <= 800
-        FSTEP = 10;
-    elseif DF > 800
-        FSTEP = 20;
-    end
-else
-    FSTART = 10;
-    FSTEP = 1;
-    FEND = FSTART;
+% movie frames
+% FSTART = 1;
+% FEND = NFRAMES;
+
+% set step size
+FSTEP = 1;
+DF = FEND - FSTART;
+if DF > 80 && DF <= 400
+    FSTEP = 5;
+elseif DF > 400 && DF <= 800
+    FSTEP = 10;
+elseif DF > 800
+    FSTEP = 20;
 end
 
 % make a movie
@@ -122,7 +114,7 @@ for ff = FSTART:FSTEP:FEND
         end
         
         % draw SS polygon
-        drawSSPoly(xtmp, ytmp, rtmp, clr);
+        drawSSPoly(xtmp, ytmp, rtmp, clr, L, L, 1);
         
     end
         

@@ -54,7 +54,7 @@ const int NSKIP = 2000;
 const int NMIN = 10;
 const int NNEGMAX = 1000;
 const int NDELAY = 20;
-const int itmax = 5e7;
+const int itmax = 1e6;
 
 class dpm
 {

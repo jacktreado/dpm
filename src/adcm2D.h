@@ -99,6 +99,7 @@ public:
 
 	// FIRE relaxation at fixed pressure
 	void nphFIRE(double Ftol, double dPtol, double P0, double dt0, bool printCompression);
+	void nphSplitFIRE(double Ftol, double dPtol, double P0, double dt0, bool printCompression);
 
 	// printing
 	void printADCM2DConfiguration();

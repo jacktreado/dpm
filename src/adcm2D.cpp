@@ -195,7 +195,10 @@ void adcm2D::circuloLinePWForceUpdate(){
 					// real index of pj
 					gj = pj - 1;
 
-					if (gj == ip1[gi] || gj == im1[gi]) {
+					// cell index of gj
+					cindices(cj, vj, gj);
+
+					if (ci == cj) {
 						pj = list[pj];
 						continue;
 					}
@@ -241,7 +244,7 @@ void adcm2D::SRRepulsivePWForce(const int gi, const int gj, bool &vert_gi_on_edg
 	// Gut check distance
 	double lij = 0.5 * (seg(gi) + seg(gj));
 	double dlijApprox = 0.5 * (dr + deltaR(gip1, gjp1));
-	if (dlijApprox < 80.0 * lij) {
+	if (dlijApprox < 6.0 * lij) {
 		// projection of vertex j onto edge i
 		hr_j2i = edge2VertexDistance(gj, gi, hx_j2i, hy_j2i, tij);
 
@@ -975,7 +978,7 @@ void adcm2D::nphFIRE(double Ftol, double dPtol, double P0, double dt0, bool prin
 		L[0] = sqrt(V);
 		L[1] = sqrt(V);
 		for (d = 0; d < NDIM; d++)
-			lb[d] = L[d] / sb[d];
+			sb[d] = floor(L[d] / lb[d]);
 
 		// update forces, pressure
 		adcm2DForceUpdate();
@@ -1028,6 +1031,293 @@ void adcm2D::nphFIRE(double Ftol, double dPtol, double P0, double dt0, bool prin
 }
 
 
+// DEBUG: need to find out why V decrease is very slow, plateaus ~ phi = 0.5
+// It may be that this is just a slow method for compression, worth it to O'Hern jamming from below
+void adcm2D::nphSplitFIRE(double Ftol, double dPtol, double P0, double dt0, bool printCompression){
+	// local variables
+	int i, d;
+
+	// box size, momentum, and internal virial pressure
+	double V=L[0]*L[1], Pi=0.0, P=0.0;
+
+	// FIRE variables for particles
+	double pP, pFNRM, pVNRM, pAL, FCHECK;
+	int pNPPOS, pNPNEG;
+
+	// FIRE variables for box
+	double bP, bFNRM, bVNRM, bAL, DPCHECK;
+	int bNPPOS, bNPNEG;
+
+	// FIRE variables for everything
+	double dtmax, dtmin;
+	int fireit;
+
+	// set dt based on geometric parameters
+	dt = dt0;
+
+	// Initialize FIRE variables
+	pAL   		= alpha0;
+	bAL 		= alpha0;
+
+	dtmax   	= 10.0 * dt;
+	dtmin   	= 0.1 * dt;
+
+	pNPPOS    	= 0;
+	pNPNEG      = 0;
+	bNPPOS 		= 0;
+	bNPNEG 	 	= 0;
+
+	fireit    	= 0;
+	FCHECK  	= 10*Ftol;
+	DPCHECK 	= 10*dPtol;
+
+	// initialize loop
+	while ((FCHECK > Ftol || DPCHECK > dPtol || fireit < NDELAY) && fireit < itmax){
+		// VV VELOCITY UPDATE #1
+		for (i=0; i<vertDOF; i++)
+			v[i] += 0.5 * dt * (F[i] - 0.5 * v[i] * (Pi / V));
+		Pi += 0.5 * dt * (P - P0);
+
+		// compute projection of force onto velocity
+		pP = 0.0;
+		for (i=0; i<vertDOF; i++)
+			pP += v[i] * (F[i] - 0.5 * v[i] * (Pi / V));
+		bP = Pi * (P - P0);
+
+		// print to console
+		if (fireit % NSKIP == 0){
+			cout << endl << endl;
+			cout << "===============================" << endl;
+			cout << " 	S P L I T  F I R E 			" << endl;
+			cout << " 	E N T H A L P Y  			" << endl;
+			cout << "	M I N I M I Z A T I O N 	" << endl;
+			cout << "================================" << endl;
+			cout << endl;
+			cout << "	** fireit 	= " << fireit << endl;
+			cout << "	** FCHECK 	= " << FCHECK << endl;
+			cout << " 	** DPCHECK 	= " << DPCHECK << endl;
+			cout << "	** dt 		= " << dt << endl;
+			cout << "	** V  		= " << V << endl;
+			cout << "	** P 		= " << P << endl;
+			cout << "	** Pi 		= " << Pi << endl << endl;
+			
+			cout << "	Particles:" << endl;
+			cout << "	** pP 		= " << pP << endl;
+			cout << "	** pAL 		= " << pAL << endl;
+			cout << "	** pFNRM 	= " << pFNRM << endl;
+			cout << "	** pVNRM 	= " << pVNRM << endl;
+			cout << "	** pNPPOS 	= " << pNPPOS << endl;
+			cout << "	** pNPNEG 	= " << pNPNEG << endl;
+
+			cout << "	Box:" << endl;
+			cout << "	** bP 		= " << bP << endl;
+			cout << "	** bAL 		= " << bAL << endl;
+			cout << "	** bFNRM 	= " << bFNRM << endl;
+			cout << "	** bVNRM 	= " << bVNRM << endl;
+			cout << "	** bNPPOS 	= " << bNPPOS << endl;
+			cout << "	** bNPNEG 	= " << bNPNEG << endl;
+			
+			// print it
+			if (printCompression && posout.is_open())
+				printADCM2DConfiguration();
+		}
+
+
+		// -- ADJUST PARTICLE DYNAMICS
+
+		// Adjust simulation based on net motion of degrees of freedom
+		if (pP > 0){
+			// counters
+			pNPPOS++;
+			pNPNEG = 0;
+
+			// alter simulation if enough positive steps have been taken
+			if (pNPPOS > NDELAY){
+				// change time step
+				if (dt*finc < dtmax)
+					dt *= finc;
+
+				// decrease alpha
+				pAL *= falpha;
+			}
+		}
+		else{
+			// couters
+			pNPPOS = 0;
+			pNPNEG++;
+
+			// check if simulation is stuck
+			if (pNPNEG > NNEGMAX){
+				cerr << "	** ERROR: During initial FIRE minimization, P < 0 for too long, so ending." << endl;
+				exit(1);
+			}
+
+			// take half step backwards, reset velocities
+			for (i=0; i<vertDOF; i++){
+				x[i] -= 0.5 * dt * (v[i] + 0.5*x[i]*(Pi/V));
+				v[i] = 0.0;
+			}
+
+			// decrease time step if past initial delay
+			if (fireit > NDELAY){
+				// decrease time step 
+				if (dt * fdec > dtmin)
+					dt *= fdec;
+
+				// reset alpha
+				pAL = alpha0;
+			}
+		}
+
+		// compute fnorm and vnorm for particles
+		pFNRM = 0.0;
+		pVNRM = 0.0;
+		for (i=0; i<vertDOF; i++){
+			pFNRM 	+= F[i] * F[i];
+			// pFNRM 	+= pow((F[i] - 0.5 * v[i] * (Pi / V)), 2.0);
+			pVNRM 	+= v[i] * v[i];
+		}
+		pFNRM = sqrt(pFNRM);
+		pVNRM = sqrt(pVNRM);
+
+
+		// adjust velocities
+		if (pFNRM > 0){
+			for (i=0; i<vertDOF; i++){
+				// v[i] = (1 - pAL) * v[i] + pAL * ((F[i] - 0.5 * v[i] * (Pi / V))/ pFNRM) * pVNRM;
+				v[i] = (1 - pAL) * v[i] + pAL * (F[i]/ pFNRM) * pVNRM;
+			}
+				
+		}
+
+
+
+		// -- ADJUST BOX DYNAMICS
+
+		// Adjust simulation based on net motion of degrees of freedom
+		if (bP > 0){
+			// counters
+			bNPPOS++;
+			bNPNEG = 0;
+
+			// alter simulation if enough positive steps have been taken
+			if (bNPPOS > NDELAY){
+				// change time step
+				if (dt*finc < dtmax)
+					dt *= finc;
+
+				// decrease alpha
+				bAL *= falpha;
+			}
+		}
+		else{
+			// couters
+			bNPPOS = 0;
+			bNPNEG++;
+
+			// check if simulation is stuck
+			if (bNPNEG > NNEGMAX){
+				cerr << "	** ERROR: During initial FIRE minimization, P < 0 for too long, so ending." << endl;
+				exit(1);
+			}
+
+			// take half step backwards, reset velocities
+			V -= 0.5 * dt * Pi;
+
+			// decrease time step if past initial delay
+			if (fireit > NDELAY){
+				// decrease time step 
+				if (dt * fdec > dtmin)
+					dt *= fdec;
+
+				// reset alpha
+				bAL = alpha0;
+			}
+		}
+
+		// compute fnorm and vnorm for particles
+		bFNRM = abs(P - P0);
+		bVNRM = abs(Pi);
+
+		// adjust velocities
+		if (bFNRM > 0)
+			Pi = (1 - bAL) * Pi + bAL * ((P - P0)/bFNRM) * bVNRM;
+
+
+
+		// VV POSITION UPDATE
+		for (i=0; i<vertDOF; i++)
+			x[i] += dt * (v[i] + 0.5 * x[i] * (Pi/V));
+		V += dt * Pi;
+		L[0] = sqrt(V);
+		L[1] = sqrt(V);
+		for (d = 0; d < NDIM; d++)
+			sb[d] = floor(L[d] / lb[d]);
+
+		// update forces, pressure
+		adcm2DForceUpdate();
+		P = Pinst;
+
+		// VV VELOCITY UPDATE #2
+		for (i=0; i<vertDOF; i++)
+			v[i] += 0.5 * dt * (F[i] - 0.5 * v[i] * (Pi / V));
+		Pi += 10.5 * dt * (P - P0);
+
+		// update fcheck based on fnorm (= force per degree of freedom)
+		FCHECK = 0.0;
+		for (i=0; i<vertDOF; i++)
+			FCHECK += F[i] * F[i];
+		FCHECK = sqrt(FCHECK / vertDOF);
+		DPCHECK = abs(P - P0);
+
+		// update iterator
+		fireit++;
+	}
+	// check if FIRE converged
+	if (fireit == itmax){
+		cout << "	** FIRE minimization did not converge, fireit = " << fireit << ", itmax = " << itmax << "; ending." << endl;
+		exit(1);
+	}
+	else{
+		cout << endl << endl;
+			cout << "===============================" << endl;
+			cout << " 	S P L I T  F I R E 			" << endl;
+			cout << " 	E N T H A L P Y  			" << endl;
+			cout << "	M I N I M I Z A T I O N 	" << endl;
+			cout << "================================" << endl;
+			cout << endl;
+			cout << "	** fireit 	= " << fireit << endl;
+			cout << "	** FCHECK 	= " << FCHECK << endl;
+			cout << " 	** DPCHECK 	= " << DPCHECK << endl;
+			cout << "	** dt 		= " << dt << endl;
+			cout << "	** V  		= " << V << endl;
+			cout << "	** P 		= " << P << endl;
+			cout << "	** Pi 		= " << Pi << endl << endl;
+			
+			cout << "	Particles:" << endl;
+			cout << "	** pP 		= " << pP << endl;
+			cout << "	** pAL 		= " << pAL << endl;
+			cout << "	** pFNRM 	= " << pFNRM << endl;
+			cout << "	** pVNRM 	= " << pVNRM << endl;
+			cout << "	** pNPPOS 	= " << pNPPOS << endl;
+			cout << "	** pNPNEG 	= " << pNPNEG << endl;
+
+			cout << "	Box:" << endl;
+			cout << "	** bP 		= " << bP << endl;
+			cout << "	** bAL 		= " << bAL << endl;
+			cout << "	** bFNRM 	= " << bFNRM << endl;
+			cout << "	** bVNRM 	= " << bVNRM << endl;
+			cout << "	** bNPPOS 	= " << bNPPOS << endl;
+			cout << "	** bNPNEG 	= " << bNPNEG << endl;
+			
+			// print it
+			if (printCompression && posout.is_open())
+				printADCM2DConfiguration();
+	}
+	
+
+
+}
 
 
 
