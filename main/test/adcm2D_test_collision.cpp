@@ -11,22 +11,22 @@ using namespace std;
 
 int main() {
     // input variables
-    int numcells = 4;
+    int numcells = 3;
     int numverts = 16;
     double sizeDisp = 0;
     double phi0 = 0.2;
-    double boxLengthScale = 3.0;
-    double clScale = 0.5;
-    double gam0 = 0.01;
-    double kc = 0.5;
-    int seed = 10;
+    double boxLengthScale = 3.5;
+    double clScale = 1.0;
+    double gam0 = 0.001;
+    double kc = 0.1;
+    int seed = 2;
 
     // collision variables
     int NT = 2e5;
-    int NSKIP = 2e3;
-    double dt = 0.005;
-    double v0 = 0.1;
-    double cx, cy, vx, vy;
+    int NSKIP = 2000;
+    double dt = 0.01;
+    double v0 = 0.05;
+    double cx, cy, vx, vy;    
 
     // output file name
     string posf = "adcm2D_test_collision.pos";
@@ -41,6 +41,11 @@ int main() {
     // set constants
     sim.setkc(kc);
     sim.setdt_pure(dt);
+
+    // use adhesion
+    sim.setl1(0.01);
+    sim.setl2(0.02);
+    sim.useAttractiveForce();
 
     // initial collision velocities
     for (int ci=0; ci<numcells; ci++){

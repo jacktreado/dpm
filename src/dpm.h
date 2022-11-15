@@ -54,7 +54,7 @@ const int NSKIP = 2000;
 const int NMIN = 10;
 const int NNEGMAX = 1000;
 const int NDELAY = 20;
-const int itmax = 1e6;
+const int itmax = 5e6;
 
 class dpm
 {
@@ -191,12 +191,16 @@ public:
 	void setkc(double val) { kc = val; };
 	void setl1(double val) { l1 = val; };
 	void setl2(double val) { l2 = val; };
-	void setComV(const int ci,  const int d, double val) { int gi; for (int vi=0; vi<nv[ci]; vi++) {gi = gindex(ci, vi); v.at(NDIM * gi + d) = val / nv[ci];} };
+	void setComV(const int ci, const int d, double val) { int gi; for (int vi=0; vi<nv[ci]; vi++) {gi = gindex(ci, vi); v.at(NDIM * gi + d) = val / nv[ci];} };
+	void setComF(const int ci, const int d, double val) { int gi; for (int vi=0; vi<nv[ci]; vi++) {gi = gindex(ci, vi); F.at(NDIM * gi + d) = val / nv[ci];} };
+	void setCom(const int ci, const double cxnew, const double cynew);
 
 	// Updates
 	void addx(double val, int gi, int d) { x.at(NDIM * gi + d) += val; };
 	void addv(double val, int gi, int d) { v.at(NDIM * gi + d) += val; };
+	void addComV(const int ci, const int d, double val) { int gi; for (int vi=0; vi<nv[ci]; vi++) {gi = gindex(ci, vi); v.at(NDIM * gi + d) += val / nv[ci];} };
 	void addF(double val, int gi, int d) { F.at(NDIM * gi + d) += val; };
+	void addComF(const int ci, const int d, double val) { int gi; for (int vi=0; vi<nv[ci]; vi++) {gi = gindex(ci, vi); F.at(NDIM * gi + d) += val / nv[ci];} };
 	void addU(double val) { U += val; };
 
 	void vvVelUpdate();
@@ -222,6 +226,7 @@ public:
 	double seg(const int gi) { return deltaR(gi, ip1[gi]); };
 	double unitDelX(const int gi, const int gj, const int d) { return deltaX(gi, gj, d) / deltaR(gi, gj); };
 	double unitSegX(const int gi, const int d) { return segX(gi, d) / seg(gi); }; 
+	double theta(const int gi);
     
 	// Initialize particles (two dimensions)
 	void monodisperse2D(int n);
@@ -233,6 +238,7 @@ public:
 	void initializeVertexIndexing2D();
 	void initializePositions2D(double phi0, double Ftol);
 	void initializeNeighborLinkedList2D(double boxLengthScale);
+	void resetNeighborLinkedListCellNNs();
 
 	// editing & updating
 	void sortNeighborLinkedList2D();

@@ -8,7 +8,6 @@ adsscm2D::adsscm2D(int numcells, int numverts, double sizeDisp, double phi0, dou
 	// initialize variables for adcm2D
 	useRepulsiveForce();
 	useIndependentShapeForce();
-	v0 = 0.0; Dr = 1.0; Ds = 1.0;
 
 	// initialize particles with gaussian sizes
 	gaussian2D(sizeDisp, 1.0, numverts);
@@ -54,16 +53,16 @@ adsscm2D::adsscm2D(int numcells, int numverts, double sizeDisp, double phi0, dou
 // pairwise force between two circulolines that may or may not be bonded
 void adsscm2D::checkBondPWForce(const int gi, const int gj){
 	// local variables
-	bool vert_gi_on_edge_gj, vert_gj_on_edge_gi = 0;
+	bool vivj, viej, vjei = 0;
 	double hx_1, hy_1, hx_2, hy_2, hr_1, hr_2, t_1, t_2;
 
 	// if not bonded, use sr repulsive pw force. 
 	if (bonds.at(gi) != bonds.at(gj)){
 		// update force
-		SRRepulsivePWForce(gi, gj, vert_gi_on_edge_gj, vert_gj_on_edge_gi);
+		SRRepulsivePWForce(gi, gj, vivj, viej, vjei);
 
 		// check whether to add to new_bonds list for later (vertex gi onto edge gj)
-		if (vert_gi_on_edge_gj && bonds.at(gj) == -1 && bonds.at(gj) == -1){
+		if (viej && bonds.at(gj) == -1 && bonds.at(gj) == -1){
 			if (new_bonds.at(gi) == -1)
 				new_bonds.at(gi) = gj;
 			else {
@@ -76,7 +75,7 @@ void adsscm2D::checkBondPWForce(const int gi, const int gj){
 		}
 
 		// same as above, but also check vertex gj onto edge gi
-		if (vert_gj_on_edge_gi && bonds.at(gj) == -1 && bonds.at(gj) == -1){
+		if (vjei && bonds.at(gj) == -1 && bonds.at(gj) == -1){
 			if (new_bonds.at(gj) == -1)
 				new_bonds.at(gj) = gi;
 			else {

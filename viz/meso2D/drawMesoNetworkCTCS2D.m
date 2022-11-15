@@ -6,7 +6,7 @@ close all;
 clc;
 
 % create file name
-fstr = 'local/mesoHMin2D_data/mesoHMin2D_N32_n32_ca1.14_kb0.1_be300_h1_da0.5_dl5_cL0.5_cB4_t0m0.3_P1e-7_seed100.posctc';
+fstr = 'local/mesoHMin2D_data/mesoHMin2D_N64_n32_ca1.14_kb0.4_be100_h1_da0.5_dl5_cL0.5_cB4_t0m0.2_P1e-3_seed14.posctc';
 % fstr = 'local/mesoDM2D_data/mesoDM2D_N32_n32_ca1.14_kl1_kb01e-3_be50_da0.02_dl10_P1e-4_seed27.posctc';
 % fstr = '~/Jamming/CellSim/dpm/pos.test';
 
@@ -184,6 +184,16 @@ if NFRAMES > 2
     xlabel('frame','Interpreter','latex');
     ax.FontSize = 24;
     ax.XLim = [1 NFRAMES];
+    
+    figure(26), clf, hold on, box on;
+    plot(1:NFRAMES-1,phipatch(2:NFRAMES),'ko','markersize',10,'markerfacecolor','b');
+    h = ylabel('$\phi$','Interpreter','latex');
+    ax = gca;
+    ax.YLim = [0 1];
+    xlabel('frame','Interpreter','latex');
+    ax.FontSize = 32;
+    ax.XLim = [1 NFRAMES];
+    ax.YTick = [0 0.25 0.5 0.75 1];
     
     % plot shape vs porosity
     ambroseData = load('/Users/jacktreado/Jamming/Flowers/structure/plant/ambroseMesoCells/ambroseData.mat');

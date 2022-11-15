@@ -183,6 +183,22 @@ double dpm::deltaR(const int gi, const int gj, double &dx, double &dy){
 	return sqrt(dx*dx + dy*dy);
 }
 
+// get angle at particular vertex
+double dpm::theta(const int gi){
+	// local variables
+	double lix, liy, lim1x, lim1y;
+
+	// get components of segment vectors
+	deltaR(im1[gi], gi, lim1x, lim1y);
+	deltaR(gi, ip1[gi], lix, liy);
+
+	// get angle contributions
+	double sini = lim1x*liy - lim1y*lix;
+	double cosi = lim1x*lix + lim1y*liy;
+
+	// return angle
+	return atan2(sini,cosi);
+}
 
 /******************************
 
@@ -404,6 +420,23 @@ void dpm::com2D(int ci, double &cx, double &cy) {
 	cx /= nvtmp;
 	cy /= nvtmp;
 }
+
+void dpm::setCom(const int ci, const double cxnew, const double cynew) { 
+	// local variables
+	int gi;
+	double cx, cy;
+
+	// get com
+	com2D(ci, cx, cy);
+
+	for (int vi=0; vi<nv[ci]; vi++) {
+		gi = gindex(ci, vi);
+		x[NDIM * gi] += cxnew - cx;
+		x[NDIM * gi + 1] += cynew - cy;
+	} 
+}
+
+
 
 // get configuration packing fraction
 double dpm::vertexPackingFraction2D() {
@@ -1085,7 +1118,91 @@ void dpm::initializeNeighborLinkedList2D(double boxLengthScale) {
 	cout << ";  initially NBX = " << NBX << " ..." << endl;
 }
 
+// reset Neighbor Linked List NN
+void dpm::resetNeighborLinkedListCellNNs(){
+	// local variables
+	int i, d, scx, nntmp;
 
+	// clear inital nn
+	for (i = 0; i < NBX; i++)
+		nn[i].clear();
+	nn.clear();
+
+	// recompute number of boxes
+	NBX = 1;
+	for (int d=0; d<NDIM; d++)
+		NBX *= sb[d];
+
+	// resize nn
+	scx = sb[0];
+	nn.resize(NBX);
+
+	// loop over cells, save forward neighbors for each box
+	for (i = 0; i < NBX; i++) {
+		// reshape entry
+		nn[i].resize(NNN);
+
+		// right neighbor (i+1)
+		nn[i][0] = (i + 1) % NBX; 
+
+		// top neighbors (i,j+1), (i+1,j+1)
+		if (pbc[1]){
+			// (i,j+1) w/ pbc
+			nn[i][1] = (i + scx) % NBX;
+
+			// (i+1,j+1) w/ pbc
+			nn[i][2] = (nn[i][1] + 1) % NBX;
+		}
+		else {
+			// if on top row, both = -1
+			if (i >= NBX - scx){
+				nn[i][1] = -1;
+				nn[i][2] = -1;
+			}
+			// if not on top row, still add
+			else{
+				nn[i][1] = i + scx; 
+				nn[i][2] = nn[i][1] + 1;
+			}
+		}
+
+		// bottom neighbor w/ pbc (j-1)
+		nntmp = (i + NBX - scx) % NBX;	
+
+		// bottom-right neighbor (i+1, j-1)
+		if (pbc[1])
+			nn[i][3] = nntmp + 1;
+		else{
+			// if on bottom row, skip
+			if (i < scx)
+				nn[i][3] = -1;
+			// otherwise, set
+			else
+				nn[i][3] = nntmp + 1;
+		}
+
+		// right-hand bc (periodic)
+		if ((i + 1) % scx == 0) {
+			if (pbc[0]) {
+				nn[i][0] = i - scx + 1;
+				if (pbc[1]){
+					nn[i][2] = nn[i][1] - scx + 1;
+					nn[i][3] = nntmp - scx + 1;
+				}
+			}
+			else {
+				nn[i][0] = -1;
+				nn[i][2] = -1;
+				nn[i][3] = -1;
+			}
+		}
+	}
+
+	// linked-list variables
+	head.resize(NBX);
+	last.resize(NBX);
+	list.resize(NVTOT + 1);
+}
 
 
 

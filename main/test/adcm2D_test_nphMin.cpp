@@ -11,33 +11,42 @@ using namespace std;
 
 int main() {
     // input variables
-    int numcells = 12;
+    int numcells = 16;
     int numverts = 24;
     double sizeDisp = 0.1;
-    double phi0 = 0.45;
-    double boxLengthScale = 2.5;
-    double clScale = 0.25;
-    double gam0 = 0.01;
+    double phi0 = 0.5;
+    double boxLengthScale = 2.75;
+    double clScale = 1.0;
+    double gam0 = 1e-5;
     double kc = 1.0;
+    double W = 0;
     int seed = 1;
 
     // NPH specific constants
-    double Ftol = 1e-12;
-    double P0 = 1e-5;
+    double Ftol = 1e-10;
+    double P0 = 2e-5;
     double dPtol = Ftol;
     double dt0 = 0.01;
+
+    // use adhesion
+    double l2 = 0.1;
+    double l1 = 0.5 * l2;
 
     // output file name
     string posf = "adcm2D_test.pos";
 
     // initialize
     adcm2D adcm2DSimObj(numcells, numverts, sizeDisp, phi0, boxLengthScale, clScale, gam0, seed);
+    adcm2DSimObj.useAttractiveForce();
 
     // open output file, print
 	adcm2DSimObj.openPosObject(posf);
 
     // set constants
     adcm2DSimObj.setkc(kc);
+    adcm2DSimObj.setW(W);
+    adcm2DSimObj.setgam0(gam0);
+    adcm2DSimObj.setgam(gam0);
 
     // run NPH min protocol
     adcm2DSimObj.nphSplitFIRE(Ftol, dPtol, P0, dt0, true);
