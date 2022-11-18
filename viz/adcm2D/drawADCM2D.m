@@ -17,6 +17,7 @@ NFRAMES = simdata.NFRAMES;
 NCELLS = simdata.NCELLS;
 nv = simdata.nv;
 LList = simdata.L;
+S = simdata.S;
 x = simdata.x;
 y = simdata.y;
 r = simdata.r;
@@ -33,6 +34,10 @@ if NCELLS < 3
 else
     pbc = 1;
 end
+
+% stresses
+P = S(:,1);
+Sxy = S(:,2);
 
 % phi = area + edge of circulolines
 ravg = cellfun(@mean, r);
@@ -65,13 +70,44 @@ ylabel('$\Delta p_\mu$','Interpreter','latex');
 ax = gca;
 ax.FontSize = 24;
 
-% plot shape fluctuations
+% plot area fluctuations
 figure(13), clf, hold on, box on;
+patchErrorBar((1:size(meanst,1))',mean(a - mean(a),2),std(a - mean(a),0,2),'-o',8,plotClr(1,:),plotClr(1,:),0.5);
+% plot(p - mean(p), '-o','markersize',8);
+xlabel('frame','Interpreter','latex');
+ylabel('$\Delta a_\mu$','Interpreter','latex');
+ax = gca;
+ax.FontSize = 24;
+
+
+% plot area strains
+da = a./a0 - 1.0;
+figure(14), clf, hold on, box on;
+patchErrorBar((1:NFRAMES)',mean(da,2),std(da,0,2),'-o',8,plotClr(1,:),plotClr(1,:),0.5);
+% plot(p - mean(p), '-o','markersize',8);
+xlabel('frame','Interpreter','latex');
+ylabel('$\epsilon_a$','Interpreter','latex');
+ax = gca;
+ax.FontSize = 24;
+
+
+% plot shape fluctuations
+figure(15), clf, hold on, box on;
 patchErrorBar((1:size(meanst,1))',mean(calA,2),std(calA,0,2),'-o',8,plotClr(2,:),plotClr(2,:),0.5);
 xlabel('frame','Interpreter','latex');
 ylabel('$\langle \mathcal{A} \rangle$','Interpreter','latex');
 ax = gca;
 ax.FontSize = 24;
+
+
+% plot instantaneous pressure 
+figure(16), clf, hold on, box on;
+plot(1:NFRAMES,P,'-ko','markerfacecolor',plotClr(2,:),'markersize',10);
+xlabel('frame','Interpreter','latex');
+ylabel('$P$','Interpreter','latex');
+ax = gca;
+ax.FontSize = 24;
+ax.YScale = 'log';
 
 
 %% Draw cells over time

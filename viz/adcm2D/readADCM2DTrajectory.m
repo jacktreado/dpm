@@ -17,12 +17,15 @@ NCELLS      = NCELLS{1};
 phitmp      = textscan(fid,'PACKF %f',1);
 fline       = fgetl(fid);
 Ltmp        = textscan(fid,'BOXSZ %f %f',1);
+fline       = fgetl(fid);
+Stmp        = textscan(fid,'STRSS %f %f',1);
 
 % cells to save 
 NFRAMES = 1e6;
 
 phi     = zeros(NFRAMES,1);
 L       = zeros(NFRAMES,2);
+S       = zeros(NFRAMES,2);
 
 nv      = zeros(NFRAMES,NCELLS);
 a0      = zeros(NFRAMES,NCELLS);
@@ -47,6 +50,9 @@ while ~feof(fid)
     L(nf,1) = Ltmp{1};
     L(nf,2) = Ltmp{2};
     
+    % get stresses
+    S(nf,1) = Stmp{1};
+    S(nf,2) = Stmp{2};
     
     % get info about deformable particle
     for nn = 1:NCELLS
@@ -102,6 +108,10 @@ while ~feof(fid)
         % update box size
         Ltmp            = textscan(fid,'BOXSZ %f %f',1);
         fline = fgetl(fid);
+        
+         % update stress
+        Stmp            = textscan(fid,'STRSS %f %f',1);
+        fline = fgetl(fid);
     end
 end
 
@@ -110,6 +120,7 @@ if (nf < NFRAMES)
     NFRAMES = nf-1;
     phi(nf:end) = [];
     L(nf:end,:) = [];
+    S(nf:end,:) = [];
     
     nv(nf:end,:) = [];
     a0(nf:end,:) = [];
@@ -129,6 +140,7 @@ fclose(fid);
 dpmConfigData               = struct('NFRAMES',NFRAMES,'NCELLS',NCELLS);
 dpmConfigData.phi           = phi;
 dpmConfigData.L             = L;
+dpmConfigData.S             = S;
 
 dpmConfigData.nv            = nv;
 dpmConfigData.a0            = a0;

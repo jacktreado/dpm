@@ -204,6 +204,31 @@ adcm2D::adcm2D(string &inputFileStr, int seed, double boxLengthScale) : dpm(2) {
 }
 
 
+// set all a0 to be regular values for osmotic pressure
+void adcm2D::regularizeA0(){
+	// local variables
+	int ci;
+	double acurr, dtheta, trigfactor, lbar; 
+
+	// loop over cells, set a0
+	for (ci=0; ci<NCELLS; ci++){
+		// get current area
+		acurr = area(ci);
+
+		// angle
+		dtheta = (2.0 * PI) / nv.at(ci);
+
+		// trig factor
+		trigfactor = (1.0 - cos(dtheta)) / sin(dtheta);
+
+		// segment length
+		lbar = perimeter(ci) / nv.at(ci);
+
+		// set a0
+		a0.at(ci) = acurr - (lbar / ((Posm * lbar) + 2.0 * gam0 * trigfactor));
+	}
+}
+
 
 /******************************
 
@@ -273,6 +298,38 @@ double adcm2D::edge2VertexDistance(const int gv, const int ge, double &hx, doubl
 
 *******************************/
 
+// update all forces when using active tension fluctuations
+void adcm2D::activeTensionForceUpdate(){
+	// update vertex numbers
+	checkVertices();
+
+	// reset energies, stresses, forces
+	U = 0.0; 
+	Pinst = 0.0; 
+	Sinst = 0.0; 
+	fill(F.begin(), F.end(), 0.0);
+
+	// use whatever shape force
+	(*this.*shpFrc)();
+
+	// reset surface tension to the void values
+	int gi = 0;
+	for (int ci=0; ci<NCELLS; ci++){
+		for (int vi=0; vi<nv[ci]; vi++){
+			// set tension cell-void coupling
+			st.at(gi) = stMat.at(0).at(ci+1);
+
+			// increment global index
+			gi++;
+		}
+	}
+
+	// use pairwise force update
+	circuloLinePWForceUpdate();
+
+	// update stresses
+	stressUpdate();
+}
 
 // force update for circulolines
 void adcm2D::circuloLinePWForceUpdate(){
@@ -281,19 +338,6 @@ void adcm2D::circuloLinePWForceUpdate(){
 
 	// sort particles
 	sortNeighborLinkedList2D();
-
-	// reset surface tension to the void values
-	gi = 0;
-	for (ci=0; ci<NCELLS; ci++){
-		for (vi=0; vi<nv[ci]; vi++){
-			// set tension cell-void coupling
-			st.at(gi) = stMat.at(0).at(ci+1);
-
-			// increment global index
-			gi++;
-		}
-	}
-	
 
 	// loop over cell collision linked list boxes
 	for (bi = 0; bi < NBX; bi++) {
@@ -487,15 +531,8 @@ void adcm2D::SRRepulsivePWForce(const int gi, const int gj, bool& vivj, bool &vi
 	}
 }
 
-// short-range (SR) _attractive_ pairwise force between two circulolines
-// TO DO:
-// 	* Add \Delta P update here for each vertex in contact with other segments
-// 	* Create new shape force function that resets to \Delta P = Pi - P0 after every force update
-// 	* in new construction, a0 is now MINIMUM area, not PREFERRED a0. Copy AF model for ideas about a0
-// 
-// NOTE: on 11/02, added CELL-CELL surface tension matrix, it defines tension here, but OU process governed below in active tension fluctuation function
-// (DEPRECATED) NOTE: on 11/02, added intercellular surface tension coupling
-void adcm2D::SRAttractivePWForce(const int gi, const int gj, bool& vivj, bool &viej, bool &vjei){
+// short-range (SR) _attractive pairwise force
+void adcm2D::SRAttractivePWForce(const int gi, const int gj, bool &vivj, bool &viej, bool &vjei){
 	// local variables
 	int ci, vi, cj, vj;
 	double tij, tji;
@@ -544,17 +581,167 @@ void adcm2D::SRAttractivePWForce(const int gi, const int gj, bool& vivj, bool &v
 			
 			// force
 			xij = dr / sij;
-			// if (dr > cutij){
-			// 	ftmp = kint * (1.0 + l2 - xij) / sij;
-			// 	addU(-0.5 * kint * pow(1.0 + l2 - xij, 2.0));
-			// }
-			// else{
-			// 	ftmp = -kc * (1 - xij) / sij;
-			// 	addU(0.5 * kc * (pow(1.0 - xij, 2.0) - l1 * l2));
-			// }
+			if (dr > cutij){
+				ftmp = kint * (1.0 + l2 - xij) / sij;
+				addU(-0.5 * kint * pow(1.0 + l2 - xij, 2.0));
+			}
+			else{
+				ftmp = -kc * (1 - xij) / sij;
+				addU(0.5 * kc * (pow(1.0 - xij, 2.0) - l1 * l2));
+			}
+
+			// force elements
+			dfx = ftmp * (dx / dr);
+			dfy = ftmp * (dy / dr);
+
+			// add to force
+			addF(dfx, gi, 0);
+			addF(dfy, gi, 1);
+			addF(-dfx, gj, 0);
+			addF(-dfy, gj, 1);
+
+			// add to pressure
+			Pinst += ftmp * (dr / L[0]);
+		}
+		else if (tij > 0 && tij < 1 && hr_j2i < shellij) {
+			// report
+			vjei = 1;
+
+			// force info
+			xij = hr_j2i / sij;
+			if (hr_j2i > cutij){
+				ftmp = kint * (1.0 + l2 - xij) / sij;
+				addU(-0.5 * kint * pow(1.0 + l2 - xij, 2.0));
+			}
+			else{
+				ftmp = -kc * (1 - xij) / sij;
+				addU(0.5 * kc * (pow(1.0 - xij, 2.0) - l1 * l2));
+			}
+
+			// force elements
+			dfx = ftmp * (hx_j2i / hr_j2i);
+			dfy = ftmp * (hy_j2i / hr_j2i);
+
+			// add to force (distribute so torque is balanced)
+			addF(dfx * (1 - tij), gi, 0);
+			addF(dfy * (1 - tij), gi, 1);
+			addF(dfx * tij, gip1, 0);
+			addF(dfy * tij, gip1, 1);
+			addF(-dfx, gj, 0);
+			addF(-dfy, gj, 1);
+
+			// add to potential energy
+			addU(0.5 * kint * pow(1 - (hr_j2i / sij), 2.0));
+
+			// add to pressure
+			Pinst += ftmp * (hr_j2i / L[0]);
+		}
+
+		// also check projection from edge j to vertex i (same as tij case, but note use of -dx and -dy)
+		if (tji > 0 && tji < 1 && hr_i2j < shellij) {
+			// report
+			viej = 1;
+
+			// force info
+			xij = hr_i2j / sij;
+			if (hr_i2j > cutij){
+				ftmp = kint * (1.0 + l2 - xij) / sij;
+				addU(-0.5 * kint * pow(1.0 + l2 - xij, 2.0));
+			}
+			else{
+				ftmp = -kc * (1 - xij) / sij;
+				addU(0.5 * kc * (pow(1.0 - xij, 2.0) - l1 * l2));
+			}
+
+			// force elements
+			dfx = ftmp * (hx_i2j / hr_i2j);
+			dfy = ftmp * (hy_i2j / hr_i2j);
+
+			// add to force (distribute so torque is balanced)
+			addF(-dfx, gi, 0);
+			addF(-dfy, gi, 1);
+			addF(dfx * (1 - tji), gj, 0);
+			addF(dfy * (1 - tji), gj, 1);
+			addF(dfx * tji, gjp1, 0);
+			addF(dfy * tji, gjp1, 1);
+			
+			// add to potential energy
+			addU(0.5 * kint * pow(1 - (hr_i2j / sij), 2.0));
+
+			// add to pressure
+			Pinst += ftmp * (hr_i2j / L[0]);
+		}
+	}
+}
+
+
+// short-range (SR) _attractive_ pairwise force between two circulolines
+// TO DO:
+// 	* Add \Delta P update here for each vertex in contact with other segments
+// 	* Create new shape force function that resets to \Delta P = Pi - P0 after every force update
+// 	* in new construction, a0 is now MINIMUM area, not PREFERRED a0. Copy AF model for ideas about a0
+// 
+// NOTE: on 11/02, added CELL-CELL surface tension matrix, it defines tension here, but OU process governed below in active tension fluctuation function
+void adcm2D::SRAttractiveActiveTensionPWForce(const int gi, const int gj, bool &vivj, bool &viej, bool &vjei){
+	// local variables
+	int ci, vi, cj, vj;
+	double tij, tji;
+	double hr_i2j, hr_j2i, hx_i2j, hx_j2i, hy_i2j, hy_j2i;
+	double ftmp, dfx, dfy;
+	double xij;
+
+	// get ci and cj (for surface tension update)
+	cindices(ci, vi, gi);
+	cindices(cj, vj, gj);
+
+	// contact distance
+	double sij = r[gi] + r[gj];
+
+	// shell, cutoff distance
+	double shellij = (1.0 + l2)*sij;
+	double cutij = (1.0 + l1)*sij; 
+	double kint = (kc * l1) / (l2 - l1);
+
+	// indices
+	int gip1 = ip1[gi];
+	int gim1 = im1[gi];
+	int gjp1 = ip1[gj];
+	int gjm1 = im1[gj];
+
+	// distance between vertex i and j
+	double dx = deltaX(gi, gj, 0);
+	double dy = deltaX(gi, gj, 1);
+	double dr = sqrt(dx * dx + dy * dy);
+
+	// Gut check distance
+	double lij = 0.5 * (seg(gi) + seg(gj));
+	double dlijApprox = 0.5 * (dr + deltaR(gip1, gjp1));
+	if (dlijApprox < 4.0 * lij) {
+		// projection of vertex j onto edge i
+		hr_j2i = edge2VertexDistance(gj, gi, hx_j2i, hy_j2i, tij);
+
+		// projection of vertex i onto edge j
+		hr_i2j = edge2VertexDistance(gi, gj, hx_i2j, hy_i2j, tji);
+		
+		// check determine force based on projection
+		// if (tij < 0 && dr < shellij){
+		if (tij < 0 && dr < sij){
+			// report 
+			vivj = 1;
+			
+			// force
+			xij = dr / sij;
+			if (dr > cutij){
+				ftmp = kint * (1.0 + l2 - xij) / sij;
+				addU(-0.5 * kint * pow(1.0 + l2 - xij, 2.0));
+			}
+			else{
+				ftmp = -kc * (1 - xij) / sij;
+				addU(0.5 * kc * (pow(1.0 - xij, 2.0) - l1 * l2));
+			}
 
 			// force info (TRYING REPULSIVE-ONLY AT CORNERS)
-			ftmp = -(kc / sij) * (1 - xij);	// NOTE: -1 x mag of the force, it keeps to convention that dfx is > 0 for forces on gi
+			// ftmp = -(kc / sij) * (1 - xij);	// NOTE: -1 x mag of the force, it keeps to convention that dfx is > 0 for forces on gi
 
 			// force elements
 			dfx = ftmp * (dx / dr);
@@ -579,12 +766,6 @@ void adcm2D::SRAttractivePWForce(const int gi, const int gj, bool& vivj, bool &v
 			// dp.at(gim1) = dp.at(gi);
 			// dp.at(gj) = -dp.at(gi);
 			// dp.at(gjm1) = -dp.at(gi);
-
-			// OLD: update surface tension based on neighbors
-			// st.at(gi) += dt * (0.5 * (st.at(gjm1) + st.at(gj)) - st.at(gi));
-			// st.at(gim1) += dt * (0.5 * (st.at(gjm1) + st.at(gj)) - st.at(gim1));
-			// st.at(gj) += dt * (0.5 * (st.at(gim1) + st.at(gi)) - st.at(gj));
-			// st.at(gjm1) += dt * (0.5 * (st.at(gim1) + st.at(gi)) - st.at(gjm1));
 		}
 		else if (tij > 0 && tij < 1 && hr_j2i < shellij) {
 			// report
@@ -627,11 +808,6 @@ void adcm2D::SRAttractivePWForce(const int gi, const int gj, bool& vivj, bool &v
 			// dp.at(gi) = ka * ((1.0 / (area(ci) - a0[ci])) - (1.0 / abs((area(cj) - a0[cj]))));
 			// dp.at(gj) = -dp.at(gi);
 			// dp.at(gjm1) = -dp.at(gi);
-
-			// OLD: update surface tension based on neighbors
-			// st.at(gi) += dt * (0.5 * (st.at(gjm1) + st.at(gj)) - st.at(gi));
-			// st.at(gj) += dt * (0.5 * (st.at(gim1) + st.at(gi)) - st.at(gj));
-			// st.at(gjm1) += dt * (0.5 * (st.at(gim1) + st.at(gi)) - st.at(gjm1));
 		}
 
 		// also check projection from edge j to vertex i (same as tij case, but note use of -dx and -dy)
@@ -676,11 +852,6 @@ void adcm2D::SRAttractivePWForce(const int gi, const int gj, bool& vivj, bool &v
 			// dp.at(gi) = ka * ((1.0 / (area(ci) - a0[ci])) - (1.0 / abs((area(cj) - a0[cj]))));
 			// dp.at(gim1) = dp.at(gi);
 			// dp.at(gj) = -dp.at(gi);
-
-			// OLD: update surface tension based on neighbors
-			// st.at(gi) += dt * (0.5 * (st.at(gjm1) + st.at(gj)) - st.at(gi));
-			// st.at(gim1) += dt * (0.5 * (st.at(gjm1) + st.at(gj)) - st.at(gim1));
-			// st.at(gj) += dt * (0.5 * (st.at(gim1) + st.at(gi)) - st.at(gj));
 		}
 	}
 }
@@ -762,12 +933,6 @@ void adcm2D::alignmentForce(const int gi, const int gj){
 	addF(-fjx, gjp1, 0);
 	addF(-fjy, gjp1, 1);
 }
-
-
-// // Giammona - Campàs medium-range, cts adhesion potential
-// void adcm2D::CTSAttractivePWForce(const int gi, const int gj){
-
-// }
 
 
 
@@ -1057,10 +1222,9 @@ void adcm2D::adcm2DOsmoticPressureShapeForces(){
 				nvtmp = nv.at(ci);
 
 				// update potential energy, pressure
-				// NOTE: this is not yet the pressure, just the contribution from \partial U / \partial L
-				// NOTE: NEED TO RECOMPUTE CONTRIBUTION TO EXTERNAL PRESSURE
-				U 		+= 0.0;
-				Pinst 	+= 0.0;
+				da 		= area(ci) - a0.at(ci);
+				U 		-= ka * log(da);
+				Pinst 	-= (ka / da) * ((2.0 * area(ci)) / L[0]);
 
 				// compute cell center of mass
 				xi = x[NDIM * gi];
@@ -1162,7 +1326,7 @@ void adcm2D::adcm2DOsmoticPressureShapeForces(){
 	for (ci=0; ci<NCELLS; ci++){
 		for (vi=0; vi<nv[ci]; vi++){
 			// set dp for vertex gi based on area of ci
-			dp.at(gi) = (ka / (area(ci) - a0[ci])) - Posm;
+			dp.at(gi) = Posm - (ka / (area(ci) - a0[ci]));
 			gi++;
 		}
 	}
@@ -2160,9 +2324,11 @@ void adcm2D::activeTensionFluctuations(const double Tsim, const double Tprint, c
 	k = 0;
 	while(t < Tsim){
 		// compute forces
-		adcm2DForceUpdate();
+		// cout << "updating forces positions at t = " << t << endl;
+		activeTensionForceUpdate();
 
 		// drive fluctuations to surface tensions between cells (or with cells and void)
+		// cout << "updating surface tensions at t = " << t << endl;
 		for (ci=0; ci<NCELLS+1; ci++){
 			for (cj=ci; cj<NCELLS+1; cj++){
 				// get gam0
@@ -2184,16 +2350,8 @@ void adcm2D::activeTensionFluctuations(const double Tsim, const double Tprint, c
 			}
 		}
 
-		// // OLD: drive fluctuations to surface tensions of individual segments
-		// for (gi=0; gi<NVTOT; gi++){
-		// 	r1 = drand48();
-		// 	r2 = drand48();
-		// 	grv = sqrt(-2.0 * log(r1)) * cos(2.0 * PI * r2);
-		// 	st.at(gi) += dt * (gam0 - st.at(gi)) + dt * kneigh * ((st.at(im1[gi]) - st.at(gi)) + (st.at(ip1[gi]) - st.at(gi))) + noiseStrength * grv;
-		// 	// st.at(gi) += dt * (gam0 - st.at(gi)) + noiseStrength * grv;
-		// }
-
 		// Euler update
+		// cout << "updating positions at t = " << t << endl;
 		for (i=0; i<vertDOF; i++)
 			x[i] += dt * F[i];
 
@@ -2206,7 +2364,7 @@ void adcm2D::activeTensionFluctuations(const double Tsim, const double Tprint, c
 			cout << " 	F L U C T U A T I O N S		" << endl;
 			cout << "===============================" << endl;
 			cout << endl;
-			cout << "	** t 		= " << t << endl;
+			cout << "	** t 		= " << t << " / " << Tsim << endl;
 			cout << "	** nprint 	= " << nprint << endl;
 
 			// update nprint
@@ -2257,6 +2415,12 @@ void adcm2D::printADCM2DConfiguration(){
 	posout << setw(w) << left << "BOXSZ";
 	posout << setw(wnum) << setprecision(pnum) << left << Lx;
 	posout << setw(wnum) << setprecision(pnum) << left << Ly;
+	posout << endl;
+
+	// print stresses
+	posout << setw(w) << left << "STRSS";
+	posout << setw(wnum) << setprecision(pnum) << left << Pinst;
+	posout << setw(wnum) << setprecision(pnum) << left << Sinst;
 	posout << endl;
 
 	// print coordinate for rest of the cells

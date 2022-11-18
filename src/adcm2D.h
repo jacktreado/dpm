@@ -75,9 +75,12 @@ public:
 	void setW(double val) { W = val; };
 	void setPosm(double val) { Posm = val; };
 
+	void regularizeA0();
+
 	// setup potential function pointer
 	void useRepulsiveForce() { pwFrc = &adcm2D::SRRepulsivePWForce; }; 
 	void useAttractiveForce() { pwFrc = &adcm2D::SRAttractivePWForce; }; 
+	void useActiveTensionForce() {pwFrc = &adcm2D::SRAttractiveActiveTensionPWForce; };
 	void useAlignmentForce() { pwFrc = &adcm2D::segmentPWAlignment; };
 	void useBondedForce() { pwFrc = &adcm2D::checkBondPWForce; };
 
@@ -97,6 +100,7 @@ public:
 
 	// force update
 	void adcm2DForceUpdate() { checkVertices(); U = 0.0; Pinst = 0.0; Sinst = 0.0; fill(F.begin(), F.end(), 0.0); (*this.*shpFrc)(); circuloLinePWForceUpdate(); stressUpdate(); };
+	void activeTensionForceUpdate();
 	// void adcm2DForceUpdate() { U = 0.0; Pinst = 0.0; Sinst = 0.0; fill(F.begin(), F.end(), 0.0); (*this.*shpFrc)(); circuloLinePWForceUpdate(); stressUpdate(); };
 
 
@@ -106,6 +110,8 @@ public:
 	void SRRepulsivePWForce(const int gi, const int gj) { bool a, b, c; SRRepulsivePWForce(gi, gj, a, b, c); };
 	void SRAttractivePWForce(const int gi, const int gj, bool&, bool&, bool&);
 	void SRAttractivePWForce(const int gi, const int gj) { bool a, b, c; SRAttractivePWForce(gi, gj, a, b, c); };
+	void SRAttractiveActiveTensionPWForce(const int gi, const int gj, bool&, bool&, bool&);
+	void SRAttractiveActiveTensionPWForce(const int gi, const int gj) { bool a, b, c; SRAttractiveActiveTensionPWForce(gi, gj, a, b, c); };
 	void GhostAttractivePWForce(const int gi, const int gj);
 	void segmentPWAlignment(const int gi, const int gj); 
 	void alignmentForce(const int gi, const int gj);

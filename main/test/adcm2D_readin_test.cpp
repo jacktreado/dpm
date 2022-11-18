@@ -11,17 +11,17 @@ using namespace std;
 
 int main() {
     // local variables
-    double dt = 0.0001;
+    double dt = 0.001;
 
     // input variables
     double boxLengthScale = 3.0;
     int seed = 1;
-    double kc = 1.0;
+    double kc = 0.1;
     double W = 0;
-    double gam = 1e-1;
+    double gam = 0.1;
 
     // osmotic pressure scaling
-    double Posm_lambda = 0.1; // sets preferred area = a0 * (1 + Posm_lambda)
+    double Posm_lambda = 0.05; // sets preferred area = a0 * (1 + Posm_lambda)
     double Posm = 1.0 / Posm_lambda;
 
     // input file name
@@ -44,29 +44,30 @@ int main() {
     sim.setstMat(gam);
 
     // double check pressure
-    // double Ftol = 1e-8;
-    // double dPtol = 1e-8;
-    // double P0 = 0.5 * gam;
+    // double Ftol = 1e-6;
+    // double dPtol = 1e-6;
+    // double P0 = 1e-5;
     // sim.nphSplitFIRE(Ftol, dPtol, P0, dt, 1);
     // return 0;
 
     
     // use adhesion
-    double l2 = 0.1;
-    double l1 = 0.5 * l2; 
-    sim.useAttractiveForce();
+    double l2 = 0.5;
+    double l1 = 0.95 * l2; 
+    sim.useActiveTensionForce();
     sim.setl1(l1);
     sim.setl2(l2);
 
     // use osmotic pressure
     sim.useOsmoticPressureShapeForce();
     sim.setPosm(Posm);
+    sim.regularizeA0();
 
     // run active protocol
-    double Tsim = 10;
-    double Tprint = 2.0 * dt;
+    double Tsim = 20;
+    double Tprint = 0.5;
     double kneigh = 20.0;
-    double deltaST = 0.01;
+    double deltaST = 2.0;
 
     // crawling variables
     double v0 = 0.05;
