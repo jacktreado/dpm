@@ -140,7 +140,7 @@ end
 % get frames to plot
 
 % single frame
-% FSTART = NFRAMES;
+% FSTART = 1;
 % if FSTART > NFRAMES
 %     FSTART = NFRAMES;
 % end
@@ -154,7 +154,7 @@ FEND = NFRAMES;
 FSTEP = 1;
 DF = FEND - FSTART;
 if DF > 100 && DF <= 400
-    FSTEP = 3;
+    FSTEP = 4;
 elseif DF > 400 && DF <= 800
     FSTEP = 6;
 elseif DF > 800
@@ -162,7 +162,7 @@ elseif DF > 800
 end
 
 % make a movie
-makeAMovie = 0;
+makeAMovie = 1;
 if FSTART == FEND
     % draw boundary if single frame, don't make a movie
     bndry = 1;
@@ -172,7 +172,7 @@ else
 end
 ctccopy = 1;
 if makeAMovie == 1
-    moviestr = 'tensionFlucs_DT1000_st1e-4_l10.1_stMat.mp4';
+    moviestr = 'adcm2D_relaxation_gam0.1.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
