@@ -140,7 +140,7 @@ end
 % get frames to plot
 
 % single frame
-% FSTART = 1;
+% FSTART = NFRAMES;
 % if FSTART > NFRAMES
 %     FSTART = NFRAMES;
 % end
@@ -154,7 +154,7 @@ FEND = NFRAMES;
 FSTEP = 1;
 DF = FEND - FSTART;
 if DF > 100 && DF <= 400
-    FSTEP = 4;
+    FSTEP = 2;
 elseif DF > 400 && DF <= 800
     FSTEP = 6;
 elseif DF > 800
@@ -172,7 +172,7 @@ else
 end
 ctccopy = 1;
 if makeAMovie == 1
-    moviestr = 'adcm2D_relaxation_gam0.1.mp4';
+    moviestr = 'adcm2D_VARVERTS_gam0.1_W0_l21.0_l10.01_dT1.5.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);

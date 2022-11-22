@@ -301,7 +301,7 @@ double adcm2D::edge2VertexDistance(const int gv, const int ge, double &hx, doubl
 // update all forces when using active tension fluctuations
 void adcm2D::activeTensionForceUpdate(){
 	// update vertex numbers
-	// checkVertices();
+	checkVertices();
 
 	// reset energies, stresses, forces
 	U = 0.0; 
@@ -318,6 +318,7 @@ void adcm2D::activeTensionForceUpdate(){
 		for (int vi=0; vi<nv.at(ci); vi++){
 			// set tension cell-void coupling
 			st.at(gi) = stMat.at(0).at(ci+1);
+			// st.at(gi) += dt * (stMat.at(0).at(ci+1) - st.at(gi));
 
 			// increment global index
 			gi++;
@@ -685,10 +686,13 @@ void adcm2D::SRAttractivePWForce(const int gi, const int gj, bool &vivj, bool &v
 void adcm2D::SRAttractiveActiveTensionPWForce(const int gi, const int gj, bool &vivj, bool &viej, bool &vjei){
 	// local variables
 	int ci, vi, cj, vj;
-	double tij, tji;
+	double tij, tji; 
 	double hr_i2j, hr_j2i, hx_i2j, hx_j2i, hy_i2j, hy_j2i;
 	double ftmp, dfx, dfy;
 	double xij;
+
+	// relaxation rate
+	const double rrate = 1.0;
 
 	// get ci and cj (for surface tension update)
 	cindices(ci, vi, gi);
@@ -731,17 +735,17 @@ void adcm2D::SRAttractiveActiveTensionPWForce(const int gi, const int gj, bool &
 			
 			// force
 			xij = dr / sij;
-			// if (dr > cutij){
-			// 	ftmp = kint * (1.0 + l2 - xij) / sij;
-			// 	addU(-0.5 * kint * pow(1.0 + l2 - xij, 2.0));
-			// }
-			// else{
-			// 	ftmp = -kc * (1 - xij) / sij;
-			// 	addU(0.5 * kc * (pow(1.0 - xij, 2.0) - l1 * l2));
-			// }
+			if (dr > cutij){
+				ftmp = kint * (1.0 + l2 - xij) / sij;
+				addU(-0.5 * kint * pow(1.0 + l2 - xij, 2.0));
+			}
+			else{
+				ftmp = -kc * (1 - xij) / sij;
+				addU(0.5 * kc * (pow(1.0 - xij, 2.0) - l1 * l2));
+			}
 
 			// force info (TRYING REPULSIVE-ONLY AT CORNERS)
-			ftmp = -(kc / sij) * (1 - xij);	// NOTE: -1 x mag of the force, it keeps to convention that dfx is > 0 for forces on gi
+			// ftmp = -(kc / sij) * (1 - xij);	// NOTE: -1 x mag of the force, it keeps to convention that dfx is > 0 for forces on gi
 
 			// force elements
 			dfx = ftmp * (dx / dr);
@@ -762,10 +766,10 @@ void adcm2D::SRAttractiveActiveTensionPWForce(const int gi, const int gj, bool &
 			st.at(gj) = stMat.at(ci + 1).at(cj + 1);
 			st.at(gjm1) = stMat.at(ci + 1).at(cj + 1);
 
-			// st.at(gi) += 0.1 * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gi));
-			// st.at(gim1) += 0.1 * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gim1));
-			// st.at(gj) += 0.1 * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gj));
-			// st.at(gjm1) += 0.1 * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gjm1));
+			// st.at(gi) += rrate * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gi));
+			// st.at(gim1) += rrate * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gim1));
+			// st.at(gj) += rrate * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gj));
+			// st.at(gjm1) += rrate * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gjm1));
 
 			// dp.at(gi) = ka * ((1.0 / (area(ci) - a0[ci])) - (1.0 / abs((area(cj) - a0[cj]))));
 			// dp.at(gim1) = dp.at(gi);
@@ -810,9 +814,9 @@ void adcm2D::SRAttractiveActiveTensionPWForce(const int gi, const int gj, bool &
 			st.at(gj) = stMat.at(ci + 1).at(cj + 1);
 			st.at(gjm1) = stMat.at(ci + 1).at(cj + 1);
 
-			// st.at(gi) += 0.1 * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gi));
-			// st.at(gj) += 0.1 * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gj));
-			// st.at(gjm1) += 0.1 * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gjm1));
+			// st.at(gi) += rrate * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gi));
+			// st.at(gj) += rrate * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gj));
+			// st.at(gjm1) += rrate * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gjm1));
 
 			// dp.at(gi) = ka * ((1.0 / (area(ci) - a0[ci])) - (1.0 / abs((area(cj) - a0[cj]))));
 			// dp.at(gj) = -dp.at(gi);
@@ -858,9 +862,9 @@ void adcm2D::SRAttractiveActiveTensionPWForce(const int gi, const int gj, bool &
 			st.at(gim1) = stMat.at(ci + 1).at(cj + 1);
 			st.at(gj) = stMat.at(ci + 1).at(cj + 1);
 
-			// st.at(gi) += 0.1 * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gi));
-			// st.at(gim1) += 0.1 * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gim1));
-			// st.at(gj) += 0.1 * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gj));
+			// st.at(gi) += rrate * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gi));
+			// st.at(gim1) += rrate * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gim1));
+			// st.at(gj) += rrate * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gj));
 
 			// dp.at(gi) = ka * ((1.0 / (area(ci) - a0[ci])) - (1.0 / abs((area(cj) - a0[cj]))));
 			// dp.at(gim1) = dp.at(gi);
@@ -2339,15 +2343,17 @@ void adcm2D::activeTensionFluctuations(const double Tsim, const double Tprint, c
 	// keep track of print step
 	int nprint = 0;
 
+	// compute mean gam0
+	double meanGam0 = 0.0;
+
 	// loop
 	k = 0;
 	while(t < Tsim){
 		// compute forces
 		activeTensionForceUpdate();
-			
-
 
 		// drive fluctuations to surface tensions between cells (or with cells and void)
+		meanGam0 = 0.0;
 		for (ci=0; ci<NCELLS+1; ci++){
 			for (cj=ci; cj<NCELLS+1; cj++){
 				// get gam0
@@ -2364,10 +2370,13 @@ void adcm2D::activeTensionFluctuations(const double Tsim, const double Tprint, c
 				// update surface tension
 				sttmp = stMat.at(ci).at(cj);
 				sttmp += dt * (gam0tmp - sttmp) + noiseStrength * grv;
+				// sttmp += noiseStrength * grv;
 				stMat.at(ci).at(cj) = sttmp;
 				stMat.at(cj).at(ci) = sttmp;
+				meanGam0 += sttmp;
 			}
 		}
+		meanGam0 /= 0.5 * (NCELLS + 2) * (NCELLS + 1);
 
 		// Euler update
 		for (i=0; i<vertDOF; i++)
@@ -2384,6 +2393,7 @@ void adcm2D::activeTensionFluctuations(const double Tsim, const double Tprint, c
 			cout << endl;
 			cout << "	** t 		= " << t << " / " << Tsim << endl;
 			cout << "	** nprint 	= " << nprint << endl;
+			cout << "	** meanGam0 = " << meanGam0 << endl;
 
 			// update nprint
 			nprint++;

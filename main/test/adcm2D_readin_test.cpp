@@ -18,7 +18,7 @@ int main() {
     int seed = 1;
     double kc = 0.5;
     double gam = 0.1;
-    double W = 0.5;
+    double W = 0.0;
 
     // osmotic pressure scaling
     double Posm_lambda = 0.1; // sets preferred area = a0 * (1 + Posm_lambda)
@@ -52,8 +52,8 @@ int main() {
 
     
     // use adhesion
-    double l2 = 1e-6;
-    double l1 = 0.95 * l2; 
+    double l2 = 1.0;
+    double l1 = 0.01 * l2; 
     sim.useActiveTensionForce();
     sim.setl1(l1);
     sim.setl2(l2);
@@ -67,7 +67,7 @@ int main() {
     double Tsim = 2000;
     double Tprint = 10;
     double kneigh = 20.0;
-    double deltaST = 0.0;
+    double deltaST = 1.5;
 
     // crawling variables
     double v0 = 0.05;
