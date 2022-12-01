@@ -14,14 +14,6 @@
 	Jack Treado, 09/13/22
 * 
 	TO DO:
-		* Add bonding mechanism (NOW USING LINKING-BONDS. FOR SHARED SEGMENTS, SEE ADSSCM2D CLASS)
-		* Write force update function for circulolines in 2D
-			* In normal shape force, add shear stress calculation
-		* Incorporate constant-density vertex remapping (birth and death of i based on li and li-1)
-		* Debug, make sure energy conserved with stick circuloline potential
-		* Add compression-as-initialization protocol with FIRE for purely repulsive circlolines
-		* Add crawling model
-		* Add dynamic osmotic pressure
 		* Simulate EMT via volume / adhesion changes
 */
 
@@ -46,10 +38,6 @@ protected:
 
 	// matrix of surface tensions between each cell
 	std::vector< std::vector<double> > stMat;
-
-	// // linking bonds arrays
-	// std::vector<double *> link_loc;	 	// store locations of each linker on cell surface 
-	// std::vector<int *> link_end; 		// store vertices that the ends of each linker are attached to, will need to update in add / delete 
 
 	// pressure and shear stress
 	double Pinst;

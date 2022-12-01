@@ -63,6 +63,9 @@ int main(int argc, char const *argv[]){
     sim.setCom(0, 0.25 * L, 0.5 * L);
     sim.setCom(1, 0.75 * L, 0.5 * L);
 
+    // relax cells together using central potential
+    
+
     // -- Protocol to relax cells toward each other
     double fcheck = 10 * Ftol;
     int k = 0;

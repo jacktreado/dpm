@@ -728,8 +728,8 @@ void adcm2D::SRAttractiveActiveTensionPWForce(const int gi, const int gj, bool &
 		hr_i2j = edge2VertexDistance(gi, gj, hx_i2j, hy_i2j, tji);
 		
 		// check determine force based on projection
-		// if (tij < 0 && dr < shellij){
-		if (tij < 0 && dr < sij){
+		if (tij < 0 && dr < shellij){
+		// if (tij < 0 && dr < sij){
 			// report 
 			vivj = 1;
 			
