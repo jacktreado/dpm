@@ -52,8 +52,8 @@ int main() {
 
     
     // use adhesion
-    double l2 = 1.0;
-    double l1 = 0.01 * l2; 
+    double l2 = 0.5;
+    double l1 = 0.95 * l2; 
     sim.useActiveTensionForce();
     sim.setl1(l1);
     sim.setl2(l2);
@@ -64,10 +64,10 @@ int main() {
     sim.regularizeA0();
 
     // run active protocol
-    double Tsim = 2000;
-    double Tprint = 10;
+    double Tsim = 1000;
+    double Tprint = 2;
     double kneigh = 20.0;
-    double deltaST = 1.5;
+    double deltaST = 0.0;
 
     // crawling variables
     double v0 = 0.05;

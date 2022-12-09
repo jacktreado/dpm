@@ -1,13 +1,15 @@
-%% Script to draw outcome of adcm2D simulation
+%% Script to draw cells and to check forces from force output
 
 clear;
 close all;
 clc;
 
-% position information
+% position and force information
 dpmloc = '/Users/jacktreado/Jamming/CellSim/dpm';
 posfname = 'pos.test';
+frcfname = 'measureFriction.frc';
 posfstr = [dpmloc '/' posfname];
+frcfstr = [dpmloc '/' frcfname];
 
 % load into simulation data struct
 simdata = readADCM2DTrajectory(posfstr);
@@ -29,88 +31,55 @@ a0 = simdata.a0;
 phi0 = sum(a0,2)./(LList(:,1).*LList(:,2));
 phiA = sum(a,2)./(LList(:,1).*LList(:,2));
 
-if NCELLS < 3
+if NCELLS < 10
     pbc = 0;
 else
     pbc = 1;
 end
 
-% stresses
-P = S(:,1);
-Sxy = S(:,2);
+% get force information
+fid = fopen(frcfstr);
+ff = 1;
+frcDataList = cell(NFRAMES,1);
+while ~feof(fid)
+    % store new frame
+    newfrstr = fgetl(fid);
+    if ~strcmp(newfrstr,'NEWFR')
+        error('Issue with counting frames, ending.');
+    else
+        frcdataframe = [];
+    end
+    
+    % parse new line
+    nxtfrstr = fgetl(fid);
+    if strcmp(nxtfrstr,'ENDFR')
+        ff = ff + 1;
+        continue;
+    else
+        while ~strcmp(nxtfrstr,'ENDFR')
+            % print
+            fprintf(['On frame %d, nxtfrstr = ' nxtfrstr '\n'], ff);
 
-% phi = area + edge of circulolines
-ravg = cellfun(@mean, r);
-phiX = (sum(a, 2) + sum(ravg .* p, 2) + sum(pi .* ravg.^2, 2)) ./ (LList(:,1) .* LList(:,2));
-figure(10), clf, hold on, box on;
-plot(phiX, 'ko','markersize',8);
-xlabel('frame','Interpreter','latex');
-ylabel('$\phi$','Interpreter','latex');
-ax = gca;
-ax.FontSize = 24;
-
-
-% plot surface tension fluctuations
-plotClr = winter(3);
-meanst = cellfun(@mean, st);
-figure(11), clf, hold on, box on;
-patchErrorBar((1:size(meanst,1))',mean(meanst,2),std(meanst,0,2),'-o',8,'b','b',0.5);
-xlabel('frame','Interpreter','latex');
-ylabel('$\langle \gamma_{i\mu} \rangle$','Interpreter','latex');
-ax = gca;
-ax.FontSize = 24;
-
-
-% plot perimeter fluctuations
-figure(12), clf, hold on, box on;
-patchErrorBar((1:size(meanst,1))',mean(p - mean(p),2),std(p - mean(p),0,2),'-o',8,plotClr(1,:),plotClr(1,:),0.5);
-% plot(p - mean(p), '-o','markersize',8);
-xlabel('frame','Interpreter','latex');
-ylabel('$\Delta p_\mu$','Interpreter','latex');
-ax = gca;
-ax.FontSize = 24;
-
-% plot area fluctuations
-figure(13), clf, hold on, box on;
-patchErrorBar((1:size(meanst,1))',mean(a - mean(a),2),std(a - mean(a),0,2),'-o',8,plotClr(1,:),plotClr(1,:),0.5);
-% plot(p - mean(p), '-o','markersize',8);
-xlabel('frame','Interpreter','latex');
-ylabel('$\Delta a_\mu$','Interpreter','latex');
-ax = gca;
-ax.FontSize = 24;
+            % parse "next frame string"
+            frcdatatmp = sscanf(nxtfrstr,'%f %f %f %f %f %f %f');
+            frcdatatmp = frcdatatmp';
+            
+            % store data
+            frcdataframe = [frcdataframe; frcdatatmp];
+            
+            % get next
+            nxtfrstr = fgetl(fid);
+        end
+        if strcmp(nxtfrstr,'ENDFR')
+            frcDataList{ff} = frcdataframe;
+            ff = ff + 1;
+        end
+    end
+end
 
 
-% plot area strains
-da = a./a0 - 1.0;
-figure(14), clf, hold on, box on;
-patchErrorBar((1:NFRAMES)',mean(da,2),std(da,0,2),'-o',8,plotClr(1,:),plotClr(1,:),0.5);
-% plot(p - mean(p), '-o','markersize',8);
-xlabel('frame','Interpreter','latex');
-ylabel('$\epsilon_a$','Interpreter','latex');
-ax = gca;
-ax.FontSize = 24;
+%% Draw cells with forces
 
-
-% plot shape fluctuations
-figure(15), clf, hold on, box on;
-patchErrorBar((1:size(meanst,1))',mean(calA,2),std(calA,0,2),'-o',8,plotClr(2,:),plotClr(2,:),0.5);
-xlabel('frame','Interpreter','latex');
-ylabel('$\langle \mathcal{A} \rangle$','Interpreter','latex');
-ax = gca;
-ax.FontSize = 24;
-
-
-% plot instantaneous pressure 
-figure(16), clf, hold on, box on;
-plot(1:NFRAMES,P,'-ko','markerfacecolor',plotClr(2,:),'markersize',10);
-xlabel('frame','Interpreter','latex');
-ylabel('$P$','Interpreter','latex');
-ax = gca;
-ax.FontSize = 24;
-ax.YScale = 'log';
-
-
-%% Draw cells over time
 
 % color by shape or size
 colorOpt = -1;
@@ -139,14 +108,14 @@ end
 
 % get frames to plot
 
-% % single frame
-% FSTART = NFRAMES;
+% single frame
+% FSTART = 2135;
 % if FSTART > NFRAMES
 %     FSTART = NFRAMES;
 % end
 % FEND = FSTART;
 
-% movie frames
+% % movie frames
 FSTART = 1;
 FEND = NFRAMES;
 
@@ -154,9 +123,9 @@ FEND = NFRAMES;
 FSTEP = 1;
 DF = FEND - FSTART;
 if DF > 100 && DF <= 400
-    FSTEP = 2;
+    FSTEP = 1;
 elseif DF > 400 && DF <= 800
-    FSTEP = 6;
+    FSTEP = 4;
 elseif DF > 800
     FSTEP = 10;
 end
@@ -215,7 +184,8 @@ for ff = FSTART:FSTEP:FEND
         if bndry == 1
             drawSSPoly(xtmp, ytmp, rtmp, clr, L, L, pbc, bndry);
         else
-            drawSSProjPoly(xtmp, ytmp, rtmp, clr, L, L, pbc);
+%             drawSSProjPoly(xtmp, ytmp, rtmp, clr, L, L, pbc);
+            patch('Faces', [1:nvtmp, 1], 'Vertices', [xtmp ytmp], 'EdgeColor', 'k', 'FaceColor', clr);
         end
         text(mean(xtmp), mean(ytmp), num2str(nn));
     end
@@ -226,16 +196,26 @@ for ff = FSTART:FSTEP:FEND
     ax = gca;
     ax.XTick = [];
     ax.YTick = [];
-%     ax.XLim = [-0.25 1.25]*L;
-%     ax.YLim = [-0.25 1.25]*L;
-    ax.XLim = [1.5258    2.7108];
-    ax.YLim = [1.6214    2.8064];
-    
-%     colorbar
-%     colormap(jet);
-%     cb = colorbar;
-%     cb.Ticks = [];
-    
+    ax.XLim = [-0.25 1.25]*L;
+    ax.YLim = [-0.25 1.25]*L;
+    ax.XLim = [1.4585    1.9268];
+    ax.YLim = [1.1241    1.5923];
+
+        % plot forces
+    if ~isempty(frcDataList{ff})
+        % loop over forces, plot
+        fdl = frcDataList{ff};
+        NFRC = size(fdl,1);
+        for gg = 1:NFRC
+            fdltmp = fdl(gg,:);
+            p = fdltmp([3 4]);
+            del = fdltmp([5 6]);
+            plot(p(1), p(2), 'ko','markersize', 6, 'markerfacecolor', 'b');
+            plot(p(1) + del(1), p(2) + del(2), 'ko', 'markersize', 8, 'markerfacecolor', 'r');
+            plot(p(1) + [0 del(1)], p(2) + [0 del(2)], 'k-', 'linewidth', 2);
+        end
+        test = 1;
+    end
     
     % if making a movie, save frame
     if makeAMovie == 1
@@ -248,5 +228,3 @@ end
 if makeAMovie == 1
     close(vobj);
 end
-
-

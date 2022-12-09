@@ -91,8 +91,7 @@ public:
 	void activeTensionForceUpdate();
 	// void adcm2DForceUpdate() { U = 0.0; Pinst = 0.0; Sinst = 0.0; fill(F.begin(), F.end(), 0.0); (*this.*shpFrc)(); circuloLinePWForceUpdate(); stressUpdate(); };
 
-
-	// interaction forces
+	// interaction force functions
 	void circuloLinePWForceUpdate();
 	void SRRepulsivePWForce(const int gi, const int gj, bool&, bool&, bool&);
 	void SRRepulsivePWForce(const int gi, const int gj) { bool a, b, c; SRRepulsivePWForce(gi, gj, a, b, c); };
@@ -104,6 +103,10 @@ public:
 	void segmentPWAlignment(const int gi, const int gj); 
 	void alignmentForce(const int gi, const int gj);
 	void checkBondPWForce(const int gi, const int gj);
+
+	// compute individual forces
+	double vvSoftAdhesionForce(const int gv1, const int gv2, const double dr, const double dx, const double dy);
+	double evSoftAdhesionForce(const int ge, const int gv, const double dr, const double dx, const double dy, const double t);
 
 	// shape forces
 	void adcm2DShapeForces();
@@ -127,6 +130,7 @@ public:
 
 	// printing
 	void printADCM2DConfiguration();
+	void printInstantaneousForces(std::ofstream &outputObj);
 };
 
 #endif

@@ -2,6 +2,9 @@
 // compile with: g++ --std=c++11 -I src main/test/adcm2D_test_collision.cpp  src/*.cpp -o adcm2D_test_collision.o
 // run with : ./adcm2D_test_collision.o
 
+// TO DO:
+// * Check energy conservation with normal area term (because there is a well defined energy there) OR add appropriate energy for osmotic pressure force
+
 #include<iostream>
 #include<fstream>
 #include<string>
@@ -12,25 +15,29 @@ using namespace std;
 int main() {
     // input variables
     int numcells = 3;
-    int numverts = 16;
+    int numverts = 32;
     double sizeDisp = 0;
     double phi0 = 0.2;
     double boxLengthScale = 3.5;
     double clScale = 1.0;
-    double gam0 = 0.001;
+    double gam0 = 0.1;
     double kc = 0.1;
     int seed = 2;
 
     // collision variables
-    int NT = 2e5;
-    int NSKIP = 2000;
-    double dt = 0.01;
+    double Tend = 500;
+    double Tskip = 1.0;
+    double dt = 0.001;
     double v0 = 0.05;
     double cx, cy, vx, vy;    
 
     // output file name
     string posf = "adcm2D_test_collision.pos";
     string enf = "adcm2D_test_collision.en";
+    string forcef = "adcm2D_test_collision.frc";
+
+    // open force output file
+    ofstream forceOuputObj(forcef.c_str());
 
     // initialize
     adcm2D sim(numcells, numverts, sizeDisp, phi0, boxLengthScale, clScale, gam0, seed);
@@ -41,11 +48,22 @@ int main() {
     // set constants
     sim.setkc(kc);
     sim.setdt_pure(dt);
+    sim.setgam(gam0);
+    sim.setgam0(gam0);
+    sim.setstMat(gam0);
 
-    // use adhesion
-    sim.setl1(0.01);
-    sim.setl2(0.02);
-    sim.useAttractiveForce();
+     // use adhesion
+    double l2 = 0.05;
+    double l1 = 0.5 * l2; 
+    sim.useActiveTensionForce();
+    sim.setl1(l1);
+    sim.setl2(l2);
+    // sim.useRepulsiveForce();
+
+    // use osmotic pressure
+    sim.useOsmoticPressureShapeForce();
+    sim.setPosm(10.0);
+    sim.regularizeA0();
 
     // initial collision velocities
     for (int ci=0; ci<numcells; ci++){
@@ -70,7 +88,10 @@ int main() {
     // sim.printNeighborList();
 
     // integrate time
-    for (int tt=0; tt<NT; tt++){
+    double t = 0.0;
+    int nprint = 0;
+    double Px, Py;
+    while (t < Tend){
         // VV velocity half-step update
 		sim.vvVelUpdate();
 
@@ -78,28 +99,41 @@ int main() {
 		sim.vvPosUpdate();
 
 		// Update Forces & Potential Energy
-		sim.adcm2DForceUpdate();
+		sim.activeTensionForceUpdate();
+        // sim.adcm2DForceUpdate();
 
 		// VV velocity half-step update
 		sim.vvVelUpdate();
 
         // print statement
-		if (tt % NSKIP == 0){
+		if (floor(t / Tskip) == nprint){
+            // get current linear momentum
+            sim.netLinearMomentum2D(Px, Py);
+
 			cout << endl << endl;
 			cout << "===========================================" << endl;
 			cout << " 	N V E 									" << endl;
 			cout << "===========================================" << endl;
 			cout << endl;
-			cout << "	** tt 		= " << tt << endl;
+            cout << "   ** t        = " << t << endl;
+			cout << "   ** nprint 	= " << nprint << endl;
 			cout << "	** U 		= " << sim.getU() << endl;
 			cout << " 	** K 		= " << sim.vertexKineticEnergy() << endl;
 			cout << " 	** E 		= " << sim.getU() + sim.vertexKineticEnergy() << endl;
-			cout << "	** dt 		= " << dt << endl;
+            cout << "   ** net Px   = " << Px << endl;
+            cout << "   ** net Py   = " << Py << endl;
+            cout << "   ** net Lz   = " << sim.netAngularMomentum2D() << endl << endl;
 
 			// print it
             sim.printADCM2DConfiguration();
+            sim.printInstantaneousForces(forceOuputObj);
+            nprint++;
 		}
+
+        // update time
+        t += dt;
     }
 
+    forceOuputObj.close();
     return 0;
 }

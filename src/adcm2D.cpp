@@ -257,7 +257,8 @@ double adcm2D::getVertexEdgeProjection(const int gv, const int ge){
 	return (dx * ux + dy * uy) / l;
 }
 
-double adcm2D::edge2VertexDistance(const int gv, const int ge, double &hx, double &hy, double &tev){
+// points from edge to vertex (PASS EDGE IN FIRST)
+double adcm2D::edge2VertexDistance(const int ge, const int gv, double &hx, double &hy, double &tev){
 	// local variables
 	double cp, dp, dx, dy, ux, uy, l;
 
@@ -301,7 +302,7 @@ double adcm2D::edge2VertexDistance(const int gv, const int ge, double &hx, doubl
 // update all forces when using active tension fluctuations
 void adcm2D::activeTensionForceUpdate(){
 	// update vertex numbers
-	checkVertices();
+	// checkVertices();
 
 	// reset energies, stresses, forces
 	U = 0.0; 
@@ -442,10 +443,10 @@ void adcm2D::SRRepulsivePWForce(const int gi, const int gj, bool& vivj, bool &vi
 	double dlijApprox = 0.5 * (dr + deltaR(gip1, gjp1));
 	if (dlijApprox < 4.0 * lij) {
 		// projection of vertex j onto edge i
-		hr_j2i = edge2VertexDistance(gj, gi, hx_j2i, hy_j2i, tij);
+		hr_j2i = edge2VertexDistance(gi, gj, hx_j2i, hy_j2i, tij);
 
 		// projection of vertex i onto edge j
-		hr_i2j = edge2VertexDistance(gi, gj, hx_i2j, hy_i2j, tji);
+		hr_i2j = edge2VertexDistance(gj, gi, hx_i2j, hy_i2j, tji);
 		
 		// check determine force based on projection
 		if (tij < 0 && dr < sij){
@@ -569,10 +570,10 @@ void adcm2D::SRAttractivePWForce(const int gi, const int gj, bool &vivj, bool &v
 	double dlijApprox = 0.5 * (dr + deltaR(gip1, gjp1));
 	if (dlijApprox < 4.0 * lij) {
 		// projection of vertex j onto edge i
-		hr_j2i = edge2VertexDistance(gj, gi, hx_j2i, hy_j2i, tij);
+		hr_j2i = edge2VertexDistance(gi, gj, hx_j2i, hy_j2i, tij);
 
 		// projection of vertex i onto edge j
-		hr_i2j = edge2VertexDistance(gi, gj, hx_i2j, hy_i2j, tji);
+		hr_i2j = edge2VertexDistance(gj, gi, hx_i2j, hy_i2j, tji);
 		
 		// check determine force based on projection
 		// if (tij < 0 && dr < shellij){
@@ -676,35 +677,49 @@ void adcm2D::SRAttractivePWForce(const int gi, const int gj, bool &vivj, bool &v
 }
 
 
-// short-range (SR) _attractive_ pairwise force between two circulolines
-// TO DO:
-// 	* Add \Delta P update here for each vertex in contact with other segments
-// 	* Create new shape force function that resets to \Delta P = Pi - P0 after every force update
-// 	* in new construction, a0 is now MINIMUM area, not PREFERRED a0. Copy AF model for ideas about a0
+// short-range (SR) _attractive_ pairwise force between two circulolines WITH SURFACE TENSION FLUCTUATIONS
 // 
-// NOTE: on 11/02, added CELL-CELL surface tension matrix, it defines tension here, but OU process governed below in active tension fluctuation function
-void adcm2D::SRAttractiveActiveTensionPWForce(const int gi, const int gj, bool &vivj, bool &viej, bool &vjei){
+// Procedure:
+// 1. Compute dlijApprox, approx dist (lower bound) between segment centers
+// 2. If dlijApprox small enough, 
+// 		a. 	compute projection from edges im1, i, ip1 onto vertex j
+// 				i. 		compute vertex-vertex force if vertex i and vertex j overlap
+// 				ii.		otherwise, compute edge-vertex force depending on projection overlap between edges on mu and vertex (j, nu)
+// 		b. 	compute projection from edges jm1, j, jp1 onto vertex i
+// 				i. 		compute only edge-vertex force depending on projection overlap between edges on nu and vertex (i, mu)
+// 
+// TO DO:
+//  * How to make surface surface tensions vary properly?
+// 	-- what happens if vertex j overlaps with 1 or more edges near i, but vertex i overlaps also with multiple edges near j? 
+// 	-- what happens if the number of edges overlapped by vertex j does not equal the number of edges overlapped by vertex i? 
+// 		** will this create problems?
+//	-- how to make sure surface tension variation is not extreme when edges bind and unbind? How to lag the surface tensions on a segment-basis across multiple functions?
+// 
+void adcm2D::SRAttractiveActiveTensionPWForce(const int gi, const int gj, bool &vivj, bool &viej, bool &vjei) {
 	// local variables
 	int ci, vi, cj, vj;
-	double tij, tji; 
-	double hr_i2j, hr_j2i, hx_i2j, hx_j2i, hy_i2j, hy_j2i;
-	double ftmp, dfx, dfy;
-	double xij;
+	double ftmp;
 
-	// relaxation rate
-	const double rrate = 1.0;
+	// projection components from EDGES ((im1, i, ip1), mu) TO VERTEX (j, nu)
+	double tim1j, tij, tip1j;
+	double hr_ij, hx_ij, hy_ij;
+	double hr_im1j, hx_im1j, hy_im1j;
+	double hr_ip1j, hx_ip1j, hy_ip1j;
+
+	// projection components from EDGES ((jm1, j, jp1), nu) TO VERTEX (i, mu)
+	double tjm1i, tji, tjp1i;
+	double hr_ji, hx_ji, hy_ji;
+	double hr_jm1i, hx_jm1i, hy_jm1i;
+	double hr_jp1i, hx_jp1i, hy_jp1i;
 
 	// get ci and cj (for surface tension update)
 	cindices(ci, vi, gi);
 	cindices(cj, vj, gj);
 
-	// contact distance
+	// contact distances
 	double sij = r[gi] + r[gj];
-
-	// shell, cutoff distance
 	double shellij = (1.0 + l2)*sij;
 	double cutij = (1.0 + l1)*sij; 
-	double kint = (kc * l1) / (l2 - l1);
 
 	// indices
 	int gip1 = ip1[gi];
@@ -717,161 +732,205 @@ void adcm2D::SRAttractiveActiveTensionPWForce(const int gi, const int gj, bool &
 	double dy = deltaX(gi, gj, 1);
 	double dr = sqrt(dx * dx + dy * dy);
 
+	// distance between vertex i and jp1
+	double drjip1 = deltaR(gj, gip1);
+	double drijp1 = deltaR(gi, gjp1);
+
 	// Gut check distance
 	double lij = 0.5 * (seg(gi) + seg(gj));
 	double dlijApprox = 0.5 * (dr + deltaR(gip1, gjp1));
-	if (dlijApprox < 4.0 * lij) {
-		// projection of vertex j onto edge i
-		hr_j2i = edge2VertexDistance(gj, gi, hx_j2i, hy_j2i, tij);
-
-		// projection of vertex i onto edge j
-		hr_i2j = edge2VertexDistance(gi, gj, hx_i2j, hy_i2j, tji);
+	if (dlijApprox < 6.0 * lij) {
+		// vectors from edge to vertex (EDGE IS PASSED FIRST)
+		hr_ij = edge2VertexDistance(gi, gj, hx_ij, hy_ij, tij);
+		hr_ji = edge2VertexDistance(gj, gi, hx_ji, hy_ji, tji);
 		
-		// check determine force based on projection
-		if (tij < 0 && dr < shellij){
-		// if (tij < 0 && dr < sij){
-			// report 
-			vivj = 1;
+		// -- 	force due to projection from edge i onto vertex j, or due to vertex i - vertex j overlap, 
+		// 		or due to projection from edge j onto vertex i
+		if (dr < shellij) {
+			// compute projection from edge im1 to vertex j (PASS EDGE INDEX FIRST)
+			hr_im1j = edge2VertexDistance(gim1, gj, hx_im1j, hy_im1j, tim1j);
+			hr_jm1i = edge2VertexDistance(gjm1, gi, hx_jm1i, hy_jm1i, tjm1i);
 			
-			// force
-			xij = dr / sij;
-			if (dr > cutij){
-				ftmp = kint * (1.0 + l2 - xij) / sij;
-				addU(-0.5 * kint * pow(1.0 + l2 - xij, 2.0));
+			// check projection component, determine relevant minimum distance
+			if (tij < 0 && tim1j > 1)
+				ftmp = vvSoftAdhesionForce(gi, gj, dr, dx, dy); 					// vertex - vertex contact
+			else if (tij > 0 && tim1j > 1)
+				ftmp = evSoftAdhesionForce(gi, gj, hr_ij, hx_ij, hy_ij, tij);		// vertex - edge contact
+			else if (tij < 0 && tim1j < 1)
+				ftmp = evSoftAdhesionForce(gim1, gj, hr_im1j, hx_im1j, hy_im1j, tim1j);
+			else {
+				// projection on both i and im1, so need to check minimum
+				if (hr_ij < hr_im1j)
+					ftmp = evSoftAdhesionForce(gi, gj, hr_ij, hx_ij, hy_ij, tij);
+				else
+					ftmp = evSoftAdhesionForce(gim1, gj, hr_im1j, hx_im1j, hy_im1j, tim1j);
 			}
-			else{
-				ftmp = -kc * (1 - xij) / sij;
-				addU(0.5 * kc * (pow(1.0 - xij, 2.0) - l1 * l2));
+
+			// do same, but for projections from vertex i to edges j, jm1
+			if (tji < 0 && tjm1i > 1 && !(tij < 0 && tim1j > 1))
+				ftmp = vvSoftAdhesionForce(gj, gi, dr, -dx, -dy); 
+			else if (tji > 0 && tji < 1 && tjm1i > 1)
+				ftmp = evSoftAdhesionForce(gj, gi, hr_ji, hx_ji, hy_ji, tji);		// vertex - edge contact
+			else if (tji < 0 && tjm1i < 1 && tjm1i > 0)
+				ftmp = evSoftAdhesionForce(gjm1, gi, hr_jm1i, hx_jm1i, hy_jm1i, tjm1i);
+			else {
+				// projection on both i and im1, so need to check minimum
+				if (hr_ji < hr_jm1i)
+					ftmp = evSoftAdhesionForce(gj, gi, hr_ji, hx_ji, hy_ji, tji);
+				else
+					ftmp = evSoftAdhesionForce(gjm1, gi, hr_jm1i, hx_jm1i, hy_jm1i, tjm1i);
 			}
-
-			// force info (TRYING REPULSIVE-ONLY AT CORNERS)
-			// ftmp = -(kc / sij) * (1 - xij);	// NOTE: -1 x mag of the force, it keeps to convention that dfx is > 0 for forces on gi
-
-			// force elements
-			dfx = ftmp * (dx / dr);
-			dfy = ftmp * (dy / dr);
-
-			// add to force
-			addF(dfx, gi, 0);
-			addF(dfy, gi, 1);
-			addF(-dfx, gj, 0);
-			addF(-dfy, gj, 1);
-
-			// add to pressure
-			Pinst += ftmp * (dr / L[0]);
-
-			// update surface tensions and pressure  to reflect connection to other cell
-			st.at(gi) = stMat.at(ci + 1).at(cj + 1);
-			st.at(gim1) = stMat.at(ci + 1).at(cj + 1);
-			st.at(gj) = stMat.at(ci + 1).at(cj + 1);
-			st.at(gjm1) = stMat.at(ci + 1).at(cj + 1);
-
-			// st.at(gi) += rrate * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gi));
-			// st.at(gim1) += rrate * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gim1));
-			// st.at(gj) += rrate * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gj));
-			// st.at(gjm1) += rrate * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gjm1));
-
-			// dp.at(gi) = ka * ((1.0 / (area(ci) - a0[ci])) - (1.0 / abs((area(cj) - a0[cj]))));
-			// dp.at(gim1) = dp.at(gi);
-			// dp.at(gj) = -dp.at(gi);
-			// dp.at(gjm1) = -dp.at(gi);
 		}
-		else if (tij > 0 && tij < 1 && hr_j2i < shellij) {
-			// report
-			vjei = 1;
+		else if (drjip1 > shellij && hr_ij < shellij && tij > 0 && tij < 1) {
+			// compute projection onto adjacent edges
+			hr_im1j = edge2VertexDistance(gim1, gj, hx_im1j, hy_im1j, tim1j);
+			hr_ip1j = edge2VertexDistance(gip1, gj, hx_ip1j, hy_ip1j, tip1j);
 
-			// force info
-			xij = hr_j2i / sij;
-			if (hr_j2i > cutij){
-				ftmp = kint * (1.0 + l2 - xij) / sij;
-				addU(-0.5 * kint * pow(1.0 + l2 - xij, 2.0));
+			// check location and projections to determine force
+			if ((tim1j < 0 || tim1j > 1) && (tip1j < 0 || tip1j > 1)){
+				// IF vertex gj projects onto "bulk" of edge gi, no other edge
+				ftmp = evSoftAdhesionForce(gi, gj, hr_ij, hx_ij, hy_ij, tij);
+			}				
+			else if (tim1j > 0 && tim1j < 1) {
+				if (hr_ij < hr_im1j)
+					ftmp = evSoftAdhesionForce(gi, gj, hr_ij, hx_ij, hy_ij, tij);				// IF vertex gj projects onto edges gi and gim1, closer to gi (REGION III')
+				else
+					ftmp = evSoftAdhesionForce(gim1, gj, hr_im1j, hx_im1j, hy_im1j, tim1j);		// IF vertex gj projects onto edges gi and gim1, closer to gim1 (REGION II')
 			}
-			else{
-				ftmp = -kc * (1 - xij) / sij;
-				addU(0.5 * kc * (pow(1.0 - xij, 2.0) - l1 * l2));
+			else if (tip1j > 0 && tip1j < 1) {
+				if (hr_ij < hr_ip1j)
+					ftmp = evSoftAdhesionForce(gi, gj, hr_ij, hx_ij, hy_ij, tij);				// IF vertex gj projects onto edges gi and gip1, closer to gi (REGION II' centered on ip1)
+				else 
+					ftmp = evSoftAdhesionForce(gip1, gj, hr_ip1j, hx_ip1j, hy_ip1j, tip1j);     // IF vertex gj projects onto edges gi and gip1, closer to gip1 (REGION III' centered on ip1)
 			}
-
-			// force elements
-			dfx = ftmp * (hx_j2i / hr_j2i);
-			dfy = ftmp * (hy_j2i / hr_j2i);
-
-			// add to force (distribute so torque is balanced)
-			addF(dfx * (1 - tij), gi, 0);
-			addF(dfy * (1 - tij), gi, 1);
-			addF(dfx * tij, gip1, 0);
-			addF(dfy * tij, gip1, 1);
-			addF(-dfx, gj, 0);
-			addF(-dfy, gj, 1);
-
-			// add to potential energy
-			addU(0.5 * kint * pow(1 - (hr_j2i / sij), 2.0));
-
-			// add to pressure
-			Pinst += ftmp * (hr_j2i / L[0]);
-
-			// update surface tensions and pressures to reflect connection to other cell
-			st.at(gi) = stMat.at(ci + 1).at(cj + 1);
-			st.at(gj) = stMat.at(ci + 1).at(cj + 1);
-			st.at(gjm1) = stMat.at(ci + 1).at(cj + 1);
-
-			// st.at(gi) += rrate * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gi));
-			// st.at(gj) += rrate * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gj));
-			// st.at(gjm1) += rrate * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gjm1));
-
-			// dp.at(gi) = ka * ((1.0 / (area(ci) - a0[ci])) - (1.0 / abs((area(cj) - a0[cj]))));
-			// dp.at(gj) = -dp.at(gi);
-			// dp.at(gjm1) = -dp.at(gi);
+			else
+				ftmp = 0.0;
 		}
+		else
+			ftmp = 0.0;
 
-		// also check projection from edge j to vertex i (same as tij case, but note use of -dx and -dy)
-		if (tji > 0 && tji < 1 && hr_i2j < shellij) {
-			// report
-			viej = 1;
 
-			// force info
-			xij = hr_i2j / sij;
-			if (hr_i2j > cutij){
-				ftmp = kint * (1.0 + l2 - xij) / sij;
-				addU(-0.5 * kint * pow(1.0 + l2 - xij, 2.0));
+
+
+
+
+
+		// -- force due to projection from vertex i onto edge j (Note, vertex-vertex overlap will already have been taken care of above)
+		if (drijp1 > shellij && hr_ji < shellij && tji > 0 && tji < 1){
+			// compute projection onto adjacent edges
+			hr_jm1i = edge2VertexDistance(gjm1, gi, hx_jm1i, hy_jm1i, tjm1i);
+			hr_jp1i = edge2VertexDistance(gjp1, gi, hx_jp1i, hy_jp1i, tjp1i);
+
+			// check location and projections to determine force
+			if ((tjm1i < 0 || tjm1i > 1) && (tjp1i < 0 || tjp1i > 1)) {
+				// IF vertex gi projects onto bulk of edge gi and no other edge
+				ftmp = evSoftAdhesionForce(gj, gi, hr_ji, hx_ji, hy_ji, tji);
 			}
-			else{
-				ftmp = -kc * (1 - xij) / sij;
-				addU(0.5 * kc * (pow(1.0 - xij, 2.0) - l1 * l2));
+			else if (tjm1i > 0 && tjm1i < 1){
+				if (hr_ji < hr_jm1i)
+					ftmp = evSoftAdhesionForce(gj, gi, hr_ji, hx_ji, hy_ji, tji);				// IF vertex gi projects onto edges gj and gjm1, closer to gj (REGION III')
+				else
+					ftmp = evSoftAdhesionForce(gjm1, gi, hr_jm1i, hx_jm1i, hy_jm1i, tjm1i);		// IF vertex gi projects onto edges gj and gjm1, closer to gjm1 (REGION II')
 			}
-
-			// force elements
-			dfx = ftmp * (hx_i2j / hr_i2j);
-			dfy = ftmp * (hy_i2j / hr_i2j);
-
-			// add to force (distribute so torque is balanced)
-			addF(-dfx, gi, 0);
-			addF(-dfy, gi, 1);
-			addF(dfx * (1 - tji), gj, 0);
-			addF(dfy * (1 - tji), gj, 1);
-			addF(dfx * tji, gjp1, 0);
-			addF(dfy * tji, gjp1, 1);
-			
-			// add to potential energy
-			addU(0.5 * kint * pow(1 - (hr_i2j / sij), 2.0));
-
-			// add to pressure
-			Pinst += ftmp * (hr_i2j / L[0]);
-
-			// update surface tensions to reflect connection to other cell
-			st.at(gi) = stMat.at(ci + 1).at(cj + 1);
-			st.at(gim1) = stMat.at(ci + 1).at(cj + 1);
-			st.at(gj) = stMat.at(ci + 1).at(cj + 1);
-
-			// st.at(gi) += rrate * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gi));
-			// st.at(gim1) += rrate * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gim1));
-			// st.at(gj) += rrate * dt * (stMat.at(ci + 1).at(cj + 1) - st.at(gj));
-
-			// dp.at(gi) = ka * ((1.0 / (area(ci) - a0[ci])) - (1.0 / abs((area(cj) - a0[cj]))));
-			// dp.at(gim1) = dp.at(gi);
-			// dp.at(gj) = -dp.at(gi);
+			else if (tjp1i > 0 && tjp1i < 1) {
+				if (hr_ji < hr_jp1i)
+					ftmp = evSoftAdhesionForce(gj, gi, hr_ji, hx_ji, hy_ji, tji);				// IF vertex gi projects onto edges gj and gjm1, closer to gj (REGION II' centered on ip1)
+				else 
+					ftmp = evSoftAdhesionForce(gjp1, gi, hr_jp1i, hx_jp1i, hy_jp1i, tjp1i);		// IF vertex gi projects onto edges gj and gjm1, closer to gjm1 centered on ip1)
+			}
+			else
+				ftmp = 0.0;
 		}
 	}
 }
+
+// function to add to total force with adhesive force (vertex-vertex contacts)
+// NOTE: vector (dx, dy) points from gv1 to gv2
+double adcm2D::vvSoftAdhesionForce(const int gv1, const int gv2, const double dr, const double dx, const double dy){
+	// local variables
+	double val, sij, xij, shellij, cutij;
+	double ftmp = 0.0, dfx, dfy;
+	double kint = (kc * l1) / (l2 - l1);
+
+	// contact distances
+	sij = r[gv1] + r[gv2];
+	cutij = (1.0 + l1) * sij;
+	shellij = (1.0 + l2) * sij;
+
+	// compute and add to forces, energy, pressure
+	xij = dr / sij;
+	if (dr > shellij)
+		ftmp = 0.0;
+	else if (dr < shellij && dr > cutij) {
+		ftmp = kint * (1.0 + l2 - xij) / sij;
+		addU(-0.5 * kint * pow(1.0 + l2 - xij, 2.0));
+	}
+	else {
+		ftmp = -kc * (1 - xij) / sij;
+		addU(0.5 * kc * (pow(1.0 - xij, 2.0) - l1 * l2));
+	}
+
+	// force elements
+	dfx = ftmp * (dx / dr);
+	dfy = ftmp * (dy / dr);
+
+	// add to force
+	addF(dfx, gv1, 0);
+	addF(dfy, gv1, 1);
+	addF(-dfx, gv2, 0);
+	addF(-dfy, gv2, 1);
+
+	// add to pressure
+	Pinst += ftmp * (dr / L[0]);
+
+	// return ftmp
+	return ftmp;
+}
+
+// dx, dy should point from edge to vertex 
+double adcm2D::evSoftAdhesionForce(const int ge, const int gv, const double dr, const double dx, const double dy, const double t){
+	// local variables
+	double val, sij, xij, shellij, cutij;
+	double ftmp = 0.0, dfx, dfy;
+	double kint = (kc * l1) / (l2 - l1);
+
+	// contact distances
+	sij = r[ge] + r[gv];
+	cutij = (1.0 + l1) * sij;
+	shellij = (1.0 + l2) * sij;
+
+	// compute and add to forces, energy, pressure
+	xij = dr / sij;
+	if (dr > shellij)
+		ftmp = 0.0;
+	else if (dr < shellij && dr > cutij) {
+		ftmp = kint * (1.0 + l2 - xij) / sij;
+		addU(-0.5 * kint * pow(1.0 + l2 - xij, 2.0));
+	}
+	else {
+		ftmp = -kc * (1 - xij) / sij;
+		addU(0.5 * kc * (pow(1.0 - xij, 2.0) - l1 * l2));
+	}
+
+	// force elements
+	dfx = ftmp * (dx / dr);
+	dfy = ftmp * (dy / dr);
+
+	// add to force
+	addF(dfx * (1 - t), ge, 0);
+	addF(dfy * (1 - t), ge, 1);
+	addF(dfx * t, ip1[ge], 0);
+	addF(dfy * t, ip1[ge], 1);
+	addF(-dfx, gv, 0);
+	addF(-dfy, gv, 1);
+
+	// add to pressure
+	Pinst += ftmp * (dr / L[0]);
+
+	// return ftmp
+	return ftmp;
+}
+
 
 // Repulsive force at short range, but with segment alignment
 void adcm2D::segmentPWAlignment(const int gi, const int gj){
@@ -1185,8 +1244,8 @@ void adcm2D::adcm2DContractileForces(){
 		li 		= sqrt(lix * lix + liy * liy);
 
 		// segment strains from preferred lengths
-		l0im1 	= l0reg * (1.0 - st[im1[gi]] * l0reg);
-		l0i 	= l0reg * (1.0 - st[gi] * l0reg);
+		l0im1 	= l0reg;
+		l0i 	= l0reg;
 
 		dlim1  	= (lim1/l0im1) - 1.0;
 		dli 	= (li/l0i) - 1.0;
@@ -2417,6 +2476,7 @@ void adcm2D::activeTensionFluctuations(const double Tsim, const double Tprint, c
 
 
 void adcm2D::printADCM2DConfiguration(){
+
 	// local variables
 	int ci, cj, vi, gi, ctmp, zc, zv;
 	double xi, yi, dx, dy, Lx, Ly;
@@ -2511,3 +2571,322 @@ void adcm2D::printADCM2DConfiguration(){
 	posout << setw(w) << left << "ENDFR"
 		   << " " << endl;
 }
+
+
+
+// function to print out instantaneous force vectors
+void adcm2D::printInstantaneousForces(ofstream &outputObj){
+	// first, check if object is open
+	if (!outputObj.is_open()) {
+		cout << "ERROR: In printInstantaneousForces, outputObj is not open, so ending here." << endl;
+		exit(1);
+	}
+	else {
+		cout << "** In printInstantaneousForces, printing forces to file..." << endl;
+	}
+
+	// print to start frame
+	outputObj << "NEWFR" << endl;
+
+	// local variables
+	int ci, vi, cj, vj, gi, gj;
+	int gip1, gim1, gjp1, gjm1;
+	double sij, shellij, cutij, drijp1, drjip1, lij, dlijApprox;
+	double dx, dy, dr;
+	double ftmpi, ftmpj;
+	double pxi, pyi, delxi, delyi, tiprint;
+	double pxj, pyj, delxj, delyj, tjprint;
+
+	// projection components from EDGES ((im1, i, ip1), mu) TO VERTEX (j, nu)
+	double tim1j, tij, tip1j;
+	double hr_ij, hx_ij, hy_ij;
+	double hr_im1j, hx_im1j, hy_im1j;
+	double hr_ip1j, hx_ip1j, hy_ip1j;
+
+	// projection components from EDGES ((jm1, j, jp1), nu) TO VERTEX (i, mu)
+	double tjm1i, tji, tjp1i;
+	double hr_ji, hx_ji, hy_ji;
+	double hr_jm1i, hx_jm1i, hy_jm1i;
+	double hr_jp1i, hx_jp1i, hy_jp1i;
+	
+	// loop over all pairs of segments, compute force if interacting
+	for (gi=0; gi<NVTOT; gi++){
+		cindices(ci, vi, gi);
+		for (gj=(gi+1); gj<NVTOT; gj++){
+			// skip if gj is on same cell as gi
+			cindices(cj, vj, gj);
+			if (ci == cj)
+				continue;
+
+			// reset force counters
+			ftmpi = 0.0;
+			ftmpj = 0.0;
+			
+			// -- Compute pairwise force
+			
+			// contact distances
+			sij = r[gi] + r[gj];
+			shellij = (1.0 + l2)*sij;
+			cutij = (1.0 + l1)*sij; 
+
+			// indices
+			gip1 = ip1[gi];
+			gim1 = im1[gi];
+			gjp1 = ip1[gj];
+			gjm1 = im1[gj];
+
+			// distance between vertex i and j
+			dx = deltaX(gi, gj, 0);
+			dy = deltaX(gi, gj, 1);
+			dr = sqrt(dx * dx + dy * dy);
+
+			// distance between vertex i and jp1
+			drjip1 = deltaR(gj, gip1);
+			drijp1 = deltaR(gi, gjp1);
+
+			// Gut check distance
+			lij = 0.5 * (seg(gi) + seg(gj));
+		 	dlijApprox = 0.5 * (dr + deltaR(gip1, gjp1));
+			if (dlijApprox < 6.0 * lij) {
+				// vectors from edge to vertex (EDGE IS PASSED FIRST)
+				hr_ij = edge2VertexDistance(gi, gj, hx_ij, hy_ij, tij);
+				hr_ji = edge2VertexDistance(gj, gi, hx_ji, hy_ji, tji);
+				
+				// -- 	force due to projection from edge i onto vertex j, or due to vertex i - vertex j overlap, 
+				// 		or due to projection from edge j onto vertex i
+				if (dr < shellij) {
+					// compute projection from edge im1 to vertex j (PASS EDGE INDEX FIRST)
+					hr_im1j = edge2VertexDistance(gim1, gj, hx_im1j, hy_im1j, tim1j);
+					hr_jm1i = edge2VertexDistance(gjm1, gi, hx_jm1i, hy_jm1i, tjm1i);
+					
+					// check projection component, determine relevant minimum distance
+					if (tij < 0 && tim1j > 1){
+						ftmpi = vvSoftAdhesionForce(gi, gj, dr, dx, dy); 
+						pxi = x[NDIM * gi];
+						pyi = x[NDIM * gi + 1];
+						delxi = dx;
+						delyi = dy;
+						tiprint = -1000;
+					}
+					else if (tij > 0 && tim1j > 1){
+						ftmpi = evSoftAdhesionForce(gi, gj, hr_ij, hx_ij, hy_ij, tij);
+						pxi = x[NDIM * gi] + tij * segX(gi, 0);
+						pyi = x[NDIM * gi + 1] + tij * segX(gi, 1);
+						delxi = hx_ij;
+						delyi = hy_ij;
+						tiprint = tij;
+					}
+					else if (tij < 0 && tim1j < 1){
+						ftmpi = evSoftAdhesionForce(gim1, gj, hr_im1j, hx_im1j, hy_im1j, tim1j);
+						pxi = x[NDIM * gim1] + tim1j * segX(gim1, 0);
+						pyi = x[NDIM * gim1 + 1] + tim1j * segX(gim1, 1);
+						delxi = hx_im1j;
+						delyi = hy_im1j;
+						tiprint = tim1j;
+					}
+					else {
+						// projection on both i and im1, so need to check minimum
+						if (hr_ij < hr_im1j){
+							ftmpi = evSoftAdhesionForce(gi, gj, hr_ij, hx_ij, hy_ij, tij);
+							pxi = x[NDIM * gi] + tij * segX(gi, 0);
+							pyi = x[NDIM * gi + 1] + tij * segX(gi, 1);
+							delxi = hx_ij;
+							delyi = hy_ij;
+							tiprint = tij;
+						}
+						else{
+							ftmpi = evSoftAdhesionForce(gim1, gj, hr_im1j, hx_im1j, hy_im1j, tim1j);
+							pxi = x[NDIM * gim1] + tim1j * segX(gim1, 0);
+							pyi = x[NDIM * gim1 + 1] + tim1j * segX(gim1, 1);
+							delxi = hx_im1j;
+							delyi = hy_im1j;
+							tiprint = tim1j;
+						}
+					}
+
+					// do same, but for projections from vertex i to edges j, jm1
+					if (tji < 0 && tjm1i > 1 && !(tij < 0 && tim1j > 1)){
+						ftmpj = vvSoftAdhesionForce(gj, gi, dr, -dx, -dy); 
+						pxj = x[NDIM * gj];
+						pyj = x[NDIM * gj + 1];
+						delxj = -dx;
+						delyj = -dy;
+						tjprint = -1000;
+					}
+					else if (tji > 0 && tji < 1 && tjm1i > 1){
+						ftmpj = evSoftAdhesionForce(gj, gi, hr_ji, hx_ji, hy_ji, tji);		// vertex - edge contact
+						pxj = x[NDIM * gj] + tji * segX(gj, 0);
+						pyj = x[NDIM * gj + 1] + tji * segX(gj, 1);
+						delxj = hx_ji;
+						delyj = hy_ji;
+						tjprint = tji;
+					}
+					else if (tji < 0 && tjm1i < 1 && tjm1i > 0){
+						ftmpj = evSoftAdhesionForce(gjm1, gi, hr_jm1i, hx_jm1i, hy_jm1i, tjm1i);
+						pxj = x[NDIM * gjm1] + tjm1i * segX(gjm1, 0);
+						pyj = x[NDIM * gjm1 + 1] + tjm1i * segX(gjm1, 1);
+						delxj = hx_jm1i;
+						delyj = hy_jm1i;
+						tjprint = tjm1i;
+					}
+					else {
+						// projection on both i and im1, so need to check minimum
+						if (hr_ji < hr_jm1i){
+							ftmpj = evSoftAdhesionForce(gj, gi, hr_ji, hx_ji, hy_ji, tji);
+							pxj = x[NDIM * gj] + tji * segX(gj, 0);
+							pyj = x[NDIM * gj + 1] + tji * segX(gj, 1);
+							delxj = hx_ji;
+							delyj = hy_ji;
+							tjprint = tji;
+						}
+						else{
+							ftmpj = evSoftAdhesionForce(gjm1, gi, hr_jm1i, hx_jm1i, hy_jm1i, tjm1i);
+							pxj = x[NDIM * gjm1] + tjm1i * segX(gjm1, 0);
+							pyj = x[NDIM * gjm1 + 1] + tjm1i * segX(gjm1, 1);
+							delxj = hx_jm1i;
+							delyj = hy_jm1i;
+							tjprint = tjm1i;
+						}
+					}
+				}
+				else if (drjip1 > shellij && hr_ij < shellij && tij > 0 && tij < 1) {
+					// compute projection onto adjacent edges
+					hr_im1j = edge2VertexDistance(gim1, gj, hx_im1j, hy_im1j, tim1j);
+					hr_ip1j = edge2VertexDistance(gip1, gj, hx_ip1j, hy_ip1j, tip1j);
+
+					// check location and projections to determine force
+					if ((tim1j < 0 || tim1j > 1) && (tip1j < 0 || tip1j > 1)){
+						// IF vertex gj projects onto "bulk" of edge gi, no other edge
+						ftmpi = evSoftAdhesionForce(gi, gj, hr_ij, hx_ij, hy_ij, tij);
+						pxi = x[NDIM * gi] + tij * segX(gi, 0);
+						pyi = x[NDIM * gi + 1] + tij * segX(gi, 1);
+						delxi = hx_ij;
+						delyi = hy_ij;	
+						tiprint = tij;
+					}				
+					else if (tim1j > 0 && tim1j < 1) {
+						if (hr_ij < hr_im1j){
+							ftmpi = evSoftAdhesionForce(gi, gj, hr_ij, hx_ij, hy_ij, tij);				
+							pxi = x[NDIM * gi] + tij * segX(gi, 0);
+							pyi = x[NDIM * gi + 1] + tij * segX(gi, 1);
+							delxi = hx_ij;
+							delyi = hy_ij;	
+							tiprint = tij;
+						}
+						else{
+							ftmpi = evSoftAdhesionForce(gim1, gj, hr_im1j, hx_im1j, hy_im1j, tim1j);		
+							pxi = x[NDIM * gim1] + tim1j * segX(gim1, 0);
+							pyi = x[NDIM * gim1 + 1] + tim1j * segX(gim1, 1);
+							delxi = hx_im1j;
+							delyi = hy_im1j;
+							tiprint = tim1j;
+						}
+					}
+					else if (tip1j > 0 && tip1j < 1) {
+						if (hr_ij < hr_ip1j){
+							ftmpi = evSoftAdhesionForce(gi, gj, hr_ij, hx_ij, hy_ij, tij);	
+							pxi = x[NDIM * gi] + tij * segX(gi, 0);
+							pyi = x[NDIM * gi + 1] + tij * segX(gi, 1);
+							delxi = hx_ij;
+							delyi = hy_ij;		
+							tiprint = tij;		
+						}
+						else {
+							ftmpi = evSoftAdhesionForce(gip1, gj, hr_ip1j, hx_ip1j, hy_ip1j, tip1j);
+							pxi = x[NDIM * gip1] + tip1j * segX(gip1, 0);
+							pyi = x[NDIM * gip1 + 1] + tip1j * segX(gip1, 1);
+							delxi = hx_ip1j;
+							delyi = hy_ip1j;
+							tiprint = tip1j;
+						}
+					}
+				}
+
+
+
+				// -- force due to projection from vertex i onto edge j (Note, vertex-vertex overlap will already have been taken care of above)
+				if (drijp1 > shellij && hr_ji < shellij && tji > 0 && tji < 1){
+					// compute projection onto adjacent edges
+					hr_jm1i = edge2VertexDistance(gjm1, gi, hx_jm1i, hy_jm1i, tjm1i);
+					hr_jp1i = edge2VertexDistance(gjp1, gi, hx_jp1i, hy_jp1i, tjp1i);
+
+					// check location and projections to determine force
+					if ((tjm1i < 0 || tjm1i > 1) && (tjp1i < 0 || tjp1i > 1)) {
+						// IF vertex gi projects onto bulk of edge gi and no other edge
+						ftmpj = evSoftAdhesionForce(gj, gi, hr_ji, hx_ji, hy_ji, tji);
+						pxj = x[NDIM * gj] + tji * segX(gj, 0);
+						pyj = x[NDIM * gj + 1] + tji * segX(gj, 1);
+						delxj = hx_ji;
+						delyj = hy_ji;
+						tjprint = tji;
+					}
+					else if (tjm1i > 0 && tjm1i < 1){
+						if (hr_ji < hr_jm1i){
+							ftmpj = evSoftAdhesionForce(gj, gi, hr_ji, hx_ji, hy_ji, tji);				// IF vertex gi projects onto edges gj and gjm1, closer to gj (REGION III')
+							pxj = x[NDIM * gj] + tji * segX(gj, 0);
+							pyj = x[NDIM * gj + 1] + tji * segX(gj, 1);
+							delxj = hx_ji;
+							delyj = hy_ji;
+							tjprint = tji;
+						}
+						else {
+							ftmpj = evSoftAdhesionForce(gjm1, gi, hr_jm1i, hx_jm1i, hy_jm1i, tjm1i);		// IF vertex gi projects onto edges gj and gjm1, closer to gjm1 (REGION II')
+							pxj = x[NDIM * gjm1] + tjm1i * segX(gjm1, 0);
+							pyj = x[NDIM * gjm1 + 1] + tjm1i * segX(gjm1, 1);
+							delxj = hx_jm1i;
+							delyj = hy_jm1i;
+							tjprint = tjm1i;
+						}
+					}
+					else if (tjp1i > 0 && tjp1i < 1) {
+						if (hr_ji < hr_jp1i){
+							ftmpj = evSoftAdhesionForce(gj, gi, hr_ji, hx_ji, hy_ji, tji);				// IF vertex gi projects onto edges gj and gjm1, closer to gj (REGION II' centered on ip1)
+							pxj = x[NDIM * gj] + tji * segX(gj, 0);
+							pyj = x[NDIM * gj + 1] + tji * segX(gj, 1);
+							delxj = hx_ji;
+							delyj = hy_ji;
+							tjprint = tji;
+						}
+						else {
+							ftmpj = evSoftAdhesionForce(gjp1, gi, hr_jp1i, hx_jp1i, hy_jp1i, tjp1i);		// IF vertex gi projects onto edges gj and gjm1, closer to gjm1 centered on ip1)
+							pxj = x[NDIM * gjp1] + tjp1i * segX(gjp1, 0);
+							pyj = x[NDIM * gjp1 + 1] + tjp1i * segX(gjp1, 1);
+							delxj = hx_jp1i;
+							delyj = hy_jp1i;
+							tjprint = tjp1i;
+						}
+					}
+				}
+
+
+
+				// print based on forces
+				if (ftmpi > 0 || ftmpi < 0){
+					outputObj << gi << "  ";
+					outputObj << gj << "  ";
+					outputObj << setprecision(8) << pxi << "  ";
+					outputObj << setprecision(8) << pyi << "  ";
+					outputObj << setprecision(8) << delxi << "  ";
+					outputObj << setprecision(8) << delyi << "  ";
+					outputObj << setprecision(8) << tiprint << "  ";
+					outputObj << endl;
+				}
+				if (ftmpj > 0 || ftmpj < 0){
+					outputObj << gj << "  ";
+					outputObj << gi << "  ";
+					outputObj << setprecision(8) << pxj << "  ";
+					outputObj << setprecision(8) << pyj << "  ";
+					outputObj << setprecision(8) << delxj << "  ";
+					outputObj << setprecision(8) << delyj << "  ";
+					outputObj << setprecision(8) << tjprint << "  ";
+					outputObj << endl;
+				}
+			}
+		}
+	}
+
+	// print to close frame
+	fill(F.begin(), F.end(), 0.0);
+	outputObj << "ENDFR" << endl;
+}
+

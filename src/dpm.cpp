@@ -483,6 +483,90 @@ double dpm::vertexKineticEnergy() {
 	return K;
 }
 
+// get total linear momentum
+void dpm::netLinearMomentum2D(double &Px, double &Py){
+	// local variables
+	int gi;
+	
+	// loop over vertices, compute linear momentum assuming unit mass
+	Px = 0.0;
+	Py = 0.0;
+	for (gi=0; gi<NVTOT; gi++){
+		Px += v[NDIM * gi];
+		Py += v[NDIM * gi + 1];
+	}
+}
+
+// get total angular momentum
+double dpm::netAngularMomentum2D(){
+	// local variables
+	int gi;
+	double rx, ry, cx, cy;
+	double Lz;
+
+	// compute system center of mass
+	cx = 0.0;
+	cy = 0.0;
+	for (gi=0; gi<NVTOT; gi++){
+		cx += x[NDIM * gi];
+		cy += x[NDIM * gi + 1];
+	}
+	cx /= NVTOT;
+	cy /= NVTOT;
+	
+	// loop over vertices, compute linear momentum assuming unit mass
+	Lz = 0.0;
+	for (gi=0; gi<NVTOT; gi++){
+		// get position relative to center of mass
+		rx = x[NDIM * gi] - cx;
+		if (pbc[0])
+			rx -= L[0] * round(rx / L[0]);
+		ry = x[NDIM * gi + 1 ] - cy;
+		if (pbc[1])
+			ry -= L[1] * round(ry / L[1]);
+
+		// cross product 
+		Lz += rx * v[NDIM * gi + 1] - ry * v[NDIM * gi];
+	}
+
+	// return net angular momentum
+	return Lz;
+}
+
+// get net torque on cell ci
+double dpm::cellNetTorque2D(int ci){
+	// local variables
+	int vi, gi;
+	double cx, cy, rx, ry, Tz;
+
+	// get global index of vertex 0 on cell ci
+	gi = szList.at(ci);
+
+	// get cell center of mass
+	com2D(ci, cx, cy);
+
+	// loop over vertices on cell ci
+	Tz = 0.0;
+	for (vi=0; vi<nv.at(ci); vi++){
+		// distance to center of mass
+		rx = x[NDIM * gi] - cx;
+		ry = x[NDIM * gi + 1] - cy;
+		if (pbc[0])
+			rx -= L[0] * round(rx / L[0]);
+		if (pbc[1])
+			ry -= L[1] * round(ry / L[1]);
+
+		// cross product (torque = r x F = r_xF_y - r_yF_x)
+		Tz += rx * F[NDIM * gi + 1] - ry * F[NDIM * gi];
+
+		// incremement global index
+		gi++;
+	}
+
+	// return
+	return Tz;
+}
+
 // get number of vertex-vertex contacts
 int dpm::vvContacts() {
 	int nvv = 0;

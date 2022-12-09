@@ -176,6 +176,9 @@ public:
 	double vertexPackingFraction2D();
 	double vertexPreferredPackingFraction2D();
 	double vertexKineticEnergy();
+	void netLinearMomentum2D(double &Px, double &Py);
+	double netAngularMomentum2D();
+	double cellNetTorque2D(int ci);
 	int vvContacts();
 	int ccContacts();
 
