@@ -64,6 +64,20 @@ int main() {
     // adcm2DSimObj.nphFIRE(Ftol, dPtol, P0, dt0, true);
     adcm2DSimObj.printADCM2DConfiguration();
 
+    // To DO:
+    // 1. Write new NPH-Min protocol with areal terms as CONSTRAINTS, so 
+    //      -- eg: "minimize U + P_0 A subject to a_i = \bar{a}_i", where \bar_{a}_i are constraints
+    //      -- Since all areas uncoupled, can just solve uncoupled quadratic equations
+    // 2. Use CG instead of FIRE, I think this is cleaner
+    // 3. Write simpler force and energy update functions that "shapeForces", which is a bit too convoluted at the moment
+    // 4. Should be able to find configurations at a certain pressure, all with perfect areas
+    // 5. Can then include box pressure into constrained area dynamics
+    //      -- Why do we always need to take \lambda_+? 
+    // 6. Maybe write a new code base with cell objects, easier to control where area constraints live
+    //      -- Also maybe easier to implement constrained fluid pressure dynamics
+    //      -- Also can push to PKS gitlab, use gitlab to handle to do list as push requests
+
+
     // run nve 
     // int NT = 2e6;
     // double T0 = 1e-6;

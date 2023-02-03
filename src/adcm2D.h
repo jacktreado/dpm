@@ -70,13 +70,10 @@ public:
 	void useRepulsiveForce() { pwFrc = &adcm2D::SRRepulsivePWForce; }; 
 	void useAttractiveForce() { pwFrc = &adcm2D::SRAttractivePWForce; }; 
 	void useActiveTensionForce() {pwFrc = &adcm2D::SRAttractiveActiveTensionPWForce; };
-	void useAlignmentForce() { pwFrc = &adcm2D::segmentPWAlignment; };
-	void useBondedForce() { pwFrc = &adcm2D::checkBondPWForce; };
 
 	void useIndependentShapeForce() { shpFrc = &adcm2D::adcm2DShapeForces; };
 	void useContractileShapeForce() { shpFrc = &adcm2D::adcm2DContractileForces; };
 	void useOsmoticPressureShapeForce() { shpFrc = &adcm2D::adcm2DOsmoticPressureShapeForces; };
-	void useBondedShapeForce() { shpFrc = &adcm2D::adcm2DBondedShapeForces; };
 
 	// circuloline geometry
 	double getVertexEdgeProjection(const int gv, const int ge);
@@ -101,10 +98,6 @@ public:
 	void SRAttractivePWForce(const int gi, const int gj) { bool a, b, c; SRAttractivePWForce(gi, gj, a, b, c); };
 	void SRAttractiveActiveTensionPWForce(const int gi, const int gj, bool&, bool&, bool&);
 	void SRAttractiveActiveTensionPWForce(const int gi, const int gj) { bool a, b, c; SRAttractiveActiveTensionPWForce(gi, gj, a, b, c); };
-	void GhostAttractivePWForce(const int gi, const int gj);
-	void segmentPWAlignment(const int gi, const int gj); 
-	void alignmentForce(const int gi, const int gj);
-	void checkBondPWForce(const int gi, const int gj);
 
 	// compute individual forces
 	double vvSoftAdhesionForce(const int gv1, const int gv2, const double dr, const double dx, const double dy);
@@ -116,7 +109,6 @@ public:
 	void adcm2DShapeForces();
 	void adcm2DContractileForces();
 	void adcm2DOsmoticPressureShapeForces();
-	void adcm2DBondedShapeForces();
 
 	// stresses
 	void stressUpdate();
@@ -134,6 +126,11 @@ public:
 	// active simulations
 	void activeBrownianCrawling(const double Tsim, const double Tprint, const double dt0, const double v0, const double Dr, const double Ds);
 	void activeTensionFluctuations(const double Tsim, const double Tprint, const double dt0, const double deltaST);
+
+
+	// -- Constrained Simulation functions
+	void updateConstrainedAreas();
+
 
 	// printing
 	void printADCM2DConfiguration();
