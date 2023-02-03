@@ -1,17 +1,7 @@
 # Deformable Particle Model in C++
-By Jack Treado, Yale University
+By Jack Treado
 
 This repository broadly allows for the simulation of deformable particles using an OOP, C++ simulation framework. Currently we only support 2D particles, but 3D is on the way!
-
-
-
-References that use the DPM:
-
-J. D. Treado, D. Wang, A. Boromand, M. P. Murrell, M. D. Shattuck, and C. S. O'Hern, "Bridging particle deformability and collective response in soft solids," [_Phys. Rev. Materials_](https://journals.aps.org/prmaterials/abstract/10.1103/PhysRevMaterials.5.055605) **5** 055605 (2021).
-
-A. Boromand, A. Signoriello, J. Lowensohn, C. S. Orellana, E. R. Weeks, F. Ye, M. D. Shattuck, and C. S. O'Hern, "The role of deformability in determining the structural and mechanical properties of bubbles and emulsions," [_Soft Matter_](https://pubs.rsc.org/en/content/articlelanding/2019/sm/c9sm00775j#!divAbstract) **15** 5854 (2019).
-
-A. Boromand, A. Signoriello, F. Ye, C. S. O'Hern, and M. D. Shattuck, "Jamming of deformable polygons," [_Phys. Rev. Lett._](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.121.248003) **121** 248003 (2018).
 
 
 ## Compilation

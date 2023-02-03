@@ -14,8 +14,8 @@ using namespace std;
 
 int main() {
     // input variables
-    int numcells = 3;
-    int numverts = 32;
+    int numcells = 4;
+    int numverts = 24;
     double sizeDisp = 0;
     double phi0 = 0.2;
     double boxLengthScale = 3.5;
@@ -25,10 +25,10 @@ int main() {
     int seed = 2;
 
     // collision variables
-    double Tend = 500;
+    double Tend = 5000;
     double Tskip = 1.0;
-    double dt = 0.001;
-    double v0 = 0.05;
+    double dt = 0.005;
+    double v0 = 0.2;
     double cx, cy, vx, vy;    
 
     // output file name
@@ -53,7 +53,7 @@ int main() {
     sim.setstMat(gam0);
 
      // use adhesion
-    double l2 = 0.05;
+    double l2 = 1e-16;
     double l1 = 0.5 * l2; 
     sim.useActiveTensionForce();
     sim.setl1(l1);
@@ -61,9 +61,12 @@ int main() {
     // sim.useRepulsiveForce();
 
     // use osmotic pressure
-    sim.useOsmoticPressureShapeForce();
-    sim.setPosm(10.0);
-    sim.regularizeA0();
+    // sim.useOsmoticPressureShapeForce();
+    // sim.setPosm(10.0);
+    // sim.regularizeA0();
+
+    // relax cells together using central potential
+    sim.useContractileShapeForce();
 
     // initial collision velocities
     for (int ci=0; ci<numcells; ci++){
@@ -99,8 +102,7 @@ int main() {
 		sim.vvPosUpdate();
 
 		// Update Forces & Potential Energy
-		sim.activeTensionForceUpdate();
-        // sim.adcm2DForceUpdate();
+        sim.activeTensionForceUpdateVertexPreservation();
 
 		// VV velocity half-step update
 		sim.vvVelUpdate();
@@ -133,7 +135,6 @@ int main() {
         // update time
         t += dt;
     }
-
     forceOuputObj.close();
     return 0;
 }

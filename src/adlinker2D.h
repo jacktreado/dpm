@@ -34,6 +34,7 @@ protected:
 public:
     // constructor
     adlinker2D(int numcells, int numverts, double sizeDisp, double phi0, double boxLengthScale, double clScale, double initGamma0, int seed);
+    adlinker2D(std::string &inputFileStr, int seed, double boxLengthScale);
 
     // add and subtract linkers
     void addLinkers();

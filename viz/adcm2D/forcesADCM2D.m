@@ -31,7 +31,7 @@ a0 = simdata.a0;
 phi0 = sum(a0,2)./(LList(:,1).*LList(:,2));
 phiA = sum(a,2)./(LList(:,1).*LList(:,2));
 
-if NCELLS < 10
+if NCELLS < 100
     pbc = 0;
 else
     pbc = 1;
@@ -61,7 +61,7 @@ while ~feof(fid)
             fprintf(['On frame %d, nxtfrstr = ' nxtfrstr '\n'], ff);
 
             % parse "next frame string"
-            frcdatatmp = sscanf(nxtfrstr,'%f %f %f %f %f %f %f');
+            frcdatatmp = sscanf(nxtfrstr,'%f %f %f %f %f %f %f %f %f %f %f');
             frcdatatmp = frcdatatmp';
             
             % store data
@@ -77,6 +77,36 @@ while ~feof(fid)
     end
 end
 
+% compute RMSD
+RMSD = zeros(NFRAMES-1,NCELLS);
+clr = winter(NCELLS);
+figure(11), clf, hold on, box on;
+for cc = 1:NCELLS
+    for ff = 1:NFRAMES-1
+        RMSD(ff,cc) = sqrt(sum((x{ff+1,cc} - x{ff,cc}).^2/nv(ff,cc)));
+    end
+    plot(RMSD(:,cc),'-','linewidth',2,'color',clr(cc,:));
+end
+ax = gca;
+ax.FontSize = 24;
+ax.YScale = 'log';
+
+% check torque balance
+figure(12), clf, hold on, box on;
+trqsumList = zeros(NFRAMES, 1);
+for ff = 1:NFRAMES
+    if ~isempty(frcDataList{ff})
+        fdl = frcDataList{ff};
+        NFRC = size(fdl,1);
+        trqsum = 0.0;
+        for gg = 1:NFRC
+            fdltmp = fdl(gg,:);
+            trqsum = trqsum + (fdltmp(end-1) + fdltmp(end));
+        end
+        plot(ff, trqsum, 'ko', 'markersize', 8, 'markerfacecolor', 'g');
+        trqSumList(ff) = trqsum;
+    end
+end
 
 %% Draw cells with forces
 
@@ -109,15 +139,15 @@ end
 % get frames to plot
 
 % single frame
-% FSTART = 2135;
-% if FSTART > NFRAMES
-%     FSTART = NFRAMES;
-% end
-% FEND = FSTART;
+FSTART = NFRAMES;
+if FSTART > NFRAMES
+    FSTART = NFRAMES;
+end
+FEND = FSTART;
 
-% % movie frames
-FSTART = 1;
-FEND = NFRAMES;
+% movie frames
+% FSTART = 1;
+% FEND = NFRAMES;
 
 % set step size
 FSTEP = 1;
@@ -125,9 +155,9 @@ DF = FEND - FSTART;
 if DF > 100 && DF <= 400
     FSTEP = 1;
 elseif DF > 400 && DF <= 800
-    FSTEP = 4;
+    FSTEP = 1;
 elseif DF > 800
-    FSTEP = 10;
+    FSTEP = 4;
 end
 
 % make a movie
@@ -139,7 +169,7 @@ if FSTART == FEND
 else
     bndry = 0;
 end
-ctccopy = 1;
+ctccopy = -1:1;
 if makeAMovie == 1
     moviestr = 'adcm2D_VARVERTS_gam0.1_W0_l21.0_l10.01_dT1.5.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
@@ -198,8 +228,8 @@ for ff = FSTART:FSTEP:FEND
     ax.YTick = [];
     ax.XLim = [-0.25 1.25]*L;
     ax.YLim = [-0.25 1.25]*L;
-    ax.XLim = [1.4585    1.9268];
-    ax.YLim = [1.1241    1.5923];
+%     ax.XLim = [4.1432    5.9592];
+%     ax.YLim = [-0.4897    1.3264];
 
         % plot forces
     if ~isempty(frcDataList{ff})
@@ -228,3 +258,25 @@ end
 if makeAMovie == 1
     close(vobj);
 end
+
+
+%% Make plot of positions of one vertex in space
+
+cellid = 2;
+vertid = 12;
+meanx = 0.0;
+meany = 0.0;
+pointCLR = jet(NFRAMES);
+figure(20), clf, hold on, box on;
+drawSSPoly(x{NFRAMES, cellid}, y{NFRAMES, cellid}, r{NFRAMES, cellid}, [0 0 1], L, L, 0, 1);
+for ff = 1:NFRAMES
+    plot(x{ff, cellid}(vertid), y{ff, cellid}(vertid), 'ko', 'markersize', 6, 'markerfacecolor', pointCLR(ff,:));
+    meanx = meanx + x{ff, cellid}(vertid);
+    meany = meany + y{ff, cellid}(vertid);
+end
+meanx = meanx / NFRAMES;
+meany = meany / NFRAMES;
+axis equal;
+ax = gca;
+ax.XLim = meanx + [-1 1];
+ax.YLim = meany + [-1 1];

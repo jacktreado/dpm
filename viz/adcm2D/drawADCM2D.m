@@ -6,7 +6,7 @@ clc;
 
 % position information
 dpmloc = '/Users/jacktreado/Jamming/CellSim/dpm';
-posfname = 'pos.test';
+posfname = 'adcm2D_test.pos';
 posfstr = [dpmloc '/' posfname];
 
 % load into simulation data struct
@@ -109,6 +109,20 @@ ax = gca;
 ax.FontSize = 24;
 ax.YScale = 'log';
 
+% compute RMSD
+RMSD = zeros(NFRAMES-1,NCELLS);
+clr = winter(NCELLS);
+figure(17), clf, hold on, box on;
+for cc = 1:NCELLS
+    for ff = 1:NFRAMES-1
+        RMSD(ff,cc) = abs(mean(x{ff+1,cc}) - mean(x{ff,cc}));
+    end
+    plot(RMSD(:,cc),'-','linewidth',2,'color',clr(cc,:));
+end
+ax = gca;
+ax.FontSize = 24;
+ax.YScale = 'log';
+
 
 %% Draw cells over time
 
@@ -139,8 +153,8 @@ end
 
 % get frames to plot
 
-% % single frame
-% FSTART = NFRAMES;
+% single frame
+% FSTART = 1;
 % if FSTART > NFRAMES
 %     FSTART = NFRAMES;
 % end
@@ -154,11 +168,11 @@ FEND = NFRAMES;
 FSTEP = 1;
 DF = FEND - FSTART;
 if DF > 100 && DF <= 400
-    FSTEP = 2;
+    FSTEP = 4;
 elseif DF > 400 && DF <= 800
     FSTEP = 6;
 elseif DF > 800
-    FSTEP = 10;
+    FSTEP = 1;
 end
 
 % make a movie
@@ -172,7 +186,7 @@ else
 end
 ctccopy = 1;
 if makeAMovie == 1
-    moviestr = 'adcm2D_VARVERTS_gam0.1_W0_l21.0_l10.01_dT1.5.mp4';
+    moviestr = 'adcm2D_relax.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);
@@ -217,7 +231,7 @@ for ff = FSTART:FSTEP:FEND
         else
             drawSSProjPoly(xtmp, ytmp, rtmp, clr, L, L, pbc);
         end
-        text(mean(xtmp), mean(ytmp), num2str(nn));
+%         text(mean(xtmp), mean(ytmp), num2str(nn));
     end
         
     % plot box
@@ -226,10 +240,10 @@ for ff = FSTART:FSTEP:FEND
     ax = gca;
     ax.XTick = [];
     ax.YTick = [];
-%     ax.XLim = [-0.25 1.25]*L;
-%     ax.YLim = [-0.25 1.25]*L;
-    ax.XLim = [1.5258    2.7108];
-    ax.YLim = [1.6214    2.8064];
+    ax.XLim = [-0.25 1.25]*L;
+    ax.YLim = [-0.25 1.25]*L;
+%     ax.XLim = [4.7903    5.7327];
+%     ax.YLim = [-0.1571    0.7853];
     
 %     colorbar
 %     colormap(jet);
@@ -248,5 +262,27 @@ end
 if makeAMovie == 1
     close(vobj);
 end
+
+%% Make plot of positions of one vertex in space
+
+cellid = 13;
+vertid = 10;
+meanx = 0.0;
+meany = 0.0;
+pointCLR = jet(NFRAMES);
+figure(20), clf, hold on, box on;
+drawSSPoly(x{NFRAMES, cellid}, y{NFRAMES, cellid}, r{NFRAMES, cellid}, [0 0 1], L, L, 0, 1);
+for ff = 1:NFRAMES
+    plot(x{ff, cellid}(vertid), y{ff, cellid}(vertid), 'ko', 'markersize', 6, 'markerfacecolor', pointCLR(ff,:));
+    meanx = meanx + x{ff, cellid}(vertid);
+    meany = meany + y{ff, cellid}(vertid);
+end
+meanx = meanx / NFRAMES;
+meany = meany / NFRAMES;
+axis equal;
+ax = gca;
+ax.XLim = meanx + [-1 1];
+ax.YLim = meany + [-1 1];
+
 
 

@@ -14,9 +14,9 @@ int main() {
     double dt = 0.01;
 
     // input variables
-    double boxLengthScale = 3.0;
+    double boxLengthScale = 4.0;
     int seed = 1;
-    double kc = 0.5;
+    double kc = 0.1;
     double gam = 0.1;
     double W = 0.0;
 
@@ -25,7 +25,7 @@ int main() {
     double Posm = 1.0 / Posm_lambda;
 
     // input file name
-    string inputf = "24cell_confluent.pos";
+    string inputf = "24cell_relaxed.pos";
 
     // output file name
     string posf = "adcm2D_test.pos";
@@ -43,16 +43,8 @@ int main() {
     sim.setgam0(gam);
     sim.setstMat(gam);
 
-    // double check pressure
-    // double Ftol = 1e-6;
-    // double dPtol = 1e-6;
-    // double P0 = 1e-5;
-    // sim.nphSplitFIRE(Ftol, dPtol, P0, dt, 1);
-    // return 0;
-
-    
     // use adhesion
-    double l2 = 0.5;
+    double l2 = 1e-16;
     double l1 = 0.95 * l2; 
     sim.useActiveTensionForce();
     sim.setl1(l1);
@@ -63,9 +55,16 @@ int main() {
     sim.setPosm(Posm);
     sim.regularizeA0();
 
+    // // double check pressure
+    // double Ftol = 1e-6;
+    // double dPtol = 1e-6;
+    // double P0 = 1e-4;
+    // sim.nphSplitFIRE(Ftol, dPtol, P0, dt, 1);
+    // return 0;
+
     // run active protocol
     double Tsim = 1000;
-    double Tprint = 2;
+    double Tprint = 2. * dt;
     double kneigh = 20.0;
     double deltaST = 0.0;
 

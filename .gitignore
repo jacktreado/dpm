@@ -5,6 +5,8 @@
 bash/*/slurm
 bash/*/bin
 bash/*/tasks
+inputs/
+input/*
 *~
 .DS_Store
 *.exe
@@ -18,3 +20,4 @@ bash/*/tasks
 *.mov
 local/
 .DS_Store
+.vscode

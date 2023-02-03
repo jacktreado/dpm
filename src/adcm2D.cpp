@@ -204,6 +204,49 @@ adcm2D::adcm2D(string &inputFileStr, int seed, double boxLengthScale) : dpm(2) {
 }
 
 
+// get cell "center-of-segment"
+void adcm2D::cellCoS(int ci, double &cx, double &cy){
+	// local variables
+	int vi, gi = szList.at(ci);
+	double xcurr, ycurr, dx, dy, l;
+
+	// stay in box with vertex 0
+	xcurr = x[NDIM * gi];
+	ycurr = x[NDIM * gi + 1];
+
+	// loop over vertices
+	cx = 0.0;
+	cy = 0.0;
+	for (vi=0; vi<nv[ci]; vi++){
+		// get distance to next segment 
+		dx = x[NDIM * ip1[gi]] - xcurr;
+		dy = x[NDIM * ip1[gi] + 1] - ycurr;
+		if (pbc[0])
+			dx -= L[0] * round(dx / L[0]);
+		if (pbc[1])
+			dy -= L[1] * round(dy / L[1]);
+
+		// seg length
+		l = sqrt(dx * dx + dy * dy);
+		
+		// weight cx, cy
+		cx += xcurr * l;
+		cy += ycurr * l;
+
+		// update current position
+		xcurr += dx;
+		ycurr += dy;
+
+		// increment gi
+		gi++;
+	}
+
+	// scale by perimeter
+	cx /= perimeter(ci);
+	cy /= perimeter(ci);
+}
+
+
 // set all a0 to be regular values for osmotic pressure
 void adcm2D::regularizeA0(){
 	// local variables
@@ -332,6 +375,37 @@ void adcm2D::activeTensionForceUpdate(){
 	// update stresses
 	stressUpdate();
 }
+
+void adcm2D::activeTensionForceUpdateVertexPreservation(){
+	// reset energies, stresses, forces
+	U = 0.0; 
+	Pinst = 0.0; 
+	Sinst = 0.0; 
+	fill(F.begin(), F.end(), 0.0);
+
+	// use whatever shape force
+	(*this.*shpFrc)();
+
+	// reset surface tension to the void values
+	int gi = 0;
+	for (int ci=0; ci<NCELLS; ci++){
+		for (int vi=0; vi<nv.at(ci); vi++){
+			// set tension cell-void coupling
+			st.at(gi) = stMat.at(0).at(ci+1);
+			// st.at(gi) += dt * (stMat.at(0).at(ci+1) - st.at(gi));
+
+			// increment global index
+			gi++;
+		}
+	}
+
+	// use pairwise force update
+	circuloLinePWForceUpdate();
+
+	// update stresses
+	stressUpdate();
+}
+
 
 // force update for circulolines
 void adcm2D::circuloLinePWForceUpdate(){
@@ -712,6 +786,10 @@ void adcm2D::SRAttractiveActiveTensionPWForce(const int gi, const int gj, bool &
 	double hr_jm1i, hx_jm1i, hy_jm1i;
 	double hr_jp1i, hx_jp1i, hy_jp1i;
 
+	// test values, when dr < sij
+	int pi, pj;
+	double dij, dijx, dijy, dji, djix, djiy, ti, tj;
+
 	// get ci and cj (for surface tension update)
 	cindices(ci, vi, gi);
 	cindices(cj, vj, gj);
@@ -751,34 +829,102 @@ void adcm2D::SRAttractiveActiveTensionPWForce(const int gi, const int gj, bool &
 			hr_im1j = edge2VertexDistance(gim1, gj, hx_im1j, hy_im1j, tim1j);
 			hr_jm1i = edge2VertexDistance(gjm1, gi, hx_jm1i, hy_jm1i, tjm1i);
 			
-			// check projection component, determine relevant minimum distance
-			if (tij < 0 && tim1j > 1)
-				ftmp = vvSoftAdhesionForce(gi, gj, dr, dx, dy); 					// vertex - vertex contact
-			else if (tij > 0 && tim1j > 1)
-				ftmp = evSoftAdhesionForce(gi, gj, hr_ij, hx_ij, hy_ij, tij);		// vertex - edge contact
-			else if (tij < 0 && tim1j < 1)
-				ftmp = evSoftAdhesionForce(gim1, gj, hr_im1j, hx_im1j, hy_im1j, tim1j);
+			// check projection component from edges on mu to vertex (j, nu), determine relevant minimum distance
+			if (tij < 0 && tim1j > 1){
+				// vertex - vertex contact
+				pi = gi;
+				dij = dr;
+				dijx = dx;
+				dijy = dy;
+				ti = -1;
+			}
+			else if ((tij > 0 && tij < 1) && tim1j > 1){
+				// vertex - edge contact
+				pi = gi;
+				dij = hr_ij;
+				dijx = hx_ij;
+				dijy = hy_ij;
+				ti = tij;
+			}
+			else if (tij < 0 && (tim1j > 0 && tim1j < 1)){
+				pi = gim1;
+				dij = hr_im1j;
+				dijx = hx_im1j;
+				dijy = hy_im1j;
+				ti = tim1j;
+			}
 			else {
 				// projection on both i and im1, so need to check minimum
-				if (hr_ij < hr_im1j)
-					ftmp = evSoftAdhesionForce(gi, gj, hr_ij, hx_ij, hy_ij, tij);
-				else
-					ftmp = evSoftAdhesionForce(gim1, gj, hr_im1j, hx_im1j, hy_im1j, tim1j);
+				if (hr_ij < hr_im1j){
+					pi = gi;
+					dij = hr_ij;
+					dijx = hx_ij;
+					dijy = hy_ij;
+					ti = tij;
+				}
+				else{
+					pi = gim1;
+					dij = hr_im1j;
+					dijx = hx_im1j;
+					dijy = hy_im1j;
+					ti = tim1j;
+				}
 			}
 
-			// do same, but for projections from vertex i to edges j, jm1
-			if (tji < 0 && tjm1i > 1 && !(tij < 0 && tim1j > 1))
-				ftmp = vvSoftAdhesionForce(gj, gi, dr, -dx, -dy); 
-			else if (tji > 0 && tji < 1 && tjm1i > 1)
-				ftmp = evSoftAdhesionForce(gj, gi, hr_ji, hx_ji, hy_ji, tji);		// vertex - edge contact
-			else if (tji < 0 && tjm1i < 1 && tjm1i > 0)
-				ftmp = evSoftAdhesionForce(gjm1, gi, hr_jm1i, hx_jm1i, hy_jm1i, tjm1i);
+			// do same, but for projections from vertex (i, mu) to edges on cell nu
+			if (tji < 0 && tji > 1){
+				// vertex - vertex contact
+				pj = gj;
+				dji = dr;
+				djix = -dx;
+				djiy = -dy;
+				tj = -1;
+			}
+			else if ((tji > 0 && tji < 1) && tjm1i > 1){
+				// vertex - edge contact
+				pj = gj;
+				dji = hr_ji;
+				djix = hx_ji;
+				djiy = hy_ji;
+				tj = tji;
+			}
+			else if (tji < 0 && (tjm1i > 0 && tjm1i < 1)){
+				pj = gjm1;
+				dji = hr_jm1i;
+				djix = hx_jm1i;
+				djiy = hy_jm1i;
+				tj = tjm1i;
+			}
 			else {
 				// projection on both i and im1, so need to check minimum
-				if (hr_ji < hr_jm1i)
-					ftmp = evSoftAdhesionForce(gj, gi, hr_ji, hx_ji, hy_ji, tji);
+				if (hr_ji < hr_jm1i){
+					pj = gj;
+					dji = hr_ji;
+					djix = hx_ji;
+					djiy = hy_ji;
+					tj = tji;
+				}
+				else{
+					pj = gjm1;
+					dji = hr_jm1i;
+					djix = hx_jm1i;
+					djiy = hy_jm1i;
+					tj = tjm1i;
+				}
+			}
+
+			// use force based on ti, tj, minimum distance
+			if (dij < dji){
+				if (ti < 0)
+					ftmp = vvSoftAdhesionForce(pi, gj, dij, dijx, dijy);
 				else
-					ftmp = evSoftAdhesionForce(gjm1, gi, hr_jm1i, hx_jm1i, hy_jm1i, tjm1i);
+					ftmp = evSoftAdhesionForce(pi, gj, dij, dijx, dijy, ti);
+			}
+			else {
+				if (tj < 0)
+					ftmp = vvSoftAdhesionForce(pj, gi, dji, djix, djiy);
+				else
+					ftmp = evSoftAdhesionForce(pj, gi, dji, djix, djiy, tj);
 			}
 		}
 		else if (drjip1 > shellij && hr_ij < shellij && tij > 0 && tij < 1) {
@@ -803,20 +949,12 @@ void adcm2D::SRAttractiveActiveTensionPWForce(const int gi, const int gj, bool &
 				else 
 					ftmp = evSoftAdhesionForce(gip1, gj, hr_ip1j, hx_ip1j, hy_ip1j, tip1j);     // IF vertex gj projects onto edges gi and gip1, closer to gip1 (REGION III' centered on ip1)
 			}
-			else
-				ftmp = 0.0;
 		}
-		else
-			ftmp = 0.0;
-
-
-
-
 
 
 
 		// -- force due to projection from vertex i onto edge j (Note, vertex-vertex overlap will already have been taken care of above)
-		if (drijp1 > shellij && hr_ji < shellij && tji > 0 && tji < 1){
+		if (drijp1 > shellij && dr > shellij && hr_ji < shellij && tji > 0 && tji < 1){
 			// compute projection onto adjacent edges
 			hr_jm1i = edge2VertexDistance(gjm1, gi, hx_jm1i, hy_jm1i, tjm1i);
 			hr_jp1i = edge2VertexDistance(gjp1, gi, hx_jp1i, hy_jp1i, tjp1i);
@@ -838,8 +976,6 @@ void adcm2D::SRAttractiveActiveTensionPWForce(const int gi, const int gj, bool &
 				else 
 					ftmp = evSoftAdhesionForce(gjp1, gi, hr_jp1i, hx_jp1i, hy_jp1i, tjp1i);		// IF vertex gi projects onto edges gj and gjm1, closer to gjm1 centered on ip1)
 			}
-			else
-				ftmp = 0.0;
 		}
 	}
 }
@@ -847,9 +983,14 @@ void adcm2D::SRAttractiveActiveTensionPWForce(const int gi, const int gj, bool &
 // function to add to total force with adhesive force (vertex-vertex contacts)
 // NOTE: vector (dx, dy) points from gv1 to gv2
 double adcm2D::vvSoftAdhesionForce(const int gv1, const int gv2, const double dr, const double dx, const double dy){
+	double dfx = 0.0, dfy = 0.0;
+	return vvSoftAdhesionForce(gv1, gv2, dr, dx, dy, dfx, dfy);
+}
+
+double adcm2D::vvSoftAdhesionForce(const int gv1, const int gv2, const double dr, const double dx, const double dy, double &dfx, double &dfy){
 	// local variables
 	double val, sij, xij, shellij, cutij;
-	double ftmp = 0.0, dfx, dfy;
+	double ftmp = 0.0;
 	double kint = (kc * l1) / (l2 - l1);
 
 	// contact distances
@@ -887,11 +1028,18 @@ double adcm2D::vvSoftAdhesionForce(const int gv1, const int gv2, const double dr
 	return ftmp;
 }
 
+
+
 // dx, dy should point from edge to vertex 
 double adcm2D::evSoftAdhesionForce(const int ge, const int gv, const double dr, const double dx, const double dy, const double t){
+	double dfx = 0.0, dfy = 0.0;
+	return evSoftAdhesionForce(ge, gv, dr, dx, dy, t, dfx, dfy);
+}
+
+double adcm2D::evSoftAdhesionForce(const int ge, const int gv, const double dr, const double dx, const double dy, const double t, double &dfx, double &dfy){
 	// local variables
 	double val, sij, xij, shellij, cutij;
-	double ftmp = 0.0, dfx, dfy;
+	double ftmp = 0.0;
 	double kint = (kc * l1) / (l2 - l1);
 
 	// contact distances
@@ -1147,16 +1295,15 @@ void adcm2D::adcm2DContractileForces(){
 	double fa, cx, cy, xi, yi;
 	double a0tmp, atmp, l0i, l0im1, l0reg;
 	double dx, dy, da, dli, dlim1;
-	double lim1x, lim1y, lix, liy, lip1x, lip1y, li, lim1;
+	double lim1x, lim1y, lix, liy, lip1x, lip1y, li = 0.0, lim1 = 0.0;
 	double rim1x, rim1y, rix, riy, rip1x, rip1y;
 
 	// loop over vertices, add to force
 	ci = 0;
 	for (gi = 0; gi < NVTOT; gi++) {
-
 		// -- Area force (and get cell index ci)
 		if (ci < NCELLS) {
-			if (gi == szList[ci]) {
+			if (gi == szList.at(ci)) {
 				// shape information
 				nvtmp = nv.at(ci);
 				a0tmp = a0.at(ci);
@@ -1234,8 +1381,6 @@ void adcm2D::adcm2DContractileForces(){
 		F[NDIM * gi] += 0.5 * fa * (rim1y - rip1y);
 		F[NDIM * gi + 1] += 0.5 * fa * (rip1x - rim1x);
 
-
-
 		// -- Contractility force
 
 		// segment lengths
@@ -1251,6 +1396,7 @@ void adcm2D::adcm2DContractileForces(){
 		dli 	= (li/l0i) - 1.0;
 
 		// add to force
+		// cout << "gi=" << gi << ",   dli=" << dli << ",    dlim1=" << dlim1 << ",    flx (im1 comp.)=" << -(dlim1 * (lim1x / (lim1 * l0im1))) << ",    fly (im1 comp.)=" << -(dlim1 * (lim1y / (lim1 * l0im1))) << ",   flx=" << (dli * (lix / (li * l0i))) - (dlim1 * (lim1x / (lim1 * l0im1))) << ",   fly=" << (dli * (liy / (li * l0i))) - (dlim1 * (lim1y / (lim1 * l0im1))) << endl;
 		F[NDIM * gi] += dli * (lix / (li * l0i)) - dlim1 * (lim1x / (lim1 * l0im1));
 		F[NDIM * gi + 1] += dli * (liy / (li * l0i)) - dlim1 * (lim1y / (lim1 * l0im1));
 
@@ -1308,8 +1454,8 @@ void adcm2D::adcm2DOsmoticPressureShapeForces(){
 
 				// update potential energy, pressure
 				da 		= area(ci) - a0.at(ci);
-				U 		-= ka * log(da);
-				Pinst 	-= (ka / da) * ((2.0 * area(ci)) / L[0]);
+				U 		= Posm * area(ci) - ka * log(da);
+				Pinst 	+= ((2.0 * area(ci))/L[0]) * (Posm - (ka/da));
 
 				// compute cell center of mass
 				xi = x[NDIM * gi];
@@ -1490,62 +1636,6 @@ void adcm2D::checkVertices(){
 		addVertex(verts2Add.at(gi) + gi);
 }
 
-
-// check vertices function that deletes when segments are too small, and add when ANGLES are too large
-/*
-void adcm2D::checkVertices(){
-	// local variables
-	int gi, i, v2test;
-	double li, ti;
-	bool addim1, addi;
-
-	// frac for addition / deletion
-	const double lmin = 0.1 * targetLength;
-	const double tmax = (2.0 * PI) / 6.0;
-
-	// lists for deletion and addition
-	vector<int> verts2Del;
-	vector<int> verts2Add;
-
-	// loop over all vertices, check length, delete first
-	for (gi=0; gi<NVTOT; gi++){
-		// get segment length
-		li = seg(gi);
-		if (li < lmin)
-			verts2Del.push_back(gi);
-	}
-
-	// loop over vertices to delete, delete them
-	for (gi=0; gi<verts2Del.size(); gi++)
-		deleteVertex(verts2Del.at(gi) - gi);
-
-	// loop over all vertices, check ANGLE, add
-	for (gi=0; gi<NVTOT; gi++){
-		// get new segment length
-		ti = theta(gi);
-		if (abs(ti) > tmax){
-			// only add if not already in vector
-			addim1 = 1;
-			addi = 1;
-			for (i=0; i<verts2Add.size(); i++){
-				v2test = verts2Add[i];
-				if (im1[gi] == v2test)
-					addim1 = 0;
-				else if (gi == v2test)
-					addi = 0;
-			}
-			if (addim1)
-				verts2Add.push_back(im1[gi]);
-			if (addi)
-				verts2Add.push_back(gi);
-		}
-	}
-
-	// loop over vertices to add, add them
-	for (gi=0; gi<verts2Add.size(); gi++)
-		addVertex(verts2Add.at(gi) + gi);
-}
-*/
 
 // delete vertex, reorganize indexing
 void adcm2D::deleteVertex(const int gk){
@@ -1753,6 +1843,285 @@ void adcm2D::nve(int NT, double dt0, double T0, bool printDynamics){
 	}
 
 }
+
+
+// Energy minimization with a central potential centered at origin
+void adcm2D::ctrPotentialFIRE(double Ftol, double kctr, double dt0, bool printRelaxation){
+	// local variables
+	int i, d, gi;
+	double cx, cy, dcx, dcy, dfx, dfy, ctrRMSD, cx0, cy0;
+	double shpTrq, shpF, intTrq, intF, ctrTrq, ctrF;
+
+	// check to see if cell linked-list has been initialized
+	if (NBX == -1){
+		cerr << "	** ERROR: In adcm2D::mesoEnthalpyFIRE, NBX = -1, so cell linked-list has not yet been initialized. Ending here.\n";
+		exit(1);
+	}
+
+	// FIRE variables
+	double PFIRE, fnorm, fcheck, dPcheck, vnorm, alpha, dtmax, dtmin;
+	int npPos, npNeg, fireit;
+
+	// set dt
+	dt = dt0;
+
+	// Initialize FIRE variables
+	PFIRE  		= 0;	
+	fnorm 		= 0;
+	vnorm 		= 0;
+	alpha   	= alpha0;
+
+	dtmax   	= 2.0 * dt;
+	dtmin   	= 0.1 * dt;
+
+	npPos      	= 0;
+	npNeg      	= 0;
+
+	fireit    	= 0;
+	fcheck  	= 10*Ftol;
+
+	// reset forces and velocities
+	resetForcesAndEnergy();
+	fill(v.begin(), v.end(), 0.0);
+	adcm2DForceUpdate();
+
+	// DEBUGGING: print out forces
+	string forcef = "measureFriction.frc";
+    ofstream forceOuputObj(forcef.c_str());
+
+	// relax forces using FIRE
+	while ((fcheck > Ftol || fireit < NDELAY) && fireit < itmax){
+	// while ((fcheck > Ftol || fireit < NDELAY) && fireit < 20000){
+		// VV VELOCITY UPDATE #1
+		for (i=0; i<vertDOF; i++)
+			v[i] += 0.5*dt*F[i];
+
+		// compute PFIRE
+		PFIRE = 0.0;
+		for (i=0; i<vertDOF; i++)
+			PFIRE += v[i]*F[i];
+
+		// print to console
+		if (fireit % NSKIP == 0){
+		// if (fireit > 19000){
+			cout << endl << endl;
+			cout << "===========================================" << endl;
+			cout << " 	F I R E 								" << endl;
+			cout << "	M I N I M I Z A T I O N 				" << endl;
+			cout << "===========================================" << endl;
+			cout << endl;
+			cout << "	** fireit 	= " << fireit << endl;
+			cout << "	** fcheck 	= " << fcheck << endl;
+			cout << "	** U 		= " << U << endl;
+			cout << "	** dt 		= " << dt << endl;
+			cout << "	** PFIRE 	= " << PFIRE << endl;
+			cout << "	** alpha 	= " << alpha << endl;
+			cout << "	** npPos 	= " << npPos << endl;
+			cout << "	** npNeg 	= " << npNeg << endl;
+			cout << "	** cx 		= " << setprecision(12) << cx << endl;
+			cout << "	** cy 		= " << setprecision(12) << cy << endl;
+			cout << " 	** dc 		= " << sqrt(pow(0.5 * L[0] - cx, 2.0) + pow(0.5 * L[1] - cy, 2.0)) << endl;
+
+			// print out torque information
+			fill(F.begin(), F.end(), 0.0);
+
+			// shape forces
+			(*this.*shpFrc)();
+			shpTrq = 0.0;
+			shpF = 0.0;
+			for (gi=0; gi<NVTOT; gi++){
+				shpTrq += x[NDIM * gi] * F[NDIM * gi + 1] - x[NDIM * gi + 1] * F[NDIM * gi];
+				shpF += F[NDIM * gi] * F[NDIM * gi] + F[NDIM * gi + 1] * F[NDIM * gi + 1];
+			}
+			shpF = sqrt(shpF / NVTOT);
+			cout << "	** shpTrq 	= " << setprecision(12) << shpTrq << endl; 
+			cout << "	** shpF 	= " << setprecision(12) << shpF << endl; 
+
+			// interaction forces
+			circuloLinePWForceUpdate();
+			intTrq = 0.0;
+			intF = 0.0;
+			for (gi=0; gi<NVTOT; gi++){
+				intTrq += x[NDIM * gi] * F[NDIM * gi + 1] - x[NDIM * gi + 1] * F[NDIM * gi];
+				intF += F[NDIM * gi] * F[NDIM * gi] + F[NDIM * gi + 1] * F[NDIM * gi + 1];
+			}
+			intF = sqrt(intF / NVTOT);
+			cout << "	** intTrq 	= " << setprecision(12) << shpTrq << endl; 
+			cout << "	** intF 	= " << setprecision(12) << shpF << endl;
+
+			// central potential
+			for (int ci=0; ci<NCELLS; ci++){
+				// get centers of mass
+				com2D(ci, cx, cy);
+
+				// compute force
+				dcx = 0.5 * L[0] - cx;
+				dcy = 0.5 * L[1] - cy;
+
+				// add force to center of mass if far enough away
+				dfx = kctr * dcx;
+				dfy = kctr * dcy;
+					
+				addComF(ci, 0, dfx);
+				addComF(ci, 1, dfy);
+			}
+			ctrTrq = 0.0;
+			ctrF = 0.0;
+			for (gi=0; gi<NVTOT; gi++){
+				ctrTrq += x[NDIM * gi] * F[NDIM * gi + 1] - x[NDIM * gi + 1] * F[NDIM * gi];
+				ctrF += F[NDIM * gi] * F[NDIM * gi] + F[NDIM * gi + 1] * F[NDIM * gi + 1];
+			}
+			ctrF = sqrt(ctrF / NVTOT);
+			cout << "	** ctrTrq 	= " << setprecision(12) << ctrTrq << endl; 
+			cout << "	** ctrF 	= " << setprecision(12) << ctrF << endl; 
+
+
+			// print it
+			if (printRelaxation && posout.is_open()){
+				printADCM2DConfiguration();
+				printInstantaneousForces(forceOuputObj);
+			}
+		}
+
+		// Adjust simulation based on net motion of degrees of freedom
+		if (PFIRE > 0){
+			// increase positive counter
+			npPos++;
+
+			// reset negative counter
+			npNeg = 0;
+
+			// alter simulation if enough positive steps have been taken
+			if (npPos > NDELAY){
+				// change time step
+				if (dt*finc < dtmax)
+					dt *= finc;
+
+				// decrease alpha
+				alpha *= falpha;
+			}
+		}
+		else{
+			// reset positive counter
+			npPos = 0;
+
+			// increase negative counter
+			npNeg++;
+
+			// check if simulation is stuck
+			if (npNeg > NNEGMAX){
+				cerr << "	** ERROR: During initial FIRE minimization, P < 0 for too long, so ending." << endl;
+				exit(1);
+			}
+
+			// take half step backwards, reset velocities
+			for (i=0; i<vertDOF; i++){
+				// take half step backwards
+				x[i] -= 0.5*dt*v[i];
+
+				// reset vertex velocities
+				v[i] = 0.0;
+			}
+
+			// decrease time step if past initial delay
+			if (fireit > NDELAY){
+				// decrease time step 
+				if (dt*fdec > dtmin)
+					dt *= fdec;
+
+				// reset alpha
+				alpha = alpha0;
+			}
+		}
+
+		// compute fnorm, vnorm and P
+		fnorm = 0.0;
+		vnorm = 0.0;
+		for (i=0; i<vertDOF; i++){
+			fnorm 	+= pow(F[i],2.0);
+			vnorm 	+= v[i]*v[i];
+		}
+		fnorm = sqrt(fnorm);
+		vnorm = sqrt(vnorm);
+
+		// update velocities (s.d. vs inertial dynamics) only if forces are acting
+		if (fnorm > 0){
+			for (i=0; i<vertDOF; i++)
+				v[i] = (1 - alpha)*v[i] + alpha*(F[i]/fnorm)*vnorm;
+		}
+
+		// VV POSITION UPDATE
+		for (i=0; i<vertDOF; i++)
+			x[i] += dt*v[i];
+
+		// update forces, pressure
+		adcm2DForceUpdate();
+
+		// add central potential
+        for (int ci=0; ci<NCELLS; ci++){
+            // get centers of mass
+            com2D(ci, cx, cy);
+
+            // compute force
+            dcx = 0.5 * L[0] - cx;
+            dcy = 0.5 * L[1] - cy;
+			// dcx = 0.5 * L[0] - x[NDIM * szList.at(ci)];
+			// dcy = 0.5 * L[1] - x[NDIM * szList.at(ci) + 1];
+
+            // add force to center of mass if far enough away
+            dfx = kctr * dcx;
+            dfy = kctr * dcy;
+                
+            addComF(ci, 0, dfx);
+            addComF(ci, 1, dfy);
+			// F[NDIM * szList.at(ci)] += dfx;
+			// F[NDIM * szList.at(ci) + 1] += dfy;
+        }
+
+		// VV VELOCITY UPDATE #2
+		for (i=0; i<vertDOF; i++)
+			v[i] += 0.5*dt*F[i];
+
+		// update fcheck based on fnorm (= force per degree of freedom)
+		fcheck = 0.0;
+		for (i=0; i<vertDOF; i++)
+			fcheck += pow(F[i],2.0);
+		fcheck = sqrt(fcheck/vertDOF);
+
+		// update iterator
+		fireit++;
+	}
+
+	// DEBUGGING: close force ouput file
+	forceOuputObj.close();
+
+	// check if FIRE converged
+	if (fireit == itmax){
+		cout << "	** FIRE minimization did not converge, fireit = " << fireit << ", itmax = " << itmax << "; ending." << endl;
+		exit(1);
+	}
+	else{
+		cout << endl;
+		cout << "===========================================" << endl;
+		cout << " 	F I R E 								" << endl;
+		cout << " 	E N T H A L P Y  						" << endl;
+		cout << "	M I N I M I Z A T I O N 				" << endl;
+		cout << "	C O N V E R G E D! 						" << endl;
+		cout << "===========================================" << endl;
+		cout << endl;
+		cout << "	** fireit 	= " << fireit << endl;
+		cout << "	** fcheck 	= " << fcheck << endl;
+		cout << "	** U 		= " << U << endl;
+		cout << "	** dt 		= " << dt << endl;
+		cout << "	** PFIRE 	= " << PFIRE << endl;
+		cout << "	** alpha 	= " << alpha << endl;
+		cout << "	** npPos 	= " << npPos << endl;
+		cout << "	** npNeg 	= " << npNeg << endl;
+		cout << "	** P 		= " << Pinst << endl;
+		cout << endl << endl;
+	}
+}
+
 
 
 // Enthalpy minimization
@@ -1978,10 +2347,15 @@ void adcm2D::nphSplitFIRE(double Ftol, double dPtol, double P0, double dt0, bool
 	// local variables
 	int i, d;
 
+	// DEBUGGING: print out forces
+	string forcef = "measureFriction.frc";
+    ofstream forceOuputObj(forcef.c_str());
+
 	// check whether neighbor list changes
 	bool boxNumChange = false;
 
 	// box size, momentum, and internal virial pressure
+	Pinst = 0.0;
 	double V=L[0]*L[1], Pi=0.0, P=0.0;
 	double pdt, bdt;
 
@@ -1990,7 +2364,7 @@ void adcm2D::nphSplitFIRE(double Ftol, double dPtol, double P0, double dt0, bool
 	int pNPPOS, pNPNEG;
 
 	// FIRE variables for box
-	double bP, bFNRM, bVNRM, bAL, DPCHECK;
+	double bdtmax, bdtmin, bP, bFNRM, bVNRM, bAL, DPCHECK;
 	int bNPPOS, bNPNEG;
 
 	// FIRE variables for everything
@@ -2005,8 +2379,11 @@ void adcm2D::nphSplitFIRE(double Ftol, double dPtol, double P0, double dt0, bool
 	pAL   		= alpha0;
 	bAL 		= alpha0;
 
-	dtmax   	= 3.0 * dt0;
-	dtmin   	= 0.1 * dt0;
+	dtmax   	= 5.0 * dt0;
+	dtmin   	= 0.2 * dt0;
+
+	bdtmax 		= 5.0 * bdt;
+	bdtmin 		= 0.2 * bdt;
 
 	pNPPOS    	= 0;
 	pNPNEG      = 0;
@@ -2031,7 +2408,7 @@ void adcm2D::nphSplitFIRE(double Ftol, double dPtol, double P0, double dt0, bool
 		bP = Pi * (P - P0);
 
 		// print to console
-		if (fireit % NSKIP == 0){
+		if (fireit % 5000 == 0){
 			cout << endl << endl;
 			cout << "===============================" << endl;
 			cout << " 	S P L I T  F I R E 			" << endl;
@@ -2065,8 +2442,10 @@ void adcm2D::nphSplitFIRE(double Ftol, double dPtol, double P0, double dt0, bool
 			cout << "	** bNPNEG 	= " << bNPNEG << endl;
 			
 			// print it
-			if (printCompression && posout.is_open())
+			if (printCompression && posout.is_open()){
 				printADCM2DConfiguration();
+				// printInstantaneousForces(forceOuputObj);
+			}
 		}
 
 
@@ -2150,7 +2529,7 @@ void adcm2D::nphSplitFIRE(double Ftol, double dPtol, double P0, double dt0, bool
 			// alter simulation if enough positive steps have been taken
 			if (bNPPOS > NDELAY){
 				// change time step
-				if (bdt*finc < dtmax)
+				if (bdt*finc < bdtmax)
 					bdt *= finc;
 
 				// decrease alpha
@@ -2174,7 +2553,7 @@ void adcm2D::nphSplitFIRE(double Ftol, double dPtol, double P0, double dt0, bool
 			// decrease time step if past initial delay
 			if (fireit > NDELAY){
 				// decrease time step 
-				if (bdt * fdec > dtmin)
+				if (bdt * fdec > bdtmin)
 					bdt *= fdec;
 
 				// reset alpha
@@ -2195,7 +2574,7 @@ void adcm2D::nphSplitFIRE(double Ftol, double dPtol, double P0, double dt0, bool
 		// VV POSITION UPDATE
 		for (i=0; i<vertDOF; i++)
 			x[i] += pdt * (v[i] + 0.5 * x[i] * (Pi/V));
-		V += bdt * Pi;
+		V += 10. * bdt * Pi;
 		L[0] = sqrt(V);
 		L[1] = sqrt(V);
 
@@ -2217,9 +2596,11 @@ void adcm2D::nphSplitFIRE(double Ftol, double dPtol, double P0, double dt0, bool
 		}
 
 		// reset nn list if number of boxes change
-		if (boxNumChange)
+		if (boxNumChange){
+			cerr << "resetting NNs" << endl;
 			resetNeighborLinkedListCellNNs();
-			
+			printNeighborList();
+		}
 
 		// update forces, pressure
 		adcm2DForceUpdate();
@@ -2241,6 +2622,7 @@ void adcm2D::nphSplitFIRE(double Ftol, double dPtol, double P0, double dt0, bool
 		// update iterator
 		fireit++;
 	}
+	forceOuputObj.close();
 	// check if FIRE converged
 	if (fireit == itmax){
 		cout << "	** FIRE minimization did not converge, fireit = " << fireit << ", itmax = " << itmax << "; ending." << endl;
@@ -2387,7 +2769,7 @@ void adcm2D::activeBrownianCrawling(const double Tsim, const double Tprint, cons
 
 
 // Active tension fluctuations
-void adcm2D::activeTensionFluctuations(const double Tsim, const double Tprint, const double dt0, const double kneigh, const double deltaST){
+void adcm2D::activeTensionFluctuations(const double Tsim, const double Tprint, const double dt0, const double deltaST){
 // local variables
 	double t = 0.0;
 	double r1, r2, grv, sttmp, gam0tmp;
@@ -2428,8 +2810,8 @@ void adcm2D::activeTensionFluctuations(const double Tsim, const double Tprint, c
 				
 				// update surface tension
 				sttmp = stMat.at(ci).at(cj);
-				sttmp += dt * (gam0tmp - sttmp) + noiseStrength * grv;
-				// sttmp += noiseStrength * grv;
+				// sttmp += dt * (gam0tmp - sttmp) + noiseStrength * grv;
+				sttmp += noiseStrength * grv;
 				stMat.at(ci).at(cj) = sttmp;
 				stMat.at(cj).at(ci) = sttmp;
 				meanGam0 += sttmp;
@@ -2466,6 +2848,8 @@ void adcm2D::activeTensionFluctuations(const double Tsim, const double Tprint, c
 		t += dt;
 	}
 }
+
+
 
 
 /******************************
@@ -2592,10 +2976,10 @@ void adcm2D::printInstantaneousForces(ofstream &outputObj){
 	int ci, vi, cj, vj, gi, gj;
 	int gip1, gim1, gjp1, gjm1;
 	double sij, shellij, cutij, drijp1, drjip1, lij, dlijApprox;
-	double dx, dy, dr;
-	double ftmpi, ftmpj;
-	double pxi, pyi, delxi, delyi, tiprint;
-	double pxj, pyj, delxj, delyj, tjprint;
+	double dx, dy, dr, dfx, dfy;
+	double ftmpi, ftmpj, trq, tqi, tqj;
+	double pxi, pyi, delxi, delyi, tiprint, fxi, fyi;
+	double pxj, pyj, delxj, delyj, tjprint, fxj, fyj;
 
 	// projection components from EDGES ((im1, i, ip1), mu) TO VERTEX (j, nu)
 	double tim1j, tij, tip1j;
@@ -2608,6 +2992,10 @@ void adcm2D::printInstantaneousForces(ofstream &outputObj){
 	double hr_ji, hx_ji, hy_ji;
 	double hr_jm1i, hx_jm1i, hy_jm1i;
 	double hr_jp1i, hx_jp1i, hy_jp1i;
+
+	// for min distance checking
+	int pi, pj;
+	double dij, dijx, dijy, dji, djix, djiy, ti, tj;
 	
 	// loop over all pairs of segments, compute force if interacting
 	for (gi=0; gi<NVTOT; gi++){
@@ -2647,7 +3035,7 @@ void adcm2D::printInstantaneousForces(ofstream &outputObj){
 			// Gut check distance
 			lij = 0.5 * (seg(gi) + seg(gj));
 		 	dlijApprox = 0.5 * (dr + deltaR(gip1, gjp1));
-			if (dlijApprox < 6.0 * lij) {
+			if (dlijApprox < 20.0 * lij) {
 				// vectors from edge to vertex (EDGE IS PASSED FIRST)
 				hr_ij = edge2VertexDistance(gi, gj, hx_ij, hy_ij, tij);
 				hr_ji = edge2VertexDistance(gj, gi, hx_ji, hy_ji, tji);
@@ -2659,93 +3047,133 @@ void adcm2D::printInstantaneousForces(ofstream &outputObj){
 					hr_im1j = edge2VertexDistance(gim1, gj, hx_im1j, hy_im1j, tim1j);
 					hr_jm1i = edge2VertexDistance(gjm1, gi, hx_jm1i, hy_jm1i, tjm1i);
 					
-					// check projection component, determine relevant minimum distance
+					// check projection component from edges on mu to vertex (j, nu), determine relevant minimum distance
 					if (tij < 0 && tim1j > 1){
-						ftmpi = vvSoftAdhesionForce(gi, gj, dr, dx, dy); 
-						pxi = x[NDIM * gi];
-						pyi = x[NDIM * gi + 1];
-						delxi = dx;
-						delyi = dy;
-						tiprint = -1000;
+						// vertex - vertex contact
+						pi = gi;
+						dij = dr;
+						dijx = dx;
+						dijy = dy;
+						ti = -1;
 					}
-					else if (tij > 0 && tim1j > 1){
-						ftmpi = evSoftAdhesionForce(gi, gj, hr_ij, hx_ij, hy_ij, tij);
-						pxi = x[NDIM * gi] + tij * segX(gi, 0);
-						pyi = x[NDIM * gi + 1] + tij * segX(gi, 1);
-						delxi = hx_ij;
-						delyi = hy_ij;
-						tiprint = tij;
+					else if ((tij > 0 && tij < 1) && tim1j > 1){
+						// vertex - edge contact
+						pi = gi;
+						dij = hr_ij;
+						dijx = hx_ij;
+						dijy = hy_ij;
+						ti = tij;
 					}
-					else if (tij < 0 && tim1j < 1){
-						ftmpi = evSoftAdhesionForce(gim1, gj, hr_im1j, hx_im1j, hy_im1j, tim1j);
-						pxi = x[NDIM * gim1] + tim1j * segX(gim1, 0);
-						pyi = x[NDIM * gim1 + 1] + tim1j * segX(gim1, 1);
-						delxi = hx_im1j;
-						delyi = hy_im1j;
-						tiprint = tim1j;
+					else if (tij < 0 && (tim1j > 0 && tim1j < 1)){
+						pi = gim1;
+						dij = hr_im1j;
+						dijx = hx_im1j;
+						dijy = hy_im1j;
+						ti = tim1j;
 					}
 					else {
 						// projection on both i and im1, so need to check minimum
 						if (hr_ij < hr_im1j){
-							ftmpi = evSoftAdhesionForce(gi, gj, hr_ij, hx_ij, hy_ij, tij);
-							pxi = x[NDIM * gi] + tij * segX(gi, 0);
-							pyi = x[NDIM * gi + 1] + tij * segX(gi, 1);
-							delxi = hx_ij;
-							delyi = hy_ij;
-							tiprint = tij;
+							pi = gi;
+							dij = hr_ij;
+							dijx = hx_ij;
+							dijy = hy_ij;
+							ti = tij;
 						}
 						else{
-							ftmpi = evSoftAdhesionForce(gim1, gj, hr_im1j, hx_im1j, hy_im1j, tim1j);
-							pxi = x[NDIM * gim1] + tim1j * segX(gim1, 0);
-							pyi = x[NDIM * gim1 + 1] + tim1j * segX(gim1, 1);
-							delxi = hx_im1j;
-							delyi = hy_im1j;
-							tiprint = tim1j;
+							pi = gim1;
+							dij = hr_im1j;
+							dijx = hx_im1j;
+							dijy = hy_im1j;
+							ti = tim1j;
 						}
 					}
 
-					// do same, but for projections from vertex i to edges j, jm1
-					if (tji < 0 && tjm1i > 1 && !(tij < 0 && tim1j > 1)){
-						ftmpj = vvSoftAdhesionForce(gj, gi, dr, -dx, -dy); 
-						pxj = x[NDIM * gj];
-						pyj = x[NDIM * gj + 1];
-						delxj = -dx;
-						delyj = -dy;
-						tjprint = -1000;
+					// do same, but for projections from vertex (i, mu) to edges on cell nu
+					if (tji < 0 && tji > 1){
+						// vertex - vertex contact
+						pj = gj;
+						dji = dr;
+						djix = -dx;
+						djiy = -dy;
+						tj = -1;
 					}
-					else if (tji > 0 && tji < 1 && tjm1i > 1){
-						ftmpj = evSoftAdhesionForce(gj, gi, hr_ji, hx_ji, hy_ji, tji);		// vertex - edge contact
-						pxj = x[NDIM * gj] + tji * segX(gj, 0);
-						pyj = x[NDIM * gj + 1] + tji * segX(gj, 1);
-						delxj = hx_ji;
-						delyj = hy_ji;
-						tjprint = tji;
+					else if ((tji > 0 && tji < 1) && tjm1i > 1){
+						// vertex - edge contact
+						pj = gj;
+						dji = hr_ji;
+						djix = hx_ji;
+						djiy = hy_ji;
+						tj = tji;
 					}
-					else if (tji < 0 && tjm1i < 1 && tjm1i > 0){
-						ftmpj = evSoftAdhesionForce(gjm1, gi, hr_jm1i, hx_jm1i, hy_jm1i, tjm1i);
-						pxj = x[NDIM * gjm1] + tjm1i * segX(gjm1, 0);
-						pyj = x[NDIM * gjm1 + 1] + tjm1i * segX(gjm1, 1);
-						delxj = hx_jm1i;
-						delyj = hy_jm1i;
-						tjprint = tjm1i;
+					else if (tji < 0 && (tjm1i > 0 && tjm1i < 1)){
+						pj = gjm1;
+						dji = hr_jm1i;
+						djix = hx_jm1i;
+						djiy = hy_jm1i;
+						tj = tjm1i;
 					}
 					else {
 						// projection on both i and im1, so need to check minimum
 						if (hr_ji < hr_jm1i){
-							ftmpj = evSoftAdhesionForce(gj, gi, hr_ji, hx_ji, hy_ji, tji);
-							pxj = x[NDIM * gj] + tji * segX(gj, 0);
-							pyj = x[NDIM * gj + 1] + tji * segX(gj, 1);
-							delxj = hx_ji;
-							delyj = hy_ji;
-							tjprint = tji;
+							pj = gj;
+							dji = hr_ji;
+							djix = hx_ji;
+							djiy = hy_ji;
+							tj = tji;
 						}
 						else{
-							ftmpj = evSoftAdhesionForce(gjm1, gi, hr_jm1i, hx_jm1i, hy_jm1i, tjm1i);
-							pxj = x[NDIM * gjm1] + tjm1i * segX(gjm1, 0);
-							pyj = x[NDIM * gjm1 + 1] + tjm1i * segX(gjm1, 1);
-							delxj = hx_jm1i;
-							delyj = hy_jm1i;
-							tjprint = tjm1i;
+							pj = gjm1;
+							dji = hr_jm1i;
+							djix = hx_jm1i;
+							djiy = hy_jm1i;
+							tj = tjm1i;
+						}
+					}
+
+					// use force based on ti, tj, minimum distance
+					if (dij < dji){
+						if (ti < 0){
+							ftmpi = vvSoftAdhesionForce(pi, gj, dij, dijx, dijy, dfx, dfy);
+							pxi = x[NDIM * gi];
+							pyi = x[NDIM * gi + 1];
+							delxi = dijx;
+							delyi = dijy;
+							tiprint = -100;
+							fxi = dfx;
+							fyi = dfy;
+						}
+						else {
+							ftmpi = evSoftAdhesionForce(pi, gj, dij, dijx, dijy, ti, dfx, dfy);
+							pxi = x[NDIM * gi] + ti * segX(pi, 0);
+							pyi = x[NDIM * gi + 1] + ti * segX(pi, 1);
+							delxi = dijx;
+							delyi = dijy;
+							tiprint = ti;
+							fxi = dfx;
+							fyi = dfy;
+						}
+					}
+					else {
+						if (tj < 0){
+							ftmpj = vvSoftAdhesionForce(pj, gi, dji, djix, djiy, dfx, dfy);
+							pxj = x[NDIM * gj];
+							pyj = x[NDIM * gj + 1];
+							delxj = djix;
+							delyj = djiy;
+							tjprint = -100;
+							fxj = dfx;
+							fyj = dfy;
+						}
+						else {
+							ftmpj = evSoftAdhesionForce(pj, gi, dji, djix, djiy, tj, dfx, dfy);
+							pxj = x[NDIM * gj] + tj * segX(pj, 0);
+							pyj = x[NDIM * gj + 1] + tj * segX(pj, 1);
+							delxj = djix;
+							delyj = djiy;
+							tjprint = tj;
+							fxj = dfx;
+							fyj = dfy;
 						}
 					}
 				}
@@ -2757,47 +3185,62 @@ void adcm2D::printInstantaneousForces(ofstream &outputObj){
 					// check location and projections to determine force
 					if ((tim1j < 0 || tim1j > 1) && (tip1j < 0 || tip1j > 1)){
 						// IF vertex gj projects onto "bulk" of edge gi, no other edge
-						ftmpi = evSoftAdhesionForce(gi, gj, hr_ij, hx_ij, hy_ij, tij);
+						ftmpi = evSoftAdhesionForce(gi, gj, hr_ij, hx_ij, hy_ij, tij, dfx, dfy);
+						pi = gi;
 						pxi = x[NDIM * gi] + tij * segX(gi, 0);
 						pyi = x[NDIM * gi + 1] + tij * segX(gi, 1);
 						delxi = hx_ij;
 						delyi = hy_ij;	
 						tiprint = tij;
+						fxi = dfx;
+						fyi = dfy;
 					}				
 					else if (tim1j > 0 && tim1j < 1) {
 						if (hr_ij < hr_im1j){
-							ftmpi = evSoftAdhesionForce(gi, gj, hr_ij, hx_ij, hy_ij, tij);				
+							ftmpi = evSoftAdhesionForce(gi, gj, hr_ij, hx_ij, hy_ij, tij, dfx, dfy);		
+							pi = gi;		
 							pxi = x[NDIM * gi] + tij * segX(gi, 0);
 							pyi = x[NDIM * gi + 1] + tij * segX(gi, 1);
 							delxi = hx_ij;
 							delyi = hy_ij;	
 							tiprint = tij;
+							fxi = dfx;
+							fyi = dfy;
 						}
 						else{
-							ftmpi = evSoftAdhesionForce(gim1, gj, hr_im1j, hx_im1j, hy_im1j, tim1j);		
+							ftmpi = evSoftAdhesionForce(gim1, gj, hr_im1j, hx_im1j, hy_im1j, tim1j, dfx, dfy);		
+							pi = gim1;
 							pxi = x[NDIM * gim1] + tim1j * segX(gim1, 0);
 							pyi = x[NDIM * gim1 + 1] + tim1j * segX(gim1, 1);
 							delxi = hx_im1j;
 							delyi = hy_im1j;
 							tiprint = tim1j;
+							fxi = dfx;
+							fyi = dfy;
 						}
 					}
 					else if (tip1j > 0 && tip1j < 1) {
 						if (hr_ij < hr_ip1j){
-							ftmpi = evSoftAdhesionForce(gi, gj, hr_ij, hx_ij, hy_ij, tij);	
+							ftmpi = evSoftAdhesionForce(gi, gj, hr_ij, hx_ij, hy_ij, tij, dfx, dfy);	
+							pi = gi;
 							pxi = x[NDIM * gi] + tij * segX(gi, 0);
 							pyi = x[NDIM * gi + 1] + tij * segX(gi, 1);
 							delxi = hx_ij;
 							delyi = hy_ij;		
 							tiprint = tij;		
+							fxi = dfx;
+							fyi = dfy;
 						}
 						else {
-							ftmpi = evSoftAdhesionForce(gip1, gj, hr_ip1j, hx_ip1j, hy_ip1j, tip1j);
+							ftmpi = evSoftAdhesionForce(gip1, gj, hr_ip1j, hx_ip1j, hy_ip1j, tip1j, dfx, dfy);
+							pi = gip1;
 							pxi = x[NDIM * gip1] + tip1j * segX(gip1, 0);
 							pyi = x[NDIM * gip1 + 1] + tip1j * segX(gip1, 1);
 							delxi = hx_ip1j;
 							delyi = hy_ip1j;
 							tiprint = tip1j;
+							fxi = dfx;
+							fyi = dfy;
 						}
 					}
 				}
@@ -2805,7 +3248,7 @@ void adcm2D::printInstantaneousForces(ofstream &outputObj){
 
 
 				// -- force due to projection from vertex i onto edge j (Note, vertex-vertex overlap will already have been taken care of above)
-				if (drijp1 > shellij && hr_ji < shellij && tji > 0 && tji < 1){
+				if (drijp1 > shellij && dr > shellij && hr_ji < shellij && tji > 0 && tji < 1){
 					// compute projection onto adjacent edges
 					hr_jm1i = edge2VertexDistance(gjm1, gi, hx_jm1i, hy_jm1i, tjm1i);
 					hr_jp1i = edge2VertexDistance(gjp1, gi, hx_jp1i, hy_jp1i, tjp1i);
@@ -2813,47 +3256,62 @@ void adcm2D::printInstantaneousForces(ofstream &outputObj){
 					// check location and projections to determine force
 					if ((tjm1i < 0 || tjm1i > 1) && (tjp1i < 0 || tjp1i > 1)) {
 						// IF vertex gi projects onto bulk of edge gi and no other edge
-						ftmpj = evSoftAdhesionForce(gj, gi, hr_ji, hx_ji, hy_ji, tji);
+						ftmpj = evSoftAdhesionForce(gj, gi, hr_ji, hx_ji, hy_ji, tji, dfx, dfy);
+						pj = gj;
 						pxj = x[NDIM * gj] + tji * segX(gj, 0);
 						pyj = x[NDIM * gj + 1] + tji * segX(gj, 1);
 						delxj = hx_ji;
 						delyj = hy_ji;
 						tjprint = tji;
+						fxj = dfx;
+						fyj = dfy;
 					}
 					else if (tjm1i > 0 && tjm1i < 1){
 						if (hr_ji < hr_jm1i){
-							ftmpj = evSoftAdhesionForce(gj, gi, hr_ji, hx_ji, hy_ji, tji);				// IF vertex gi projects onto edges gj and gjm1, closer to gj (REGION III')
+							ftmpj = evSoftAdhesionForce(gj, gi, hr_ji, hx_ji, hy_ji, tji, dfx, dfy);				// IF vertex gi projects onto edges gj and gjm1, closer to gj (REGION III')
+							pj = gj;
 							pxj = x[NDIM * gj] + tji * segX(gj, 0);
 							pyj = x[NDIM * gj + 1] + tji * segX(gj, 1);
 							delxj = hx_ji;
 							delyj = hy_ji;
 							tjprint = tji;
+							fxj = dfx;
+							fyj = dfy;
 						}
 						else {
-							ftmpj = evSoftAdhesionForce(gjm1, gi, hr_jm1i, hx_jm1i, hy_jm1i, tjm1i);		// IF vertex gi projects onto edges gj and gjm1, closer to gjm1 (REGION II')
+							ftmpj = evSoftAdhesionForce(gjm1, gi, hr_jm1i, hx_jm1i, hy_jm1i, tjm1i, dfx, dfy);		// IF vertex gi projects onto edges gj and gjm1, closer to gjm1 (REGION II')
+							pj = gjm1;
 							pxj = x[NDIM * gjm1] + tjm1i * segX(gjm1, 0);
 							pyj = x[NDIM * gjm1 + 1] + tjm1i * segX(gjm1, 1);
 							delxj = hx_jm1i;
 							delyj = hy_jm1i;
 							tjprint = tjm1i;
+							fxj = dfx;
+							fyj = dfy;
 						}
 					}
 					else if (tjp1i > 0 && tjp1i < 1) {
 						if (hr_ji < hr_jp1i){
-							ftmpj = evSoftAdhesionForce(gj, gi, hr_ji, hx_ji, hy_ji, tji);				// IF vertex gi projects onto edges gj and gjm1, closer to gj (REGION II' centered on ip1)
+							ftmpj = evSoftAdhesionForce(gj, gi, hr_ji, hx_ji, hy_ji, tji, dfx, dfy);				// IF vertex gi projects onto edges gj and gjm1, closer to gj (REGION II' centered on ip1)
+							pj = gj;
 							pxj = x[NDIM * gj] + tji * segX(gj, 0);
 							pyj = x[NDIM * gj + 1] + tji * segX(gj, 1);
 							delxj = hx_ji;
 							delyj = hy_ji;
 							tjprint = tji;
+							fxj = dfx;
+							fyj = dfy;
 						}
 						else {
-							ftmpj = evSoftAdhesionForce(gjp1, gi, hr_jp1i, hx_jp1i, hy_jp1i, tjp1i);		// IF vertex gi projects onto edges gj and gjm1, closer to gjm1 centered on ip1)
+							ftmpj = evSoftAdhesionForce(gjp1, gi, hr_jp1i, hx_jp1i, hy_jp1i, tjp1i, dfx, dfy);		// IF vertex gi projects onto edges gj and gjm1, closer to gjm1 centered on ip1)
+							pj = gjp1;
 							pxj = x[NDIM * gjp1] + tjp1i * segX(gjp1, 0);
 							pyj = x[NDIM * gjp1 + 1] + tjp1i * segX(gjp1, 1);
 							delxj = hx_jp1i;
 							delyj = hy_jp1i;
 							tjprint = tjp1i;
+							fxj = dfx;
+							fyj = dfy;
 						}
 					}
 				}
@@ -2862,23 +3320,64 @@ void adcm2D::printInstantaneousForces(ofstream &outputObj){
 
 				// print based on forces
 				if (ftmpi > 0 || ftmpi < 0){
-					outputObj << gi << "  ";
+					// print out index
+					outputObj << pi << "  ";
 					outputObj << gj << "  ";
 					outputObj << setprecision(8) << pxi << "  ";
 					outputObj << setprecision(8) << pyi << "  ";
 					outputObj << setprecision(8) << delxi << "  ";
 					outputObj << setprecision(8) << delyi << "  ";
 					outputObj << setprecision(8) << tiprint << "  ";
+					outputObj << setprecision(8) << fxi << "  ";
+					outputObj << setprecision(8) << fyi << "  ";
+
+					// print out torque
+					if (tiprint > 0){
+						// force acting between edge i and vertex j
+						tqi = x[NDIM * pi] * (1 - tiprint) * fyi - x[NDIM * pi + 1] * (1 - tiprint) * fxi;
+						tqi += x[NDIM * ip1[pi]] * tiprint * fyi - x[NDIM * ip1[pi] + 1] * tiprint * fxi;
+						tqj = (pxi + delxi) * (-fyi) - (pyi + delyi) * (-fxi);
+					}
+					else {
+						// based on force acting between vertex i and vertex j
+						tqi = pxi * fyi - pyi * fxi;
+						tqj = (pxi + delxi) * (-fyi) - (pyi + delyi) * (-fxi);
+					}
+					outputObj << setprecision(8) << tqi << "  ";
+					outputObj << setprecision(8) << tqj << "  ";
+
+					// print out new line character
 					outputObj << endl;
 				}
 				if (ftmpj > 0 || ftmpj < 0){
-					outputObj << gj << "  ";
+					// print out easy stuff
+					outputObj << pj << "  ";
 					outputObj << gi << "  ";
 					outputObj << setprecision(8) << pxj << "  ";
 					outputObj << setprecision(8) << pyj << "  ";
 					outputObj << setprecision(8) << delxj << "  ";
 					outputObj << setprecision(8) << delyj << "  ";
 					outputObj << setprecision(8) << tjprint << "  ";
+					outputObj << setprecision(8) << fxj << "  ";
+					outputObj << setprecision(8) << fyj << "  ";
+
+					// print out torque
+					if (tjprint > 0){
+						// force acting between edge i and vertex j
+						tqj = pxj * fyj - pyj * fxj;
+						tqi = (pxj + delxj) * (-fyj) - (pyj + delyj) * (-fxj);
+					}
+					else {
+						// based on force acting between vertex i and vertex j
+						tqj = x[NDIM * pj] * (1 - tjprint) * fyj - x[NDIM * pj + 1] * (1 - tjprint) * fxj;
+						tqj += x[NDIM * ip1[pj]] * tjprint * fyj - x[NDIM * ip1[pj] + 1] * tjprint * fxj;
+						tqi = (pxj + delxj) * (-fyj) - (pyj + delyj) * (-fxj);
+					}
+					outputObj << setprecision(8) << tqi << "  ";
+					outputObj << setprecision(8) << tqj << "  ";
+
+
+					// print out new line character
 					outputObj << endl;
 				}
 			}

@@ -16,8 +16,8 @@ using namespace std;
 
 int main(){
 	// local variables
-	int NCELLS = 16, nsmall = 32, seed = 1;
-	double phi0 = 0.35, calA0 = 1.17, smallfrac = 0.5, sizefrac = 1.4, disp = 0.1, Ftol = 1e-12, dPtol = 1e-12, dt0 = 1e-2;
+	int NCELLS = 24, nsmall = 24, seed = 1;
+	double phi0 = 0.3, calA0 = 1.17, smallfrac = 0.5, sizefrac = 1.4, disp = 0.1, Ftol = 1e-12, dPtol = 1e-12, dt0 = 1e-2;
 	double ka = 1.0, kl = 1.0, kb = 0.0, kc = 1.0, thA = 0.0, thK = 0.0, boxLengthScale = 3.5;
 	double P0 = 1e-6, dphi0 = 0.01;
 	bool plotCompression = 1;

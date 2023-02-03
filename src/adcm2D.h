@@ -55,6 +55,7 @@ public:
 	// getters
 	double getPinst() { return Pinst; };
 	double getSinst() { return Sinst; };
+	void cellCoS(int ci, double &cx, double &cy);
 
 	// setters
 	void setgam0(double val) { gam0 = val; };
@@ -87,9 +88,10 @@ public:
 	void deleteVertex(const int gk);
 
 	// force update
-	void adcm2DForceUpdate() { checkVertices(); U = 0.0; Pinst = 0.0; Sinst = 0.0; fill(F.begin(), F.end(), 0.0); (*this.*shpFrc)(); circuloLinePWForceUpdate(); stressUpdate(); };
+	// void adcm2DForceUpdate() { checkVertices(); U = 0.0; Pinst = 0.0; Sinst = 0.0; fill(F.begin(), F.end(), 0.0); (*this.*shpFrc)(); circuloLinePWForceUpdate(); stressUpdate(); };
 	void activeTensionForceUpdate();
-	// void adcm2DForceUpdate() { U = 0.0; Pinst = 0.0; Sinst = 0.0; fill(F.begin(), F.end(), 0.0); (*this.*shpFrc)(); circuloLinePWForceUpdate(); stressUpdate(); };
+	void activeTensionForceUpdateVertexPreservation();
+	void adcm2DForceUpdate() { U = 0.0; Pinst = 0.0; Sinst = 0.0; fill(F.begin(), F.end(), 0.0); (*this.*shpFrc)(); circuloLinePWForceUpdate(); stressUpdate(); };
 
 	// interaction force functions
 	void circuloLinePWForceUpdate();
@@ -106,7 +108,9 @@ public:
 
 	// compute individual forces
 	double vvSoftAdhesionForce(const int gv1, const int gv2, const double dr, const double dx, const double dy);
+	double vvSoftAdhesionForce(const int gv1, const int gv2, const double dr, const double dx, const double dy, double &dfx, double &dfy);
 	double evSoftAdhesionForce(const int ge, const int gv, const double dr, const double dx, const double dy, const double t);
+	double evSoftAdhesionForce(const int ge, const int gv, const double dr, const double dx, const double dy, const double t, double &dfx, double &dfy);
 
 	// shape forces
 	void adcm2DShapeForces();
@@ -123,10 +127,13 @@ public:
 	void nve(int NT, double dt0, double T0, bool printDynamics);
 
 	// FIRE relaxation at fixed pressure
+	void ctrPotentialFIRE(double Ftol, double kctr, double dt0, bool printRelaxation);
 	void nphFIRE(double Ftol, double dPtol, double P0, double dt0, bool printCompression);
 	void nphSplitFIRE(double Ftol, double dPtol, double P0, double dt0, bool printCompression);
+
+	// active simulations
 	void activeBrownianCrawling(const double Tsim, const double Tprint, const double dt0, const double v0, const double Dr, const double Ds);
-	void activeTensionFluctuations(const double Tsim, const double Tprint, const double dt0, const double kneigh, const double deltaST);
+	void activeTensionFluctuations(const double Tsim, const double Tprint, const double dt0, const double deltaST);
 
 	// printing
 	void printADCM2DConfiguration();
