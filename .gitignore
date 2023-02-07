@@ -21,3 +21,6 @@ input/*
 local/
 .DS_Store
 .vscode
+*.json
+.vscode/*
+.vscode/settings.json

@@ -6,7 +6,7 @@ clc;
 
 % position information
 dpmloc = '/Users/jacktreado/Jamming/CellSim/dpm';
-posfname = 'adcm2D_test.pos';
+posfname = 'adcm2D_area_constraint_test.pos';
 posfstr = [dpmloc '/' posfname];
 
 % load into simulation data struct
@@ -154,15 +154,15 @@ end
 % get frames to plot
 
 % single frame
-% FSTART = 1;
-% if FSTART > NFRAMES
-%     FSTART = NFRAMES;
-% end
-% FEND = FSTART;
+FSTART = 2;
+if FSTART > NFRAMES
+    FSTART = NFRAMES;
+end
+FEND = FSTART;
 
 % movie frames
-FSTART = 1;
-FEND = NFRAMES;
+% FSTART = 1;
+% FEND = NFRAMES;
 
 % set step size
 FSTEP = 1;

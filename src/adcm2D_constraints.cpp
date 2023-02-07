@@ -44,6 +44,8 @@ void adcm2D::updateConstrainedAreas(){
         nyi = 0.5 * (x[NDIM * im1[gi]] - x[NDIM * ip1[gi]]);
 
         // compute constants for cell ci
+        C1 = 0.0;
+        C2 = 0.0;
         for (vi=0; vi<nv[ci]; vi++){
             // relevant indices
             gip1 = ip1[gi];
@@ -64,9 +66,9 @@ void adcm2D::updateConstrainedAreas(){
             nxip1 = 0.5 * (yip2 - yi);
             nyip1 = 0.5 * (xi - xip2);
 
-            // C1 (quadratic in normal vector), C2 (linear in normal vector)
-            C2 += nxi * nyip1 - nyi * nxip1;
-            C2 += xi * nyip1 - xip1 * nyi + yip1 * nxi - yi * nxip1;
+            // C1 (linear in normal vector), C2 (quadratic in normal vector)
+            C1 += 0.5 * (xi * nyip1 - xip1 * nyi + yip1 * nxi - yi * nxip1);
+            C2 += 0.5 * (nxi * nyip1 - nyi * nxip1);
             
             // increment global vertex index
             gi++;
@@ -77,11 +79,18 @@ void adcm2D::updateConstrainedAreas(){
         }
 
         // compute lagrange multiplier
-        LM = 0.5 * (sqrt(C1 * C1 - 4. * C2 * da) - C1) / C2;
+        LM = 0.5 * (sqrt((C1 * C1) - (4. * C2 * da)) - C1) / C2;
+        cout << "** ** C1 = " << C1 << endl;
+        cout << "** ** C2 = " << C2 << endl;
+        cout << "** ** LM + = " << LM << endl;
+        cout << "** ** LM - = " << 0.5 * (-sqrt(C1 * C1 - 4. * C2 * da) - C1) / C2 << endl;
 
         // loop again, apply constraint
         gk = szList[ci];
-        for (vi=0; vi<nv[vi]; vi++){
+        for (vi=0; vi<nv[ci]; vi++){
+            // output
+            cout << "vi=" << vi << ";   nx = " << nx[vi] << ", ny = " << ny[vi] << endl;
+
             // apply constraint
             x[NDIM * gk]        += LM * nx[vi];
             x[NDIM * gk + 1]    += LM * ny[vi];
@@ -94,5 +103,10 @@ void adcm2D::updateConstrainedAreas(){
         nx.clear();
         ny.clear();
     }
-    
 }
+
+
+// function to update forces based solely on  surface tension
+
+
+// function to relax total energy subject to area constraint
