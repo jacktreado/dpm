@@ -105,6 +105,9 @@ protected:
 	// macroscopic stress vector
 	std::vector<double> stress;
 
+	// instantaneous pressure and shear stresses
+	double Pinst, Sinst;
+
 	// contact network
 	std::vector<int> cij;
 

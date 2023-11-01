@@ -100,6 +100,8 @@ dpm::dpm(int n, int ndim, int seed) {
 	stress.resize(NDIM * (NDIM + 1) / 2);
 	for (i = 0; i < NDIM * (NDIM + 1) / 2; i++)
 		stress.at(i) = 0.0;
+	Pinst = 0.;
+	Sinst = 0.;
 
 	// contact network vector
 	cij.resize(NCELLS * (NCELLS - 1) / 2);
@@ -3040,7 +3042,7 @@ void dpm::vertexEnthalpyMin(dpmMemFn forceCall, double Ftol, double dPtol, doubl
 
 	// check to see if cell linked-list has been initialized
 	if (NBX == -1){
-		cerr << "	** ERROR: In meso2D::mesoNetworkFIRE, NBX = -1, so cell linked-list has not yet been initialized. Ending here.\n";
+		cerr << "	** ERROR: In dpm::vertexEnthalpyMin, NBX = -1, so cell linked-list has not yet been initialized. Ending here.\n";
 		exit(1);
 	}
 

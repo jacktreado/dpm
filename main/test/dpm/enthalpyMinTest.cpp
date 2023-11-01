@@ -1,13 +1,5 @@
-// File to jam configuration of DPM particles to target pressure
-// 
-// Will create bidisperse DPM particles, set constants,
-// place particle centers, relax shapes + positions, compress to target pressure Ptol (jamming is limit of Ptol -> 0), print configuration
-// 
 // Compilation command:
-// g++ -O3 --std=c++11 -I src main/test/jamtest.cpp src/*.cpp -o test.o
-// 
-// Run command:
-// ./test.o
+// g++ -O3 --std=c++14 -I src main/test/enthalpyMinTest.cpp src/*.cpp -o test.o
 
 
 // header files
@@ -18,8 +10,10 @@
 
 using namespace std;
 
-int main(){
-	// local variables
+// main file
+int main()
+{
+    // local variables
 	int NCELLS = 32, nsmall = 32, seed = 1;
 	double phi0 = 0.5, calA0 = 1.06, smallfrac = 0.5, sizefrac = 1.4, disp = 0.0, Ftol = 1e-10, Ptol = 1e-6, dt0 = 0.05;
 	double ka = 1.0, kl = 0.25, kb = 0., kc = 0.5, thA = 0., thK = 0.0, boxLengthScale = 3.0, l1 = 0.0, l2 = 0.0;
@@ -68,15 +62,4 @@ int main(){
 
 	// initialize neighbor linked list
 	configobj2D.initializeNeighborLinkedList2D(boxLengthScale);
-
-	// compress to target packing fraction
-	double dphi0 = 0.01;
-	bool plotCompression = true;
-	configobj2D.vertexJamming2D(forceUpdate,Ftol,Ptol,dt0,dphi0,plotCompression);
-	configobj2D.printConfiguration2D();
-
-	// say goodbye
-	cout << "\n\n** Finished jamtest.cpp, ending. " << endl;
-
-	return 0;
 }

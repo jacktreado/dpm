@@ -208,6 +208,8 @@ void meso2D::operator=(const meso2D &rhs){
 
 	// stress
 	stress = rhs.stress;
+	Pinst = rhs.Pinst;
+	Sinst = rhs.Sinst;
 
 	// cell-cell contact network
 	cij = rhs.cij;
