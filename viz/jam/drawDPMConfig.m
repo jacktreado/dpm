@@ -72,7 +72,7 @@ phi = dpmData.phi;
 %% Draw cells
 
 % show vertices or not
-showverts = 1;
+showverts = 0;
 
 % get cell colors
 [nvUQ, ~, IC] = unique(nv);
@@ -94,9 +94,9 @@ else
 end
 
 % make a movie
-makeAMovie = 0;
+makeAMovie = 1;
 if makeAMovie == 1
-    moviestr = 'compression_jamming.mp4';
+    moviestr = 'compression_enthalpyMin.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');
     vobj.FrameRate = 15;
     open(vobj);

@@ -3093,8 +3093,8 @@ void dpm::vertexEnthalpyMin(dpmMemFn forceCall, double Ftol, double dPtol, doubl
 	vnorm 		= 0;
 	alpha   	= alpha0;
 
-	dtmax   	= 20.0 * dt;
-	dtmin   	= 1e-1 * dt;
+	dtmax   	= 2.0 * dt;
+	dtmin   	= 1e-4 * dt;
 
 	npPos      	= 0;
 	npNeg      	= 0;
