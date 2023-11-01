@@ -3093,14 +3093,15 @@ void dpm::vertexEnthalpyMin(dpmMemFn forceCall, double Ftol, double dPtol, doubl
 	vnorm 		= 0;
 	alpha   	= alpha0;
 
-	dtmax   	= 20.0*dt;
-	dtmin   	= 1e-1*dt;
+	dtmax   	= 20.0 * dt;
+	dtmin   	= 1e-1 * dt;
 
 	npPos      	= 0;
 	npNeg      	= 0;
 
 	fireit    	= 0;
-	fcheck  	= 10*Ftol;
+	fcheck  	= 10 * Ftol;
+	dPcheck 	= 10 * dPtol;
 
 	// reset forces and velocities
 	resetForcesAndEnergy();
@@ -3131,8 +3132,11 @@ void dpm::vertexEnthalpyMin(dpmMemFn forceCall, double Ftol, double dPtol, doubl
 			cout << "	M I N I M I Z A T I O N 				" << endl;
 			cout << "===========================================" << endl;
 			cout << endl;
+			cout << endl;
 			cout << "	** fireit 	= " << fireit << endl;
 			cout << "	** fcheck 	= " << fcheck << endl;
+			cout << "	** dPcheck  = " << dPcheck << endl;
+			cout << "	** phi 		= " << vertexPackingFraction2D() << endl;
 			cout << "	** U 		= " << U << endl;
 			cout << "	** dt 		= " << dt << endl;
 			cout << "	** PFIRE 	= " << PFIRE << endl;
@@ -3142,7 +3146,6 @@ void dpm::vertexEnthalpyMin(dpmMemFn forceCall, double Ftol, double dPtol, doubl
 			cout << "	** V  		= " << V << endl;
 			cout << "	** P 		= " << P << endl;
 			cout << "	** Pi 		= " << Pi << endl;
-			cout << "	** phi 		= " << vertexPackingFraction2D() << endl;
 
 			if (plotCompression)
 				printConfiguration2D();
@@ -3232,7 +3235,7 @@ void dpm::vertexEnthalpyMin(dpmMemFn forceCall, double Ftol, double dPtol, doubl
 		CALL_MEMBER_FN(*this, forceCall)();
 
 		// update instantaneous pressure
-		P = 0.5*(stress[0] + stress[1]);
+		P = Pinst;
 
 		// VV VELOCITY UPDATE #2
 		for (i=0; i<vertDOF; i++)
@@ -3245,6 +3248,9 @@ void dpm::vertexEnthalpyMin(dpmMemFn forceCall, double Ftol, double dPtol, doubl
 			fcheck += pow(F[i] - 0.5*v[i]*(Pi/V),2.0);
 		fcheck += pow(P - P0,2.0);
 		fcheck = sqrt(fcheck/vertDOF);
+
+		// update dp check
+		dPcheck = abs(P - P0);
 
 		// update iterator
 		fireit++;

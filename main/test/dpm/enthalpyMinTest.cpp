@@ -62,4 +62,9 @@ int main()
 
 	// initialize neighbor linked list
 	configobj2D.initializeNeighborLinkedList2D(boxLengthScale);
+
+    // run enthalpy minimization
+	const bool plotCompression = 1;
+	const double dPtol = Ftol, P0 = 1e-6;
+	configobj2D.vertexEnthalpyMin(forceUpdate, Ftol, dPtol, P0, dt0, plotCompression);
 }
