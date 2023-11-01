@@ -222,14 +222,16 @@ public:
 	}
 
 	// Basic geometry
+	double relX(const int gi, const int d);
 	double deltaX(const int gi, const int gj, const int d);
 	double deltaR(const int gi, const int gj);
 	double deltaR(const int gi, const int gj, double &dx, double &dy);
 	double segX(const int gi, const int d) { return deltaX(gi, ip1[gi], d); };
 	double seg(const int gi) { return deltaR(gi, ip1[gi]); };
 	double unitDelX(const int gi, const int gj, const int d) { return deltaX(gi, gj, d) / deltaR(gi, gj); };
-	double unitSegX(const int gi, const int d) { return segX(gi, d) / seg(gi); }; 
+	double unitSegX(const int gi, const int d) { return segX(gi, d) / seg(gi); };
 	double theta(const int gi);
+	double normalX(const int gi, const int d) { return double(1 - 2 * d) * 0.5 * (segX(gi, 1 - d) + segX(im1[gi], 1 - d)); };
     
 	// Initialize particles (two dimensions)
 	void monodisperse2D(int n);

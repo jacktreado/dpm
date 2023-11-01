@@ -27,7 +27,6 @@ int main(){
 
     // measure initial area
     double astart = sys1.area(0);
-    sys1.printADCM2DConfiguration();
 
     // make initial perturbation
     srand48(time(NULL));
@@ -43,14 +42,27 @@ int main(){
 
     // check new area
     double aend = sys1.area(0);
-    sys1.printADCM2DConfiguration();
         
     // make constraint correction
     sys1.updateConstrainedAreas();
-    sys1.printADCM2DConfiguration();
 
     // measure new area, check to see if constraint worked
     double acorrect = sys1.area(0);
+
+    // loop over vertices, check definition of normals
+    int im1, ip1;
+    double nix, niy, nixReal, niyReal;
+    for (int i=0; i<NV; i++){
+        nix = sys1.normalX(i, 0);
+        niy = sys1.normalX(i, 1);
+
+        ip1 = (i + 1) % NV;
+        im1 = (i + NV - 1) % NV;
+        nixReal = 0.5 * (sys1.getx(ip1, 1) - sys1.getx(im1, 1));
+        niyReal = 0.5 * (sys1.getx(im1, 0) - sys1.getx(ip1, 0));
+
+        cout << "nix = " << nix << ", nixReal = " << nixReal << ";     niy = " << niy << ", niyReal = " << niyReal << ";   diff = " << nix + niy - nixReal - niyReal << endl;
+    }
 
     // print to console
     cout << "** Area update complete, results:" << endl;
@@ -61,8 +73,24 @@ int main(){
     cout << " -- a0 = " << sys1.geta0(0) << endl;
 
 
-    // -- TEST 2: impose some external pressure by increasing surface tension, make sure 
+    // -- TEST 2: impose some external pressure by increasing surface tension, make sure
+
+    // reset to center of box
+    sys1.setCom(0, 0.5 * sys1.getL(0), 0.5 * sys1.getL(1));
+
+    // set surface tension
+
     
     // area stays constant during steepest descent minimization
+    // while (t < tmax && k < kmax){
+    //     // update forces
+    //     adcm2DSurfaceTensionForceUpdate();
+
+
+    //     // update iterate
+    //     kmax++;
+    // }
+    // if (k == kmax)
+        // cout << "ERROR in adcm2D_area_constraint_test, k -> kmax = " << k << ", ending." << endl;
 
 }

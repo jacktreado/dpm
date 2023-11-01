@@ -399,7 +399,7 @@ void adcm2D::circuloLinePWForceUpdate(){
 				}
 
 				// compute force between circulolines
-				(*this.*pwFrc)(gi, gj);
+				(this->*pwFrc)(gi, gj);
 
 				// update pj
 				pj = list[pj];
@@ -2467,8 +2467,6 @@ void adcm2D::activeTensionFluctuations(const double Tsim, const double Tprint, c
 		t += dt;
 	}
 }
-
-
 
 
 /******************************

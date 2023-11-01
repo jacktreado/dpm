@@ -72,7 +72,7 @@ phi = dpmData.phi;
 %% Draw cells
 
 % show vertices or not
-showverts = 0;
+showverts = 1;
 
 % get cell colors
 [nvUQ, ~, IC] = unique(nv);
@@ -84,16 +84,17 @@ cellCLR = allClr(1:NUQ,:);
 if showverts == 0
     FSTART = 1;
     FSTEP = 1;
-    FEND = NFRAMES-1;
-%     FEND = FSTART;
+    % FEND = NFRAMES-1;
+    FEND = FSTART;
 else
     FSTART = 1;
     FSTEP = 1;
-    FEND = NFRAMES;
+    % FEND = NFRAMES;
+    FEND = FSTART;
 end
 
 % make a movie
-makeAMovie = 1;
+makeAMovie = 0;
 if makeAMovie == 1
     moviestr = 'compress_w_kb_square_T.mp4';
     vobj = VideoWriter(moviestr,'MPEG-4');

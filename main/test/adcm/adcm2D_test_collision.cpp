@@ -1,5 +1,5 @@
 // Test file for collision of 2 Active Deformable Cells (passive, just repulsive vertices)
-// compile with: g++ --std=c++11 -I src main/test/adcm2D_test_collision.cpp  src/*.cpp -o adcm2D_test_collision.o
+// compile with: g++ --std=c++11 -I src main/test/adcm/adcm2D_test_collision.cpp  src/*.cpp -o adcm2D_test_collision.o
 // run with : ./adcm2D_test_collision.o
 
 // TO DO:

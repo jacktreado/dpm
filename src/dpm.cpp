@@ -152,6 +152,26 @@ dpm::~dpm() {
 
 *******************************/
 
+
+// compute position of vertex gi relative to vertex 1
+double dpm::relX(const int gi, const int d){
+	// local variables
+	int ci, vi, g0;
+	double rx, x0;
+
+	// get indices
+	cindices(ci, vi, gi);
+	if (vi == 0)
+		return x[NDIM * gi + d];
+	else {
+		g0 = gi - vi;
+		x0 = x[NDIM * g0 + d];
+		rx = deltaX(g0, gi, d);
+		return x0 + rx;
+	}
+}
+
+
 // compute distance between vertices along dimension d
 double dpm::deltaX(const int gi, const int gj, const int d){
 	// local variables
@@ -199,6 +219,7 @@ double dpm::theta(const int gi){
 	// return angle
 	return atan2(sini,cosi);
 }
+
 
 /******************************
 

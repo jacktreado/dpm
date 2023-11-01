@@ -37,9 +37,9 @@ using namespace std;
 // global constants
 const bool plotCompression = 1;			// whether or not to plot configuration during compression protocol (0 saves memory)
 const double dphi0 = 0.01;				// packing fraction increment
-const double ka = 1.0;					// area force spring constant (should be unit)
-const double kc = 1.0;					// interaction force spring constant (should be unit)
-const double kl = 1.0;					// perimeter spring constant
+const double ka = 1.0;					// area force spring constant 
+const double kc = 0.5;					// interaction force spring constant 
+const double kl = 0.5;					// perimeter spring constant
 const double boxLengthScale = 2.5;		// neighbor list box size in units of initial l0
 const double phi0 = 0.3;				// initial packing fraction
 const double smallfrac = 0.5;			// fraction of small particles
