@@ -254,7 +254,7 @@ public:
 	int removeRattlers();
 	void drawVelocities2D(double T);
 
-	void resetForcesAndEnergy() { fill(F.begin(), F.end(), 0.0); fill(stress.begin(), stress.end(), 0.0); U = 0.0; };
+	void resetForcesAndEnergy() { fill(F.begin(), F.end(), 0.0); fill(stress.begin(), stress.end(), 0.0); U = 0.0; Pinst = 0.; Sinst = 0.; };
 	void shapeForces2D();
 	void vertexRepulsiveForces2D();
 	void vertexRepulsiveForces2D(double gamma);
@@ -263,8 +263,9 @@ public:
 	// force updates
 	void repulsiveForceUpdate();
 	void attractiveForceUpdate();
+    void addVirialToInstantaneousStresses();
 
-	// simple integrators
+    // simple integrators
 	void vertexFIRE2D(dpmMemFn forceCall, double Ftol, double dt0);
 	void vertexNVE2D(std::ofstream &enout, dpmMemFn forceCall, double T, double dt0, int NT, int NPRINTSKIP);
 	void vertexLangevinNVT2D(std::ofstream &enout, dpmMemFn forceCall, double T0, double gam, double dt0, int NT, int NPRINTSKIP);

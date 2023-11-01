@@ -75,12 +75,12 @@ dpm::dpm(int n, int ndim, int seed) {
 	NNN = 4;
 
 	// set scalars to default values
-	dt = 0.0;
+	dt = 0.01;
 
-	ka = 0.0;
-	kl = 0.0;
+	ka = 1.0;
+	kl = 1.0;
 	kb = 0.0;
-	kc = 0.0;
+	kc = 1.0;
 
 	l1 = 0.0;
 	l2 = 0.0;
@@ -1586,6 +1586,9 @@ void dpm::shapeForces2D() {
 				// update potential energy
 				U += 0.5 * ka * (da * da);
 
+				// update pressure
+				Pinst += ((2.0 * ka * atmp)/(a0tmp * L[0])) * da;
+
 				// shape force parameters
 				fa = ka * da * (rho0 / a0tmp);
 				fb = kb * rho0;
@@ -1683,6 +1686,10 @@ void dpm::shapeForces2D() {
 		// update potential energy
 		U += 0.5 * kl * (dli * dli);
 
+		// update contribution to stress
+		Pinst += ((fli * li)/L[0]) * dli;
+		Sinst += ((fli * lix *liy)/li) * dli;
+
 		// -- Bending force
 		if (kb > 0) {
 			// get ip2 for third angle
@@ -1729,6 +1736,9 @@ void dpm::shapeForces2D() {
 
 			// update potential energy
 			U += 0.5 * kb * (dti * dti);
+
+			// update contribution to shear stress
+			Sinst += kb * (nix*nix - nim1x*nim1x) * dti;
 		}
 
 		// update old coordinates
@@ -1823,6 +1833,10 @@ void dpm::vertexRepulsiveForces2D() {
 							stress[0] += (dx * fx)/(L[0] * L[1]);
 							stress[1] += (dy * fy)/(L[0] * L[1]);;
 							stress[2] += (0.5 * (dx * fy + dy * fx))/(L[0] * L[1]);
+
+							// add to stress
+							Pinst -= ftmp*(rij/L[0]);
+							Sinst -= ftmp*((dx*dy)/rij);
 
 							// add to contacts
 							cindices(ci, vi, gi);
@@ -2224,6 +2238,7 @@ void dpm::repulsiveForceUpdate() {
 	resetForcesAndEnergy();
 	shapeForces2D();
 	vertexRepulsiveForces2D();
+	addVirialToInstantaneousStresses();
 }
 
 
@@ -2231,8 +2246,27 @@ void dpm::attractiveForceUpdate(){
 	resetForcesAndEnergy();
 	shapeForces2D();
 	vertexAttractiveForces2D();
+	addVirialToInstantaneousStresses();
 }
 
+void dpm::addVirialToInstantaneousStresses()
+{
+	// virial force contribution to pressure
+	double Fvdiag = 0.0;
+	double Fvxy = 0.0;
+	int i;
+	for (i=0; i<vertDOF; i++){
+		Fvdiag += F[i]*x[i];
+		if (i % NDIM == 0)
+			Fvxy += F[i]*x[i+1];
+	}
+	Fvdiag /= 2.0*L[0]*L[1];
+	Fvxy /= L[0]*L[1];
+
+	// finalize computation of pressure
+	Pinst = Fvdiag - (Pinst/(2.0*L[0]));
+	Sinst = Fvxy - (Sinst/(L[0]*L[1]));
+}
 
 
 /******************************
